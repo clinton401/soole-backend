@@ -18,7 +18,7 @@ app.use(
 
 
   app.get('/', (req: Request, res: Response) => {
-    res.sendFile(path.join(__dirname, '../frontend/index.html'));
+    res.sendFile(path.join(__dirname, '../frontend'));
   });
 
   app.listen(PORT, () => {

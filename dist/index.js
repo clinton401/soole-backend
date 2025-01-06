@@ -16,7 +16,7 @@ app.use((0, cors_1.default)({
 }));
 app.use(express_1.default.static(node_path_1.default.join(__dirname, '../frontend')));
 app.get('/', (req, res) => {
-    res.sendFile(node_path_1.default.join(__dirname, '../frontend/index.html'));
+    res.sendFile(node_path_1.default.join(__dirname, '../frontend'));
 });
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
