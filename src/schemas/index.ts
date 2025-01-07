@@ -21,7 +21,7 @@ export const CompleteProfileSchema = z
       .trim()
       .min(3, { message: "First name must be at least 3 characters long." })
       .max(50, { message: "First name must not exceed 50 characters." }),
-      lastName: z
+    lastName: z
       .string()
       .trim()
       .min(3, { message: "Last name must be at least 3 characters long." })
@@ -31,7 +31,7 @@ export const CompleteProfileSchema = z
       .trim()
       .email({ message: "Invalid email format." })
       .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: "Invalid email address." }),
-      gender: z.enum(["MALE", "FEMALE", "OTHER"], {
+    gender: z.enum(["MALE", "FEMALE", "OTHER"], {
       errorMap: () => ({ message: "Gender must be MALE, FEMALE, or OTHER." }),
     }),
     dob: z
@@ -64,10 +64,10 @@ export const CompleteProfileSchema = z
       .string()
       .trim()
       .min(6, { message: "Confirm Password must be at least 6 characters long." }),
-      avatarUrl: z
+    avatarUrl: z
       .string()
       .url({ message: "Invalid avatar URL format." }),
-      avatarPublicId: z
+    avatarPublicId: z
       .string()
       .trim()
       .min(1, { message: "Avatar public ID must not be empty if provided." }),
@@ -76,3 +76,47 @@ export const CompleteProfileSchema = z
     message: "Passwords do not match.",
     path: ["confirmPassword"],
   });
+
+
+export const ScheduleTripSchema = z.object({
+  pickup: z.string({
+    required_error: "Pickup location is required.",
+    invalid_type_error: "Pickup location must be a string.",
+  }),
+  destination: z.string({
+    required_error: "Destination is required.",
+    invalid_type_error: "Destination must be a string.",
+  }),
+  driverId: z.string({
+    required_error: "Driver ID is required.",
+    invalid_type_error: "Driver ID must be a string.",
+  }),
+  date: z.string({
+    required_error: "Date is required.",
+    invalid_type_error: "Date must be a string in ISO format.",
+  }),
+  estimatiedTime: z.string({
+    required_error: "Estimated time is required.",
+    invalid_type_error: "Estimated time must be a string.",
+  }),
+  vehicleModel: z.string({
+    required_error: "Vehicle model is required.",
+    invalid_type_error: "Vehicle model must be a string.",
+  }),
+  color: z.string({
+    required_error: "Color is required.",
+    invalid_type_error: "Color must be a string.",
+  }),
+  plateNumber: z.string({
+    required_error: "Plate number is required.",
+    invalid_type_error: "Plate number must be a string.",
+  }),
+  noOfSeats: z.number({
+    required_error: "Number of seats is required.",
+    invalid_type_error: "Number of seats must be a number.",
+  }),
+  pricePerSeat: z.number({
+    required_error: "Price per seat is required.",
+    invalid_type_error: "Price per seat must be a number.",
+  }),
+});

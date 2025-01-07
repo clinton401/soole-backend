@@ -31,6 +31,7 @@ const createHardcodedUser = () => __awaiter(void 0, void 0, void 0, function* ()
         };
         const existingUser = yield user_1.UserModel.findOne({
             phone: hardcodedUser.phone,
+            email: hardcodedUser.email,
         });
         if (existingUser) {
             console.log("User already exists.");

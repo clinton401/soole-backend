@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CompleteProfileSchema = exports.OtpSchema = exports.RegisterSchema = void 0;
+exports.ScheduleTripSchema = exports.CompleteProfileSchema = exports.OtpSchema = exports.RegisterSchema = void 0;
 const zod_1 = require("zod");
 exports.RegisterSchema = zod_1.z.object({
     phone: zod_1.z
@@ -77,4 +77,46 @@ exports.CompleteProfileSchema = zod_1.z
     .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match.",
     path: ["confirmPassword"],
+});
+exports.ScheduleTripSchema = zod_1.z.object({
+    pickup: zod_1.z.string({
+        required_error: "Pickup location is required.",
+        invalid_type_error: "Pickup location must be a string.",
+    }),
+    destination: zod_1.z.string({
+        required_error: "Destination is required.",
+        invalid_type_error: "Destination must be a string.",
+    }),
+    driverId: zod_1.z.string({
+        required_error: "Driver ID is required.",
+        invalid_type_error: "Driver ID must be a string.",
+    }),
+    date: zod_1.z.string({
+        required_error: "Date is required.",
+        invalid_type_error: "Date must be a string in ISO format.",
+    }),
+    estimatiedTime: zod_1.z.string({
+        required_error: "Estimated time is required.",
+        invalid_type_error: "Estimated time must be a string.",
+    }),
+    vehicleModel: zod_1.z.string({
+        required_error: "Vehicle model is required.",
+        invalid_type_error: "Vehicle model must be a string.",
+    }),
+    color: zod_1.z.string({
+        required_error: "Color is required.",
+        invalid_type_error: "Color must be a string.",
+    }),
+    plateNumber: zod_1.z.string({
+        required_error: "Plate number is required.",
+        invalid_type_error: "Plate number must be a string.",
+    }),
+    noOfSeats: zod_1.z.number({
+        required_error: "Number of seats is required.",
+        invalid_type_error: "Number of seats must be a number.",
+    }),
+    pricePerSeat: zod_1.z.number({
+        required_error: "Price per seat is required.",
+        invalid_type_error: "Price per seat must be a number.",
+    }),
 });

@@ -20,6 +20,7 @@ const createHardcodedUser = async () => {
 
     const existingUser = await UserModel.findOne({
       phone: hardcodedUser.phone,
+      email: hardcodedUser.email,
     });
 
     if (existingUser) {

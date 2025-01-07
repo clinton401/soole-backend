@@ -21,6 +21,11 @@ exports.RideStructure = {
             type: String,
             required: true,
         },
+        status: {
+            description: "Status of the ride",
+            type: String,
+            required: true,
+        },
         date: {
             description: "Date",
             type: String,
@@ -35,6 +40,11 @@ exports.RideStructure = {
             description: "Images Of the Vehicle",
             type: Array,
             required: false,
+        },
+        passengers: {
+            description: "Id of the passengers",
+            type: Array,
+            required: true,
         },
         vehicleModel: {
             description: "Vehicle Model",
@@ -53,12 +63,12 @@ exports.RideStructure = {
         },
         numberOfSeats: {
             description: "Number of Seats",
-            type: String,
-            required: false,
+            type: Number,
+            required: true,
         },
         pricePerSeat: {
             description: "Price Per Seat",
-            type: String,
+            type: Number,
             required: false,
         },
     },

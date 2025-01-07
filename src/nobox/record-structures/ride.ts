@@ -5,14 +5,20 @@ interface Ride {
   userId: string;
   from: string;
   to: string;
+  status: "ACTIVE" | "CANCELLED" | "COMPLETED";
   date?: string;
+  passengers: {
+    seats: number;
+    id: string;
+  }[]
   estimatedTime?: string;
   carImages?: string[];
   vehicleModel?: string;
   color?: string;
   plateNumber?: string;
-  numberOfSeats?: string;
-  pricePerSeat?: string;
+  // changed the numberOfSeats to number also made it required
+  numberOfSeats: number;
+  pricePerSeat?: number;
 }
 
 export const RideStructure: Space<Ride> = {
@@ -34,6 +40,11 @@ export const RideStructure: Space<Ride> = {
       type: String,
       required: true,
     },
+    status: {
+      description: "Status of the ride",
+      type: String,
+      required: true,
+    },
     date: {
       description: "Date",
       type: String,
@@ -48,6 +59,11 @@ export const RideStructure: Space<Ride> = {
       description: "Images Of the Vehicle",
       type: Array,
       required: false,
+    },
+    passengers: {
+      description: "Id of the passengers",
+      type: Array,
+      required: true,
     },
     vehicleModel: {
       description: "Vehicle Model",
@@ -66,12 +82,12 @@ export const RideStructure: Space<Ride> = {
     },
     numberOfSeats: {
       description: "Number of Seats",
-      type: String,
-      required: false,
+      type: Number,
+      required: true,
     },
     pricePerSeat: {
       description: "Price Per Seat",
-      type: String,
+      type: Number,
       required: false,
     },
   },

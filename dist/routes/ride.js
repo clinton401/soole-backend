@@ -5,4 +5,8 @@ const ride_controller_1 = require("../controllers/ride-controller");
 const ride = (0, express_1.Router)();
 ride.post("/create", ride_controller_1.createRide);
 ride.get("/search", ride_controller_1.searchRides);
+ride.get("/:id", ride_controller_1.getRide);
+ride.post("/:id/request", ride_controller_1.requestRide);
+ride.post("/:id/cancel/driver", ride_controller_1.cancelRideDriver);
+ride.post("/:id/cancel/passenger", ride_controller_1.cancelRidePassenger);
 exports.default = ride;

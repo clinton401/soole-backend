@@ -36,7 +36,7 @@ export const register = async (
           "Phone number already registered. Please use a different number or log in if you already have an account."
         )
       );
-    const user = await UserModel.insertOne({ ...values, isNumberVerified: false });
+    const user = await UserModel.insertOne({ ...validatedFields.data, isNumberVerified: false });
 
     if (!user) return next(createError(500, unknown_error));
     const params = {
@@ -186,7 +186,7 @@ export const completeProfile = async (req: Request, res: Response, next: NextFun
     if (!user) return next(createError(400, "User not found."));
     if (user.email && user.password) return next(createError(400, "Profile is already complete. No further updates are allowed."))
     const validatedData = CompleteProfileSchema.parse(values);
-    const isEmailTaken = await UserModel.findOne({ email: validatedData.email });
+    const isEmailTaken = await UserModel.findOne({ email: validatedData.email.toLowerCase()});
     if (isEmailTaken) return next(createError(400, "Email already registered. Please use a different one"))
     const { confirmPassword, ...cleanedData } = validatedData;
     const hashedPassword = await hashPassword(cleanedData.password)
@@ -249,7 +249,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         return next(createError(400, "Email not in correct format. Check the email address."));
 
       }
-      user = await UserModel.findOne({ email })
+      user = await UserModel.findOne({ email: email.toLowerCase() })
       if (!user) {
         return next(createError(400, "User not found. Check email and try again."))
       }
@@ -294,7 +294,7 @@ export const sendResetCode = async(req: Request, res:Response, next: NextFunctio
         return next(createError(400, "Email not in correct format. Check the email address."));
 
       }
-      user = await UserModel.findOne({ email })
+      user = await UserModel.findOne({ email: email.toLowerCase() })
       if (!user) {
         return next(createError(400, "User not found. Check email and try again."))
       }

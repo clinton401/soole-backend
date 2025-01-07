@@ -10,7 +10,6 @@ const auth_1 = __importDefault(require("./routes/auth"));
 const ride_1 = __importDefault(require("./routes/ride"));
 const error_controllers_1 = require("./controllers/error-controllers");
 const access_tokens_1 = require("./middlewares/access-tokens");
-const init_1 = __importDefault(require("./init"));
 (0, dotenv_1.config)();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
@@ -20,7 +19,7 @@ app.use((0, cors_1.default)({
 }));
 app.use(express_1.default.json());
 app.set("trust proxy", 1);
-(0, init_1.default)();
+// createHardcodedUser();
 // app.use(express.static(path.join(__dirname, '../frontend')));
 app.use("/api/auth", access_tokens_1.isAuthenticated, auth_1.default);
 app.use("/api/rides", access_tokens_1.verifyAccessToken, ride_1.default);

@@ -50,7 +50,7 @@ const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         const isNumberAvailable = yield user_1.UserModel.findOne({ phone });
         if (isNumberAvailable)
             return next((0, http_errors_1.default)(400, "Phone number already registered. Please use a different number or log in if you already have an account."));
-        const user = yield user_1.UserModel.insertOne(Object.assign(Object.assign({}, values), { isNumberVerified: false }));
+        const user = yield user_1.UserModel.insertOne(Object.assign(Object.assign({}, validatedFields.data), { isNumberVerified: false }));
         if (!user)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         const params = {
@@ -202,7 +202,7 @@ const completeProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
         if (user.email && user.password)
             return next((0, http_errors_1.default)(400, "Profile is already complete. No further updates are allowed."));
         const validatedData = schemas_1.CompleteProfileSchema.parse(values);
-        const isEmailTaken = yield user_1.UserModel.findOne({ email: validatedData.email });
+        const isEmailTaken = yield user_1.UserModel.findOne({ email: validatedData.email.toLowerCase() });
         if (isEmailTaken)
             return next((0, http_errors_1.default)(400, "Email already registered. Please use a different one"));
         const { confirmPassword } = validatedData, cleanedData = __rest(validatedData, ["confirmPassword"]);
@@ -259,7 +259,7 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
             if (!(0, utils_1.validateEmail)(email)) {
                 return next((0, http_errors_1.default)(400, "Email not in correct format. Check the email address."));
             }
-            user = yield user_1.UserModel.findOne({ email });
+            user = yield user_1.UserModel.findOne({ email: email.toLowerCase() });
             if (!user) {
                 return next((0, http_errors_1.default)(400, "User not found. Check email and try again."));
             }
@@ -300,7 +300,7 @@ const sendResetCode = (req, res, next) => __awaiter(void 0, void 0, void 0, func
             if (!(0, utils_1.validateEmail)(email)) {
                 return next((0, http_errors_1.default)(400, "Email not in correct format. Check the email address."));
             }
-            user = yield user_1.UserModel.findOne({ email });
+            user = yield user_1.UserModel.findOne({ email: email.toLowerCase() });
             if (!user) {
                 return next((0, http_errors_1.default)(400, "User not found. Check email and try again."));
             }
