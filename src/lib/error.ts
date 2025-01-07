@@ -8,11 +8,5 @@ export class HttpError extends Error {
     }
   }
 
-  declare global {
-    namespace Express {
-      interface Request {
-        userId?: string;
-      }
-    }
-  }
+
   

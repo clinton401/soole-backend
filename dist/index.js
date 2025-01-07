@@ -11,7 +11,7 @@ const error_controllers_1 = require("./controllers/error-controllers");
 const access_tokens_1 = require("./middlewares/access-tokens");
 (0, dotenv_1.config)();
 const app = (0, express_1.default)();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 app.use((0, cors_1.default)({
     origin: "http://localhost:3000",
     credentials: true,

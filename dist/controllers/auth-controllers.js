@@ -23,7 +23,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.login = exports.completeProfile = exports.uploadImage = exports.regenerateVerificationCode = exports.verifyNumber = exports.register = void 0;
+exports.resetPassword = exports.verififyResetCode = exports.sendResetCode = exports.login = exports.completeProfile = exports.uploadImage = exports.regenerateVerificationCode = exports.verifyNumber = exports.register = void 0;
 const schemas_1 = require("../schemas");
 const http_errors_1 = __importDefault(require("http-errors"));
 const user_1 = require("../nobox/record-structures/user");
@@ -36,6 +36,7 @@ const fs_1 = __importDefault(require("fs"));
 const zod_1 = require("zod");
 const password_utils_1 = require("../lib/password-utils");
 const access_tokens_1 = require("../middlewares/access-tokens");
+const reset_code_1 = require("../nobox/record-structures/reset-code");
 (0, dotenv_1.config)();
 const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const values = req.body;
@@ -70,10 +71,6 @@ const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
                 expiresAt: expiresAt.toISOString(),
             });
         }
-        const userDetails = {
-            id: user.id,
-            number: user.phone
-        };
         res.status(201).json({ status: "success", message: "User created successfully!. Verification code sent to your messages", user: (0, utils_1.userHandler)(user) });
     }
     catch (error) {
@@ -214,10 +211,12 @@ const completeProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
         const updatedUser = yield user_1.UserModel.updateOneById(userId, dataToBeUpdated);
         if (!updatedUser)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        const access_token = (0, access_tokens_1.generateAccessToken)(updatedUser.id);
         res.status(200).json({
             success: true,
             message: "User profile updated successfully.",
-            user: (0, utils_1.userHandler)(updatedUser)
+            user: (0, utils_1.userHandler)(updatedUser),
+            access_token
         });
     }
     catch (err) {
@@ -281,3 +280,117 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
     }
 });
 exports.login = login;
+const sendResetCode = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { phone, email, } = req.body;
+    if (phone && email) {
+        return next((0, http_errors_1.default)(400, "Please provide only one of phone or email, not both."));
+    }
+    try {
+        let user;
+        if (phone) {
+            if (!(0, utils_1.validatePhone)(phone)) {
+                return next((0, http_errors_1.default)(400, "Phone not in correct format. Include country code."));
+            }
+            user = yield user_1.UserModel.findOne({ phone });
+            if (!user) {
+                return next((0, http_errors_1.default)(400, "User not found. Check phone number and try again."));
+            }
+        }
+        else {
+            if (!(0, utils_1.validateEmail)(email)) {
+                return next((0, http_errors_1.default)(400, "Email not in correct format. Check the email address."));
+            }
+            user = yield user_1.UserModel.findOne({ email });
+            if (!user) {
+                return next((0, http_errors_1.default)(400, "User not found. Check email and try again."));
+            }
+        }
+        const { code, expiresAt } = (0, utils_1.otpGenerator)();
+        const isCodeAvailable = yield reset_code_1.ResetCodeModel.findOne({ userId: user.id });
+        if (!isCodeAvailable) {
+            const body = {
+                code,
+                expiresAt: expiresAt.toISOString(),
+                userId: user.id,
+            };
+            yield reset_code_1.ResetCodeModel.insertOne(body);
+        }
+        else {
+            yield reset_code_1.ResetCodeModel.updateOneById(isCodeAvailable.id, {
+                code,
+                expiresAt: expiresAt.toISOString(),
+            });
+        }
+        const message = `Reset code sent to ${email || phone}.`;
+        res.status(200).json({
+            status: "success",
+            message,
+            user: (0, utils_1.userHandler)(user)
+        });
+    }
+    catch (error) {
+        console.error(`Unable send reset: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.sendResetCode = sendResetCode;
+const verififyResetCode = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.params.id;
+    const { code } = req.body;
+    if (!code)
+        return next((0, http_errors_1.default)(400, "Reset code is required"));
+    try {
+        const foundToken = yield reset_code_1.ResetCodeModel.findOne({ userId });
+        if (!foundToken)
+            return next((0, http_errors_1.default)(400, "User not found."));
+        const isExpired = (0, utils_1.hasExpired)(new Date(foundToken.expiresAt));
+        if (isExpired)
+            return next((0, http_errors_1.default)(400, "Code has expired, generate a new one"));
+        const isCodeValid = code === foundToken.code;
+        if (!isCodeValid)
+            return next((0, http_errors_1.default)(400, "Invalid code"));
+        yield reset_code_1.ResetCodeModel.deleteOneById(foundToken.id);
+        res.status(200).json({
+            status: "success",
+            message: "Reset code verified successfully. "
+        });
+    }
+    catch (error) {
+        console.error(`Unable verify reset code: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.verififyResetCode = verififyResetCode;
+const resetPassword = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.params.id;
+    const { newPassword, confirmPassword } = req.body;
+    if (!newPassword || !confirmPassword)
+        return next((0, http_errors_1.default)(400, "New password and confirm password are required"));
+    if (newPassword !== confirmPassword) {
+        return next((0, http_errors_1.default)(400, "Passwords do not match."));
+    }
+    try {
+        const user = yield user_1.UserModel.findOne({ id: userId });
+        if (!user)
+            return next((0, http_errors_1.default)(400, "No user found"));
+        if (!(user === null || user === void 0 ? void 0 : user.password)) {
+            return next((0, http_errors_1.default)(404, "No password found for this user."));
+        }
+        if (newPassword.length < 6)
+            return next((0, http_errors_1.default)(400, "Password must be at least 6 characters long."));
+        const isPasswordTheSameAsLastOne = yield (0, password_utils_1.validatePassword)(newPassword, user.password);
+        if (isPasswordTheSameAsLastOne)
+            return next((0, http_errors_1.default)(400, "New password cannot be the same as the current one"));
+        const hashedPassword = yield (0, password_utils_1.hashPassword)(newPassword);
+        yield user_1.UserModel.updateOneById(user.id, { password: hashedPassword });
+        res.status(200).json({
+            status: "success",
+            message: "Password changed successfully",
+        });
+    }
+    catch (error) {
+        console.error(`Unable reset user password: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.resetPassword = resetPassword;

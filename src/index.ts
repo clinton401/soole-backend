@@ -6,7 +6,7 @@ import { foundError, notFound } from './controllers/error-controllers';
 import { isAuthenticated, verifyAccessToken } from "./middlewares/access-tokens"
 config()
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 
 app.use(

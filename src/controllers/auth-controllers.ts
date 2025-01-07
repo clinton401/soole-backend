@@ -10,7 +10,8 @@ import cloudinary from "../config/cloudinary";
 import fs from 'fs';
 import { ZodError } from "zod";
 import { hashPassword, validatePassword } from "../lib/password-utils";
-import {generateAccessToken} from "../middlewares/access-tokens"
+import {generateAccessToken} from "../middlewares/access-tokens";
+import { ResetCodeModel } from "../nobox/record-structures/reset-code";
 
 config();
 export const register = async (
@@ -55,10 +56,7 @@ export const register = async (
         expiresAt: expiresAt.toISOString(),
       });
     }
-    const userDetails = {
-      id: user.id,
-      number: user.phone
-    }
+  
     res.status(201).json({ status: "success", message: "User created successfully!. Verification code sent to your messages", user: userHandler(user) });
 
   } catch (error) {
@@ -198,11 +196,12 @@ export const completeProfile = async (req: Request, res: Response, next: NextFun
     }
     const updatedUser = await UserModel.updateOneById(userId, dataToBeUpdated);
     if (!updatedUser) return next(createError(500, unknown_error))
-
+      const access_token = generateAccessToken(updatedUser.id);
     res.status(200).json({
       success: true,
       message: "User profile updated successfully.",
-      user: userHandler(updatedUser)
+      user: userHandler(updatedUser),
+      access_token
     });
 
   } catch (err) {
@@ -267,5 +266,123 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
   } catch (error) {
     console.error(`Unable sign in user: ${error}`)
     return next(createError(500, server_error))
+  }
+}
+
+export const sendResetCode = async(req: Request, res:Response, next: NextFunction) => {
+  const { phone, email, } = req.body;
+
+ 
+  if (phone && email) {
+    return next(createError(400, "Please provide only one of phone or email, not both."))
+  }
+  try{
+    let user: User & {
+      id: string;
+    } | null;
+    if (phone) {
+      if (!validatePhone(phone)) {
+        return next(createError(400, "Phone not in correct format. Include country code."));
+
+      }
+      user = await UserModel.findOne({ phone });
+      if (!user) {
+        return next(createError(400, "User not found. Check phone number and try again."))
+      }
+    } else {
+      if (!validateEmail(email)) {
+        return next(createError(400, "Email not in correct format. Check the email address."));
+
+      }
+      user = await UserModel.findOne({ email })
+      if (!user) {
+        return next(createError(400, "User not found. Check email and try again."))
+      }
+    }
+    const { code, expiresAt } = otpGenerator();
+    const isCodeAvailable = await ResetCodeModel.findOne({ userId: user.id });
+      if (!isCodeAvailable) {
+        const body = {
+          code,
+          expiresAt: expiresAt.toISOString(),
+          userId: user.id,
+        };
+        await ResetCodeModel.insertOne(body);
+      } else {
+        await ResetCodeModel.updateOneById(isCodeAvailable.id, {
+          code,
+          expiresAt: expiresAt.toISOString(),
+        });
+      }
+      const message = `Reset code sent to ${email || phone}.`
+      res.status(200).json({
+        status: "success",
+        message,
+        user: userHandler(user)
+      })
+  }catch(error) {
+    console.error(`Unable send reset: ${error}`)
+    return next(createError(500, server_error)) 
+  }
+}
+
+
+export const verififyResetCode = async(req: Request, res: Response, next: NextFunction) => {
+  const userId = req.params.id;
+  const {code} = req.body;
+  if(!code) return next(createError(400, "Reset code is required"))
+
+  try{
+    const foundToken = await ResetCodeModel.findOne({ userId });
+    if(!foundToken) return next(createError(400, "User not found."));
+    const isExpired = hasExpired(new Date(foundToken.expiresAt));
+    if(isExpired) return next(createError(400, "Code has expired, generate a new one"));
+    const isCodeValid = code === foundToken.code;
+    if(!isCodeValid) return next(createError(400, "Invalid code"));
+
+    await ResetCodeModel.deleteOneById(foundToken.id)
+    res.status(200).json({
+      status: "success",
+
+      message: "Reset code verified successfully. "
+     
+    })
+
+  }catch(error) {
+    console.error(`Unable verify reset code: ${error}`)
+    return next(createError(500, server_error)) 
+  }
+}
+
+
+export const resetPassword = async(req: Request, res: Response, next: NextFunction) => {
+  const userId = req.params.id;
+  const {newPassword, confirmPassword} = req.body;
+  if(!newPassword || !confirmPassword) return next(createError(400, "New password and confirm password are required"));
+  if (newPassword !== confirmPassword) {
+    return next(createError(400, "Passwords do not match."));
+  }
+  try{
+const user = await UserModel.findOne({id: userId});
+if(!user) return next(createError(400, "No user found"));
+if (!user?.password) {
+  return next(createError(404, "No password found for this user."))
+}
+if( newPassword.length < 6) return next(createError(400,  "Password must be at least 6 characters long."));
+const isPasswordTheSameAsLastOne = await validatePassword(
+  newPassword,
+  user.password
+);
+if(isPasswordTheSameAsLastOne) return next(createError(400,  "New password cannot be the same as the current one"));
+const hashedPassword = await hashPassword(newPassword)
+await UserModel.updateOneById(user.id, { password: hashedPassword });
+res.status(200).json({
+  status: "success",
+message: "Password changed successfully",
+
+})
+  }catch(error) {
+    console.error(`Unable reset user password: ${error}`)
+    return next(createError(500, server_error)) 
   }
 }

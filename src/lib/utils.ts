@@ -1,8 +1,16 @@
-import { User } from "../nobox/record-structures/user"
-import jwt from "jsonwebtoken";
-import { Request, Response, NextFunction } from "express";
-import createError from "http-errors";
-import { server_error } from "../lib/variables";
+import { User } from "../nobox/record-structures/user";
+
+
+declare global {
+  namespace Express {
+    interface Request {
+      userId?: string;
+      user: User & {
+        id: string;
+    } 
+    }
+  }
+}
 export const errorHandler = (error: string, code: number) => {
   return {
     error,
