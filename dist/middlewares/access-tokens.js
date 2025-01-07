@@ -18,10 +18,10 @@ const generateAccessToken = (id) => {
 exports.generateAccessToken = generateAccessToken;
 const verifyAccessToken = (req, res, next) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
         return next((0, http_errors_1.default)(401, "Access denied. No token provided."));
     }
-    const token = authHeader.split(' ')[1];
+    const token = authHeader.split(" ")[1];
     const secret = process.env.JWT_SECRET;
     if (!secret) {
         console.error("No JWT Secret provided");

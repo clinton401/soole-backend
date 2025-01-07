@@ -18,5 +18,7 @@ exports.config = {
     token,
 };
 exports.createRowSchema = (0, nobox_client_1.getSchemaCreator)(exports.config, { type: "rowed" });
-exports.createKeyGroupSchema = (0, nobox_client_1.getSchemaCreator)(exports.config, { type: "key-group" });
+exports.createKeyGroupSchema = (0, nobox_client_1.getSchemaCreator)(exports.config, {
+    type: "key-group",
+});
 exports.Nobox = (0, nobox_client_1.getFunctions)(exports.config);
