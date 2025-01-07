@@ -14,12 +14,12 @@ exports.UserStructure = {
         firstName: {
             description: "User's First Name",
             type: String,
-            required: false
+            required: false,
         },
         lastName: {
             description: "User's Last Name",
             type: String,
-            required: false
+            required: false,
         },
         password: {
             description: "User's Password",
@@ -66,7 +66,7 @@ exports.UserStructure = {
             description: "User's  Email Address",
             required: false,
             type: String,
-        }
-    }
+        },
+    },
 };
 exports.UserModel = (0, config_1.createRowSchema)(exports.UserStructure);

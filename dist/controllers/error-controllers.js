@@ -11,9 +11,7 @@ const foundError = (err, req, res, next) => {
     console.error(err);
     const msg = err.message || variables_1.server_error;
     const status = err.status || 500;
-    res
-        .status(err.status || 500)
-        .json((0, utils_1.errorHandler)(msg, status));
+    res.status(err.status || 500).json((0, utils_1.errorHandler)(msg, status));
 };
 exports.foundError = foundError;
 const notFound = (req, res, next) => {
