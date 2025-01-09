@@ -8,6 +8,7 @@ const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = require("dotenv");
 const auth_1 = __importDefault(require("./routes/auth"));
 const ride_1 = __importDefault(require("./routes/ride"));
+const user_1 = __importDefault(require("./routes/user"));
 const error_controllers_1 = require("./controllers/error-controllers");
 const access_tokens_1 = require("./middlewares/access-tokens");
 (0, dotenv_1.config)();
@@ -23,6 +24,7 @@ app.set("trust proxy", 1);
 // app.use(express.static(path.join(__dirname, '../frontend')));
 app.use("/api/auth", access_tokens_1.isAuthenticated, auth_1.default);
 app.use("/api/rides", access_tokens_1.verifyAccessToken, ride_1.default);
+app.use("/api/users", access_tokens_1.verifyAccessToken, user_1.default);
 app.get("/api/protected", access_tokens_1.verifyAccessToken, (req, res) => {
     res.status(200).json({
         message: `Welcome to protected route: ${req === null || req === void 0 ? void 0 : req.userId}`,

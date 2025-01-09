@@ -3,6 +3,7 @@ import cors from "cors";
 import { config } from "dotenv";
 import auth from "./routes/auth";
 import ride from "./routes/ride";
+import user from "./routes/user";
 import { foundError, notFound } from "./controllers/error-controllers";
 import {
   isAuthenticated,
@@ -27,6 +28,7 @@ app.set("trust proxy", 1);
 
 app.use("/api/auth", isAuthenticated, auth);
 app.use("/api/rides", verifyAccessToken, ride);
+app.use("/api/users", verifyAccessToken, user);
 
 app.get("/api/protected", verifyAccessToken, (req: Request, res: Response) => {
   res.status(200).json({

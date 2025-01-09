@@ -1,4 +1,5 @@
 import { User } from "../nobox/record-structures/user";
+import validator from 'validator';
 
 
 declare global {
@@ -61,3 +62,27 @@ export const validateEmail = (email: string) => {
   return emailRegex.test(email);
 };
 
+export const isCreditCardValid = (cardNumber: string): boolean => {
+  return validator.isCreditCard(cardNumber);
+}
+
+export const  validateExpiryDate = (expiryDate: string): string | undefined => {
+  const [month, year] = expiryDate.split('/').map(Number);
+
+ 
+  if (!month || !year || month < 1 || month > 12) {
+    return 'Invalid expiry date format. Use MM/YY.';
+  }
+
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear() % 100; 
+  const currentMonth = currentDate.getMonth() + 1; 
+
+
+  if (year < currentYear || (year === currentYear && month < currentMonth)) {
+    return 'The expiry date is in the past.';
+  }
+
+
+  return ;
+}

@@ -2,7 +2,7 @@ import { Response, Request, NextFunction } from "express";
 import { RegisterSchema, OtpSchema, CompleteProfileSchema } from "../schemas";
 import createError from "http-errors";
 import { UserModel, User } from "../nobox/record-structures/user";
-import { otpGenerator, hasExpired, userHandler, validatePhone, validateEmail } from "../lib/utils";
+import { otpGenerator, hasExpired, userHandler } from "../lib/utils";
 import { server_error, unknown_error } from "../lib/variables";
 import { NumberVerificationModel } from "../nobox/record-structures/number-verification";
 import { config } from "dotenv";
@@ -10,8 +10,9 @@ import cloudinary from "../config/cloudinary";
 import fs from 'fs';
 import { ZodError } from "zod";
 import { hashPassword, validatePassword } from "../lib/password-utils";
-import {generateAccessToken} from "../middlewares/access-tokens";
+import { generateAccessToken } from "../middlewares/access-tokens";
 import { ResetCodeModel } from "../nobox/record-structures/reset-code";
+
 
 config();
 export const register = async (
@@ -56,7 +57,7 @@ export const register = async (
         expiresAt: expiresAt.toISOString(),
       });
     }
-  
+
     res.status(201).json({ status: "success", message: "User created successfully!. Verification code sent to your messages", user: userHandler(user) });
 
   } catch (error) {
@@ -186,7 +187,7 @@ export const completeProfile = async (req: Request, res: Response, next: NextFun
     if (!user) return next(createError(400, "User not found."));
     if (user.email && user.password) return next(createError(400, "Profile is already complete. No further updates are allowed."))
     const validatedData = CompleteProfileSchema.parse(values);
-    const isEmailTaken = await UserModel.findOne({ email: validatedData.email.toLowerCase()});
+    const isEmailTaken = await UserModel.findOne({ email: validatedData.email.toLowerCase() });
     if (isEmailTaken) return next(createError(400, "Email already registered. Please use a different one"))
     const { confirmPassword, ...cleanedData } = validatedData;
     const hashedPassword = await hashPassword(cleanedData.password)
@@ -196,7 +197,7 @@ export const completeProfile = async (req: Request, res: Response, next: NextFun
     }
     const updatedUser = await UserModel.updateOneById(userId, dataToBeUpdated);
     if (!updatedUser) return next(createError(500, unknown_error))
-      const access_token = generateAccessToken(updatedUser.id);
+    const access_token = generateAccessToken(updatedUser.id);
     res.status(200).json({
       success: true,
       message: "User profile updated successfully.",
@@ -222,38 +223,30 @@ export const completeProfile = async (req: Request, res: Response, next: NextFun
 }
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
-  const { phone, email, password } = req.body;
+  const { password, contactInfo } = req.body;
 
-  if (!password || (!phone && !email)) {
+  if (!password || !contactInfo) {
     return next(createError(400, "Incomplete credentials"));
   }
-  if (phone && email) {
-    return next(createError(400, "Please provide only one of phone or email, not both."))
-  }
+
 
   try {
     let user: User & {
-      id: string;
+      id: string
     } | null;
-    if (phone) {
-      if (!validatePhone(phone)) {
-        return next(createError(400, "Phone not in correct format. Include country code."));
 
-      }
-      user = await UserModel.findOne({ phone });
-      if (!user) {
-        return next(createError(400, "User not found. Check phone number and try again."))
-      }
-    } else {
-      if (!validateEmail(email)) {
-        return next(createError(400, "Email not in correct format. Check the email address."));
-
-      }
-      user = await UserModel.findOne({ email: email.toLowerCase() })
-      if (!user) {
-        return next(createError(400, "User not found. Check email and try again."))
-      }
+    const options: { paramRelationship?: 'Or' | 'And' } = {
+      paramRelationship: 'Or',
+    };
+    user = await UserModel.findOne({ phone: contactInfo }, {});
+    if (!user) {
+      user = await UserModel.findOne({ email: contactInfo }, {})
     }
+
+    if (!user) {
+      return next(createError(400, "User not found. Check phone number or email and try again."))
+    }
+
     if (!user?.password) {
       return next(createError(404, "No password found for this user."))
     }
@@ -269,120 +262,104 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
   }
 }
 
-export const sendResetCode = async(req: Request, res:Response, next: NextFunction) => {
-  const { phone, email, } = req.body;
+export const sendResetCode = async (req: Request, res: Response, next: NextFunction) => {
+  const { contactInfo } = req.body;
 
- 
-  if (phone && email) {
-    return next(createError(400, "Please provide only one of phone or email, not both."))
+  if (!contactInfo) {
+    return next(createError(400, "Either email or phone number is required."));
   }
-  try{
-    let user: User & {
-      id: string;
-    } | null;
-    if (phone) {
-      if (!validatePhone(phone)) {
-        return next(createError(400, "Phone not in correct format. Include country code."));
-
-      }
-      user = await UserModel.findOne({ phone });
-      if (!user) {
-        return next(createError(400, "User not found. Check phone number and try again."))
-      }
-    } else {
-      if (!validateEmail(email)) {
-        return next(createError(400, "Email not in correct format. Check the email address."));
-
-      }
-      user = await UserModel.findOne({ email: email.toLowerCase() })
-      if (!user) {
-        return next(createError(400, "User not found. Check email and try again."))
-      }
+  try {
+    const options: { paramRelationship?: 'Or' | 'And' } = {
+      paramRelationship: 'Or',
+    };
+    const user = await UserModel.findOne({ phone: contactInfo, email: contactInfo }, options);
+    if (!user) {
+      return next(createError(400, "User not found. Check phone number or email and try again."))
     }
     const { code, expiresAt } = otpGenerator();
     const isCodeAvailable = await ResetCodeModel.findOne({ userId: user.id });
-      if (!isCodeAvailable) {
-        const body = {
-          code,
-          expiresAt: expiresAt.toISOString(),
-          userId: user.id,
-        };
-        await ResetCodeModel.insertOne(body);
-      } else {
-        await ResetCodeModel.updateOneById(isCodeAvailable.id, {
-          code,
-          expiresAt: expiresAt.toISOString(),
-        });
-      }
-      const message = `Reset code sent to ${email || phone}.`
-      res.status(200).json({
-        status: "success",
-        message,
-        user: userHandler(user)
-      })
-  }catch(error) {
+    if (!isCodeAvailable) {
+      const body = {
+        code,
+        expiresAt: expiresAt.toISOString(),
+        userId: user.id,
+      };
+      await ResetCodeModel.insertOne(body);
+    } else {
+      await ResetCodeModel.updateOneById(isCodeAvailable.id, {
+        code,
+        expiresAt: expiresAt.toISOString(),
+      });
+    }
+    const message = `Reset code sent to ${contactInfo}.`
+    res.status(200).json({
+      status: "success",
+      message,
+      user: userHandler(user)
+    })
+  } catch (error) {
     console.error(`Unable send reset: ${error}`)
-    return next(createError(500, server_error)) 
+    return next(createError(500, server_error))
   }
 }
 
 
-export const verififyResetCode = async(req: Request, res: Response, next: NextFunction) => {
+export const verififyResetCode = async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.params.id;
-  const {code} = req.body;
-  if(!code) return next(createError(400, "Reset code is required"))
+  const { code } = req.body;
+  if (!code) return next(createError(400, "Reset code is required"))
 
-  try{
+  try {
     const foundToken = await ResetCodeModel.findOne({ userId });
-    if(!foundToken) return next(createError(400, "User not found."));
+    if (!foundToken) return next(createError(400, "User not found."));
     const isExpired = hasExpired(new Date(foundToken.expiresAt));
-    if(isExpired) return next(createError(400, "Code has expired, generate a new one"));
+    if (isExpired) return next(createError(400, "Code has expired, generate a new one"));
     const isCodeValid = code === foundToken.code;
-    if(!isCodeValid) return next(createError(400, "Invalid code"));
+    if (!isCodeValid) return next(createError(400, "Invalid code"));
 
     await ResetCodeModel.deleteOneById(foundToken.id)
     res.status(200).json({
       status: "success",
 
       message: "Reset code verified successfully. "
-     
+
     })
 
-  }catch(error) {
+  } catch (error) {
     console.error(`Unable verify reset code: ${error}`)
-    return next(createError(500, server_error)) 
+    return next(createError(500, server_error))
   }
 }
 
 
-export const resetPassword = async(req: Request, res: Response, next: NextFunction) => {
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.params.id;
-  const {newPassword, confirmPassword} = req.body;
-  if(!newPassword || !confirmPassword) return next(createError(400, "New password and confirm password are required"));
+  const { newPassword, confirmPassword } = req.body;
+  if (!newPassword || !confirmPassword) return next(createError(400, "New password and confirm password are required"));
   if (newPassword !== confirmPassword) {
     return next(createError(400, "Passwords do not match."));
   }
-  try{
-const user = await UserModel.findOne({id: userId});
-if(!user) return next(createError(400, "No user found"));
-if (!user?.password) {
-  return next(createError(404, "No password found for this user."))
-}
-if( newPassword.length < 6) return next(createError(400,  "Password must be at least 6 characters long."));
-const isPasswordTheSameAsLastOne = await validatePassword(
-  newPassword,
-  user.password
-);
-if(isPasswordTheSameAsLastOne) return next(createError(400,  "New password cannot be the same as the current one"));
-const hashedPassword = await hashPassword(newPassword)
-await UserModel.updateOneById(user.id, { password: hashedPassword });
-res.status(200).json({
-  status: "success",
-message: "Password changed successfully",
+  try {
+    const user = await UserModel.findOne({ id: userId });
+    if (!user) return next(createError(400, "No user found"));
+    if (!user?.password) {
+      return next(createError(404, "No password found for this user."))
+    }
+    if (newPassword.length < 6) return next(createError(400, "Password must be at least 6 characters long."));
+    const isPasswordTheSameAsLastOne = await validatePassword(
+      newPassword,
+      user.password
+    );
+    if (isPasswordTheSameAsLastOne) return next(createError(400, "New password cannot be the same as the current one"));
+    const hashedPassword = await hashPassword(newPassword)
+    await UserModel.updateOneById(user.id, { password: hashedPassword });
+    res.status(200).json({
+      status: "success",
+      message: "Password changed successfully",
 
-})
-  }catch(error) {
+    })
+  } catch (error) {
     console.error(`Unable reset user password: ${error}`)
-    return next(createError(500, server_error)) 
+    return next(createError(500, server_error))
   }
 }

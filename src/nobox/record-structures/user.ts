@@ -81,6 +81,7 @@ export const UserStructure: Space<User> = {
       required: false,
       type: String,
     },
+    
   },
 };
 

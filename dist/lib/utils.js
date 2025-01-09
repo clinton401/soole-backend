@@ -10,8 +10,12 @@ var __rest = (this && this.__rest) || function (s, e) {
         }
     return t;
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateEmail = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
+exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
+const validator_1 = __importDefault(require("validator"));
 const errorHandler = (error, code) => {
     return {
         error,
@@ -54,3 +58,21 @@ const validateEmail = (email) => {
     return emailRegex.test(email);
 };
 exports.validateEmail = validateEmail;
+const isCreditCardValid = (cardNumber) => {
+    return validator_1.default.isCreditCard(cardNumber);
+};
+exports.isCreditCardValid = isCreditCardValid;
+const validateExpiryDate = (expiryDate) => {
+    const [month, year] = expiryDate.split('/').map(Number);
+    if (!month || !year || month < 1 || month > 12) {
+        return 'Invalid expiry date format. Use MM/YY.';
+    }
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear() % 100;
+    const currentMonth = currentDate.getMonth() + 1;
+    if (year < currentYear || (year === currentYear && month < currentMonth)) {
+        return 'The expiry date is in the past.';
+    }
+    return;
+};
+exports.validateExpiryDate = validateExpiryDate;

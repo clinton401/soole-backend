@@ -1,0 +1,86 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getPaymentMethods = exports.deletePaymentMethod = exports.addPaymentMethod = void 0;
+const http_errors_1 = __importDefault(require("http-errors"));
+const payment_method_1 = require("../nobox/record-structures/payment-method");
+const variables_1 = require("../lib/variables");
+const utils_1 = require("../lib/utils");
+const addPaymentMethod = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { cardNumber, cvv, expiryDate } = req.body;
+    const userId = req.userId;
+    if (!userId)
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    if (!cardNumber || !cvv || !expiryDate) {
+        return next((0, http_errors_1.default)(400, "All fields are required."));
+    }
+    try {
+        if (!(0, utils_1.isCreditCardValid)(cardNumber))
+            return next((0, http_errors_1.default)(400, "Invalid credit card number."));
+        const expiryValidationError = (0, utils_1.validateExpiryDate)(expiryDate);
+        if (expiryValidationError)
+            return next((0, http_errors_1.default)(400, expiryValidationError));
+        if (cvv.length !== 3)
+            return next((0, http_errors_1.default)(400, "CVV must be 3 digits."));
+        const foundCard = yield payment_method_1.PaymentMethodModel.findOne({
+            cardNumber, userId
+        }, {});
+        if (foundCard)
+            return next((0, http_errors_1.default)(400, "Card already exists. Please use a different card."));
+        const card = yield payment_method_1.PaymentMethodModel.insertOne({ cardNumber, cvv, expiryDate, userId });
+        if (!card)
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        res.status(201).json({ status: "success", message: 'Payment method added successfully.', card });
+    }
+    catch (error) {
+        console.error(`Unable to add payment method: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.addPaymentMethod = addPaymentMethod;
+const deletePaymentMethod = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.params.id;
+    try {
+        const card = yield payment_method_1.PaymentMethodModel.findOne({ id }, {});
+        if (!card)
+            return next((0, http_errors_1.default)(400, "Card not found. Please check and try again."));
+        yield payment_method_1.PaymentMethodModel.deleteOneById(id);
+        res.status(201).json({ status: "success", message: 'Payment method deleted successfully.', });
+    }
+    catch (error) {
+        console.error(`Unable to delete payment method: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.deletePaymentMethod = deletePaymentMethod;
+const getPaymentMethods = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.userId;
+    if (!userId)
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    try {
+        const cards = yield payment_method_1.PaymentMethodModel.find({ userId }, {});
+        if (cards.length < 1)
+            return next((0, http_errors_1.default)(404, "No payment methods found. Please add a card to your account."));
+        res.status(200).json({
+            status: "success",
+            message: "Payment methods retrieved successfully.",
+            cards
+        });
+    }
+    catch (error) {
+        console.error(`Unable to get payment methods: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.getPaymentMethods = getPaymentMethods;

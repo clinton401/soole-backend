@@ -237,32 +237,21 @@ const completeProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
 });
 exports.completeProfile = completeProfile;
 const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { phone, email, password } = req.body;
-    if (!password || (!phone && !email)) {
+    const { password, contactInfo } = req.body;
+    if (!password || !contactInfo) {
         return next((0, http_errors_1.default)(400, "Incomplete credentials"));
-    }
-    if (phone && email) {
-        return next((0, http_errors_1.default)(400, "Please provide only one of phone or email, not both."));
     }
     try {
         let user;
-        if (phone) {
-            if (!(0, utils_1.validatePhone)(phone)) {
-                return next((0, http_errors_1.default)(400, "Phone not in correct format. Include country code."));
-            }
-            user = yield user_1.UserModel.findOne({ phone });
-            if (!user) {
-                return next((0, http_errors_1.default)(400, "User not found. Check phone number and try again."));
-            }
+        const options = {
+            paramRelationship: 'Or',
+        };
+        user = yield user_1.UserModel.findOne({ phone: contactInfo }, {});
+        if (!user) {
+            user = yield user_1.UserModel.findOne({ email: contactInfo }, {});
         }
-        else {
-            if (!(0, utils_1.validateEmail)(email)) {
-                return next((0, http_errors_1.default)(400, "Email not in correct format. Check the email address."));
-            }
-            user = yield user_1.UserModel.findOne({ email: email.toLowerCase() });
-            if (!user) {
-                return next((0, http_errors_1.default)(400, "User not found. Check email and try again."));
-            }
+        if (!user) {
+            return next((0, http_errors_1.default)(400, "User not found. Check phone number or email and try again."));
         }
         if (!(user === null || user === void 0 ? void 0 : user.password)) {
             return next((0, http_errors_1.default)(404, "No password found for this user."));
@@ -281,29 +270,17 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
 });
 exports.login = login;
 const sendResetCode = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { phone, email, } = req.body;
-    if (phone && email) {
-        return next((0, http_errors_1.default)(400, "Please provide only one of phone or email, not both."));
+    const { contactInfo } = req.body;
+    if (!contactInfo) {
+        return next((0, http_errors_1.default)(400, "Either email or phone number is required."));
     }
     try {
-        let user;
-        if (phone) {
-            if (!(0, utils_1.validatePhone)(phone)) {
-                return next((0, http_errors_1.default)(400, "Phone not in correct format. Include country code."));
-            }
-            user = yield user_1.UserModel.findOne({ phone });
-            if (!user) {
-                return next((0, http_errors_1.default)(400, "User not found. Check phone number and try again."));
-            }
-        }
-        else {
-            if (!(0, utils_1.validateEmail)(email)) {
-                return next((0, http_errors_1.default)(400, "Email not in correct format. Check the email address."));
-            }
-            user = yield user_1.UserModel.findOne({ email: email.toLowerCase() });
-            if (!user) {
-                return next((0, http_errors_1.default)(400, "User not found. Check email and try again."));
-            }
+        const options = {
+            paramRelationship: 'Or',
+        };
+        const user = yield user_1.UserModel.findOne({ phone: contactInfo, email: contactInfo }, options);
+        if (!user) {
+            return next((0, http_errors_1.default)(400, "User not found. Check phone number or email and try again."));
         }
         const { code, expiresAt } = (0, utils_1.otpGenerator)();
         const isCodeAvailable = yield reset_code_1.ResetCodeModel.findOne({ userId: user.id });
@@ -321,7 +298,7 @@ const sendResetCode = (req, res, next) => __awaiter(void 0, void 0, void 0, func
                 expiresAt: expiresAt.toISOString(),
             });
         }
-        const message = `Reset code sent to ${email || phone}.`;
+        const message = `Reset code sent to ${contactInfo}.`;
         res.status(200).json({
             status: "success",
             message,
