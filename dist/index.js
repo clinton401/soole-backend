@@ -11,6 +11,8 @@ const ride_1 = __importDefault(require("./routes/ride"));
 const user_1 = __importDefault(require("./routes/user"));
 const error_controllers_1 = require("./controllers/error-controllers");
 const access_tokens_1 = require("./middlewares/access-tokens");
+const auth_controllers_1 = require("./controllers/auth-controllers");
+const upload_1 = __importDefault(require("./middlewares/upload"));
 (0, dotenv_1.config)();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 3001;
@@ -24,15 +26,11 @@ app.set("trust proxy", 1);
 // app.use(express.static(path.join(__dirname, '../frontend')));
 app.use("/api/auth", access_tokens_1.isAuthenticated, auth_1.default);
 app.use("/api/rides", access_tokens_1.verifyAccessToken, ride_1.default);
-app.use("/api/users", access_tokens_1.verifyAccessToken, user_1.default);
-app.get("/api/protected", access_tokens_1.verifyAccessToken, (req, res) => {
-    res.status(200).json({
-        message: `Welcome to protected route: ${req === null || req === void 0 ? void 0 : req.userId}`,
-    });
-});
+app.use("/api/user", access_tokens_1.verifyAccessToken, user_1.default);
 app.get("/", (req, res) => {
     res.status(200).json({ message: "Welcome to the Soole backend" });
 });
+app.post("/api/upload-images", upload_1.default.single('image'), auth_controllers_1.uploadImage);
 app.all("*", error_controllers_1.notFound);
 app.use(error_controllers_1.foundError);
 app.listen(PORT, () => {

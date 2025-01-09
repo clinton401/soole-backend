@@ -3,7 +3,9 @@ import createError from "http-errors";
 import { UserModel } from "../nobox/record-structures/user";
 import { PaymentMethodModel } from "../nobox/record-structures/payment-method";
 import { server_error, unknown_error, unauthorized_error } from "../lib/variables";
-import { isCreditCardValid, validateExpiryDate, userHandler } from "../lib/utils";
+import { isCreditCardValid, validateExpiryDate, userHandler, validateEmail, validatePhone, validateDOB } from "../lib/utils";
+import {UpdateProfileSchema} from "../schemas/index";
+import {ZodError} from "zod"
 
 export const addPaymentMethod = async (req: Request, res: Response, next: NextFunction) => {
     const { cardNumber, cvv, expiryDate } = req.body;
@@ -61,3 +63,60 @@ export const getPaymentMethods = async (req: Request, res: Response, next: NextF
         return next(createError(500, server_error));
     }
 }
+
+export const getUserDetails = async(req: Request, res: Response, next: NextFunction) => {
+    const userId = req.userId;
+    if (!userId) return next(createError(401, unauthorized_error));
+    try{
+const user = await UserModel.findOne({id: userId}, {});
+if(!user) return next(createError(404, "User not found."));
+res.status(200).json(
+{
+    status: "success",
+    user: userHandler(user)
+}
+)
+
+    }catch(error) {
+        console.error(`Unable to get signed in user's details: ${error}`);
+        return next(createError(500, server_error));
+    }
+}
+
+export const updateUserDetails = async(req: Request, res: Response, next: NextFunction) => {
+    const userId = req.userId;
+    if (!userId) return next(createError(401, unauthorized_error));
+    const values = req.body;
+    try{
+
+const validatedData = UpdateProfileSchema.parse(values);
+
+if(!validatedData ||  Object.keys(validatedData).length < 1) return next(createError(400, "At least one field must be provided."));
+
+const fieldsToUpdate = Object.fromEntries(
+    Object.entries(validatedData).filter(([key, value]) => value !== undefined)
+  );
+  const updatedUser = await UserModel.updateOneById(userId, fieldsToUpdate);
+  if(!updatedUser) return next(createError(500, unknown_error));
+  res.status(200).json({
+    status: "success",
+    message: "Updated user details successfully",
+    user: userHandler(updatedUser)
+  })
+    }catch(err) {
+        console.error(`Unable to update signed in user's details: ${err}`);
+        if (err instanceof ZodError) {
+            const errors = err.errors.map((e) => ({
+              path: e.path.join("."),
+              message: e.message,
+            }));
+            res.status(400).json({
+              success: false,
+              error: errors,
+            });
+            return
+          }
+          return next(createError(500, server_error))
+    }
+}
+

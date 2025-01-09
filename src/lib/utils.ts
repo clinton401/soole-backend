@@ -55,7 +55,10 @@ export const validatePhone = (phone: string) => {
   const phoneRegex = /^\+[1-9]\d{1,14}$/;
   return phoneRegex.test(phone);
 };
-
+export const validateDOB = (dob: string ) => {
+const dobRegex = /^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/;
+return dobRegex.test(dob)
+}
 
 export const validateEmail = (email: string) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

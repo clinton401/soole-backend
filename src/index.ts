@@ -9,6 +9,8 @@ import {
   isAuthenticated,
   verifyAccessToken,
 } from "./middlewares/access-tokens";
+import {uploadImage} from "./controllers/auth-controllers";
+import upload from "./middlewares/upload"
 import createHardcodedUser from "./init";
 
 config();
@@ -28,17 +30,15 @@ app.set("trust proxy", 1);
 
 app.use("/api/auth", isAuthenticated, auth);
 app.use("/api/rides", verifyAccessToken, ride);
-app.use("/api/users", verifyAccessToken, user);
+app.use("/api/user", verifyAccessToken, user);
 
-app.get("/api/protected", verifyAccessToken, (req: Request, res: Response) => {
-  res.status(200).json({
-    message: `Welcome to protected route: ${req?.userId}`,
-  });
-});
 
-app.get("/", (req: Request, res: Response) => {
+
+
+app.get("/",  (req: Request, res: Response) => {
   res.status(200).json({ message: "Welcome to the Soole backend" });
 });
+app.post("/api/upload-images",upload.single('image'),  uploadImage)
 app.all("*", notFound);
 app.use(foundError);
 
