@@ -12,9 +12,12 @@ const createHardcodedUser = async () => {
       lastName: "Doe",
       isNumberVerified: true,
       gender: "MALE",
+      bio: "I am a software developer.",
       dob: "1990-01-01",
       username: "johndoe",
       email: "johndoe@example.com",
+      avatarUrl: "https://via.placeholder.com/150",
+      avatarPublicId: "placeholder",
       password: hashedPassword,
     };
 

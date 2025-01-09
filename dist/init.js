@@ -24,9 +24,12 @@ const createHardcodedUser = () => __awaiter(void 0, void 0, void 0, function* ()
             lastName: "Doe",
             isNumberVerified: true,
             gender: "MALE",
+            bio: "I am a software developer.",
             dob: "1990-01-01",
             username: "johndoe",
             email: "johndoe@example.com",
+            avatarUrl: "https://via.placeholder.com/150",
+            avatarPublicId: "placeholder",
             password: hashedPassword,
         };
         const existingUser = yield user_1.UserModel.findOne({
