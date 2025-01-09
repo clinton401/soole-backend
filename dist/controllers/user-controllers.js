@@ -142,3 +142,19 @@ const updateUserDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, 
     }
 });
 exports.updateUserDetails = updateUserDetails;
+const resetPassword = (req, res, next) => {
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+    const userId = req.userId;
+    if (!userId)
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    if (!oldPassword || !newPassword || !confirmPassword)
+        return next((0, http_errors_1.default)(400, "All fields are required."));
+    if (oldPassword.length < 6 || newPassword.length < 6 || confirmPassword.length < 6)
+        return next((0, http_errors_1.default)(400, "All fields must be at least 6 characters long."));
+    try {
+    }
+    catch (error) {
+        console.error(`Unable to  reset user password: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+};

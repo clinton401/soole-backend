@@ -120,3 +120,18 @@ const fieldsToUpdate = Object.fromEntries(
     }
 }
 
+
+const resetPassword = (req: Request, res: Response, next: NextFunction) => {
+    const {oldPassword, newPassword, confirmPassword} = req.body;
+    const userId = req.userId;
+    if (!userId) return next(createError(401, unauthorized_error));
+    if(!oldPassword || !newPassword || !confirmPassword) return next(createError(400, "All fields are required."));
+    if(oldPassword.length < 6 || newPassword.length < 6 || confirmPassword.length < 6) return next(createError(400, "All fields must be at least 6 characters long."));
+
+    try{
+
+    }catch(error) {
+        console.error(`Unable to  reset user password: ${error}`)
+        return next(createError(500, server_error))
+    }
+}
