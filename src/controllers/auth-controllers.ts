@@ -269,10 +269,13 @@ export const sendResetCode = async (req: Request, res: Response, next: NextFunct
     return next(createError(400, "Either email or phone number is required."));
   }
   try {
-    const options: { paramRelationship?: 'Or' | 'And' } = {
-      paramRelationship: 'Or',
-    };
-    const user = await UserModel.findOne({ phone: contactInfo, email: contactInfo }, options);
+    let user: User & {
+      id: string
+    } | null;
+    user = await UserModel.findOne({ phone: contactInfo }, {});
+    if (!user) {
+      user = await UserModel.findOne({ email: contactInfo }, {})
+    }
     if (!user) {
       return next(createError(400, "User not found. Check phone number or email and try again."))
     }

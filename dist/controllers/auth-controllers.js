@@ -275,10 +275,11 @@ const sendResetCode = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         return next((0, http_errors_1.default)(400, "Either email or phone number is required."));
     }
     try {
-        const options = {
-            paramRelationship: 'Or',
-        };
-        const user = yield user_1.UserModel.findOne({ phone: contactInfo, email: contactInfo }, options);
+        let user;
+        user = yield user_1.UserModel.findOne({ phone: contactInfo }, {});
+        if (!user) {
+            user = yield user_1.UserModel.findOne({ email: contactInfo }, {});
+        }
         if (!user) {
             return next((0, http_errors_1.default)(400, "User not found. Check phone number or email and try again."));
         }
