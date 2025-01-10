@@ -3,9 +3,10 @@ import createError from "http-errors";
 import { UserModel } from "../nobox/record-structures/user";
 import { PaymentMethodModel } from "../nobox/record-structures/payment-method";
 import { server_error, unknown_error, unauthorized_error } from "../lib/variables";
-import { isCreditCardValid, validateExpiryDate, userHandler, validateEmail, validatePhone, validateDOB } from "../lib/utils";
-import {UpdateProfileSchema} from "../schemas/index";
-import {ZodError} from "zod"
+import { isCreditCardValid, validateExpiryDate, userHandler } from "../lib/utils";
+import { UpdateProfileSchema } from "../schemas/index";
+import { ZodError } from "zod";
+import { hashPassword, validatePassword } from "../lib/password-utils";
 
 export const addPaymentMethod = async (req: Request, res: Response, next: NextFunction) => {
     const { cardNumber, cvv, expiryDate } = req.body;
@@ -64,74 +65,115 @@ export const getPaymentMethods = async (req: Request, res: Response, next: NextF
     }
 }
 
-export const getUserDetails = async(req: Request, res: Response, next: NextFunction) => {
+export const getUserDetails = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.userId;
     if (!userId) return next(createError(401, unauthorized_error));
-    try{
-const user = await UserModel.findOne({id: userId}, {});
-if(!user) return next(createError(404, "User not found."));
-res.status(200).json(
-{
-    status: "success",
-    user: userHandler(user)
-}
-)
+    try {
+        const user = await UserModel.findOne({ id: userId }, {});
+        if (!user) return next(createError(404, "User not found."));
+        res.status(200).json(
+            {
+                status: "success",
+                user: userHandler(user)
+            }
+        )
 
-    }catch(error) {
+    } catch (error) {
         console.error(`Unable to get signed in user's details: ${error}`);
         return next(createError(500, server_error));
     }
 }
 
-export const updateUserDetails = async(req: Request, res: Response, next: NextFunction) => {
+export const updateUserDetails = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.userId;
     if (!userId) return next(createError(401, unauthorized_error));
     const values = req.body;
-    try{
+    try {
 
-const validatedData = UpdateProfileSchema.parse(values);
+        const validatedData = UpdateProfileSchema.parse(values);
 
-if(!validatedData ||  Object.keys(validatedData).length < 1) return next(createError(400, "At least one field must be provided."));
+        if (!validatedData || Object.keys(validatedData).length < 1) return next(createError(400, "At least one field must be provided."));
 
-const fieldsToUpdate = Object.fromEntries(
-    Object.entries(validatedData).filter(([key, value]) => value !== undefined)
-  );
-  const updatedUser = await UserModel.updateOneById(userId, fieldsToUpdate);
-  if(!updatedUser) return next(createError(500, unknown_error));
-  res.status(200).json({
-    status: "success",
-    message: "Updated user details successfully",
-    user: userHandler(updatedUser)
-  })
-    }catch(err) {
+        const fieldsToUpdate = Object.fromEntries(
+            Object.entries(validatedData).filter(([key, value]) => value !== undefined)
+        );
+
+        const user = await UserModel.findOne({ id: userId }, {});
+        if (!user) return next(createError(404, "User not found."));
+        const updatedUser = await UserModel.updateOneById(userId, fieldsToUpdate);
+        if (!updatedUser) return next(createError(500, unknown_error));
+        res.status(200).json({
+            status: "success",
+            message: "Updated user details successfully",
+            user: userHandler(updatedUser)
+        })
+    } catch (err) {
         console.error(`Unable to update signed in user's details: ${err}`);
         if (err instanceof ZodError) {
             const errors = err.errors.map((e) => ({
-              path: e.path.join("."),
-              message: e.message,
+                path: e.path.join("."),
+                message: e.message,
             }));
             res.status(400).json({
-              success: false,
-              error: errors,
+                success: false,
+                error: errors,
             });
             return
-          }
-          return next(createError(500, server_error))
+        }
+        return next(createError(500, server_error))
     }
 }
 
 
-const resetPassword = (req: Request, res: Response, next: NextFunction) => {
-    const {oldPassword, newPassword, confirmPassword} = req.body;
+export const resetPassword = async (req: Request, res: Response, next: NextFunction) => {
+    const { oldPassword, newPassword, confirmPassword } = req.body;
     const userId = req.userId;
     if (!userId) return next(createError(401, unauthorized_error));
-    if(!oldPassword || !newPassword || !confirmPassword) return next(createError(400, "All fields are required."));
-    if(oldPassword.length < 6 || newPassword.length < 6 || confirmPassword.length < 6) return next(createError(400, "All fields must be at least 6 characters long."));
+    if (!oldPassword || !newPassword || !confirmPassword) return next(createError(400, "All fields are required."));
+    if (oldPassword.length < 6 || newPassword.length < 6 || confirmPassword.length < 6) return next(createError(400, "All fields must be at least 6 characters long."));
+    if (newPassword !== confirmPassword) return next(createError(400, "New password and confirm password do not match."))
+    try {
 
-    try{
+        const user = await UserModel.findOne({ id: userId }, {});
+        if (!user) return next(createError(404, "User not found."));
+        if (!user?.password) {
+            return next(createError(404, "No password found for this user."))
+        }
+        const isOldPasswordCorrect = await validatePassword(oldPassword,
+            user.password);
+        if (!isOldPasswordCorrect) return next(createError(400, "The old password you entered is incorrect."))
+        const isPasswordTheSameAsLastOne = await validatePassword(
+            newPassword,
+            user.password
+        );
+        if (isPasswordTheSameAsLastOne) return next(createError(400, "New password cannot be the same as the current one"));
+        const hashedPassword = await hashPassword(newPassword)
+        await UserModel.updateOneById(user.id, { password: hashedPassword });
+        res.status(200).json({
+            status: "success",
+            message: "Password changed successfully",
 
-    }catch(error) {
+        })
+
+    } catch (error) {
         console.error(`Unable to  reset user password: ${error}`)
+        return next(createError(500, server_error))
+    }
+}
+
+export const deleteAccount = async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.userId;
+    if (!userId) return next(createError(401, unauthorized_error));
+    try {
+        const user = await UserModel.findOne({ id: userId }, {});
+        if (!user) return next(createError(404, "User not found."));
+        await UserModel.deleteOneById(userId);
+        res.status(200).json({
+            status: "success",
+            message: "Account deleted successfully."
+        })
+    } catch (error) {
+        console.error(`Unable to  delete user account: ${error}`)
         return next(createError(500, server_error))
     }
 }

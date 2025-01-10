@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateUserDetails = exports.getUserDetails = exports.getPaymentMethods = exports.deletePaymentMethod = exports.addPaymentMethod = void 0;
+exports.deleteAccount = exports.resetPassword = exports.updateUserDetails = exports.getUserDetails = exports.getPaymentMethods = exports.deletePaymentMethod = exports.addPaymentMethod = void 0;
 const http_errors_1 = __importDefault(require("http-errors"));
 const user_1 = require("../nobox/record-structures/user");
 const payment_method_1 = require("../nobox/record-structures/payment-method");
@@ -20,6 +20,7 @@ const variables_1 = require("../lib/variables");
 const utils_1 = require("../lib/utils");
 const index_1 = require("../schemas/index");
 const zod_1 = require("zod");
+const password_utils_1 = require("../lib/password-utils");
 const addPaymentMethod = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { cardNumber, cvv, expiryDate } = req.body;
     const userId = req.userId;
@@ -116,6 +117,9 @@ const updateUserDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, 
         if (!validatedData || Object.keys(validatedData).length < 1)
             return next((0, http_errors_1.default)(400, "At least one field must be provided."));
         const fieldsToUpdate = Object.fromEntries(Object.entries(validatedData).filter(([key, value]) => value !== undefined));
+        const user = yield user_1.UserModel.findOne({ id: userId }, {});
+        if (!user)
+            return next((0, http_errors_1.default)(404, "User not found."));
         const updatedUser = yield user_1.UserModel.updateOneById(userId, fieldsToUpdate);
         if (!updatedUser)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
@@ -142,7 +146,7 @@ const updateUserDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, 
     }
 });
 exports.updateUserDetails = updateUserDetails;
-const resetPassword = (req, res, next) => {
+const resetPassword = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { oldPassword, newPassword, confirmPassword } = req.body;
     const userId = req.userId;
     if (!userId)
@@ -151,10 +155,51 @@ const resetPassword = (req, res, next) => {
         return next((0, http_errors_1.default)(400, "All fields are required."));
     if (oldPassword.length < 6 || newPassword.length < 6 || confirmPassword.length < 6)
         return next((0, http_errors_1.default)(400, "All fields must be at least 6 characters long."));
+    if (newPassword !== confirmPassword)
+        return next((0, http_errors_1.default)(400, "New password and confirm password do not match."));
     try {
+        const user = yield user_1.UserModel.findOne({ id: userId }, {});
+        if (!user)
+            return next((0, http_errors_1.default)(404, "User not found."));
+        if (!(user === null || user === void 0 ? void 0 : user.password)) {
+            return next((0, http_errors_1.default)(404, "No password found for this user."));
+        }
+        const isOldPasswordCorrect = yield (0, password_utils_1.validatePassword)(oldPassword, user.password);
+        if (!isOldPasswordCorrect)
+            return next((0, http_errors_1.default)(400, "The old password you entered is incorrect."));
+        const isPasswordTheSameAsLastOne = yield (0, password_utils_1.validatePassword)(newPassword, user.password);
+        if (isPasswordTheSameAsLastOne)
+            return next((0, http_errors_1.default)(400, "New password cannot be the same as the current one"));
+        const hashedPassword = yield (0, password_utils_1.hashPassword)(newPassword);
+        yield user_1.UserModel.updateOneById(user.id, { password: hashedPassword });
+        res.status(200).json({
+            status: "success",
+            message: "Password changed successfully",
+        });
     }
     catch (error) {
         console.error(`Unable to  reset user password: ${error}`);
         return next((0, http_errors_1.default)(500, variables_1.server_error));
     }
-};
+});
+exports.resetPassword = resetPassword;
+const deleteAccount = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.userId;
+    if (!userId)
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    try {
+        const user = yield user_1.UserModel.findOne({ id: userId }, {});
+        if (!user)
+            return next((0, http_errors_1.default)(404, "User not found."));
+        yield user_1.UserModel.deleteOneById(userId);
+        res.status(200).json({
+            status: "success",
+            message: "Account deleted successfully."
+        });
+    }
+    catch (error) {
+        console.error(`Unable to  delete user account: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.deleteAccount = deleteAccount;

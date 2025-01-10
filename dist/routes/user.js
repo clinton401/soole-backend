@@ -5,6 +5,8 @@ const user_controllers_1 = require("../controllers/user-controllers");
 const user = (0, express_1.Router)();
 user.get("/me", user_controllers_1.getUserDetails);
 user.put("/me/update", user_controllers_1.updateUserDetails);
+user.put("/me/update/password", user_controllers_1.resetPassword);
+user.delete("/me/delete-account", user_controllers_1.deleteAccount);
 user.get("/payment-methods", user_controllers_1.getPaymentMethods);
 user.post("/payment-methods", user_controllers_1.addPaymentMethod);
 user.delete("/payment-methods/:id", user_controllers_1.deletePaymentMethod);
