@@ -10,7 +10,11 @@ interface Ride {
   passengers: {
     seats: number;
     id: string;
-  }[]
+  }[];
+  userAvatarUrl?: string;
+  userFirstName?: string;
+  userLastName?: string;
+  userUsername?: string;
   estimatedTime?: string;
   carImages?: string[];
   vehicleModel?: string;
@@ -90,8 +94,30 @@ export const RideStructure: Space<Ride> = {
       type: Number,
       required: false,
     },
+    // Missing properties added below
+    userAvatarUrl: {
+      description: "Avatar URL of the user",
+      type: String,
+      required: false,
+    },
+    userFirstName: {
+      description: "First Name of the user",
+      type: String,
+      required: false,
+    },
+    userLastName: {
+      description: "Last Name of the user",
+      type: String,
+      required: false,
+    },
+    userUsername: {
+      description: "Username of the user",
+      type: String,
+      required: false,
+    },
   },
 };
+
 
 export const rideModel = createRowSchema<Ride>(RideStructure);
 export type RideObject = ReturnObject<Ride>;

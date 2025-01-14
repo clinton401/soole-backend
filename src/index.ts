@@ -11,6 +11,8 @@ import {
 } from "./middlewares/access-tokens";
 import {uploadImage} from "./controllers/auth-controllers";
 import upload from "./middlewares/upload"
+import notification from "./routes/notification";
+import conversation from "./routes/conversation";
 import createHardcodedUser from "./init";
 
 config();
@@ -31,6 +33,8 @@ app.set("trust proxy", 1);
 app.use("/api/auth", isAuthenticated, auth);
 app.use("/api/rides", verifyAccessToken, ride);
 app.use("/api/user", verifyAccessToken, user);
+app.use("/api/notifications", verifyAccessToken, notification);
+app.use("/api/conversations", verifyAccessToken, conversation);
 
 
 

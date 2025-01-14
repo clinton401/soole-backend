@@ -71,6 +71,27 @@ exports.RideStructure = {
             type: Number,
             required: false,
         },
+        // Missing properties added below
+        userAvatarUrl: {
+            description: "Avatar URL of the user",
+            type: String,
+            required: false,
+        },
+        userFirstName: {
+            description: "First Name of the user",
+            type: String,
+            required: false,
+        },
+        userLastName: {
+            description: "Last Name of the user",
+            type: String,
+            required: false,
+        },
+        userUsername: {
+            description: "Username of the user",
+            type: String,
+            required: false,
+        },
     },
 };
 exports.rideModel = (0, config_1.createRowSchema)(exports.RideStructure);

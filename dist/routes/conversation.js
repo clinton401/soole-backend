@@ -1,0 +1,13 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const conversations_controllers_1 = require("../controllers/conversations-controllers");
+const conversation = (0, express_1.Router)();
+conversation.get("/", conversations_controllers_1.getUserConversations);
+conversation.post("/create", conversations_controllers_1.createConversation);
+conversation.post("/:id/messages/create", conversations_controllers_1.createMessage);
+conversation.get("/:id/messages", conversations_controllers_1.getConversationMessages);
+conversation.post("/:convoId/messages/:id/read", conversations_controllers_1.markMessageAsRead);
+conversation.delete("/:id/delete", conversations_controllers_1.deleteConversation);
+conversation.post("/:id/read", conversations_controllers_1.markConversationAsRead);
+exports.default = conversation;

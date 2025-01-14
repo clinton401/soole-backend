@@ -12,9 +12,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRide = exports.requestRide = exports.cancelRideDriver = exports.cancelRidePassenger = exports.searchRides = exports.createRide = void 0;
+exports.rejectRideRequest = exports.acceptRideRequest = exports.getRide = exports.requestRide = exports.cancelRideDriver = exports.cancelRidePassenger = exports.getRides = exports.searchRides = exports.createRide = void 0;
 const http_errors_1 = __importDefault(require("http-errors"));
 const ride_1 = require("../nobox/record-structures/ride");
+const user_1 = require("../nobox/record-structures/user");
+const notification_1 = require("../nobox/record-structures/notification");
 const variables_1 = require("../lib/variables");
 const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -27,8 +29,13 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             return next((0, http_errors_1.default)(401, "Unauthorized. Please log in to create a ride."));
         }
         const validNumberOfSeats = Number(numberOfSeats);
-        if (!validNumberOfSeats)
-            return next((0, http_errors_1.default)(400, "Number of seats is required."));
+        if (isNaN(validNumberOfSeats) || validNumberOfSeats <= 0) {
+            return next((0, http_errors_1.default)(400, "Number of seats is required and must be greater than 0."));
+        }
+        // if (!validNumberOfSeats) return next(createError(400, "Number of seats is required."))
+        const user = yield user_1.UserModel.findOne({ id: userId }, {});
+        if (!user)
+            return next((0, http_errors_1.default)(404, "User not found."));
         const ride = yield ride_1.rideModel.insertOne({
             userId,
             from: from.toLowerCase(),
@@ -42,7 +49,11 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             numberOfSeats: validNumberOfSeats,
             pricePerSeat,
             status: "ACTIVE",
-            passengers: []
+            passengers: [],
+            userAvatarUrl: user.avatarUrl,
+            userFirstName: user.firstName,
+            userLastName: user.lastName,
+            userUsername: user.username,
         });
         if (!ride) {
             return next((0, http_errors_1.default)(500, "Failed to create the ride."));
@@ -108,6 +119,36 @@ const searchRides = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
     }
 });
 exports.searchRides = searchRides;
+const getRides = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { filter } = req.query;
+    const validFilters = ['active', 'completed', 'cancelled'];
+    const selectedFilter = validFilters.includes(filter === null || filter === void 0 ? void 0 : filter.toLowerCase()) ? filter.toLowerCase() : 'active';
+    const filterVariable = selectedFilter.toUpperCase();
+    const userId = req.userId;
+    if (!userId)
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    ;
+    try {
+        const rides = yield ride_1.rideModel.find({
+            status: filterVariable
+        }, {
+            pagination: {
+                limit: 20,
+                page: 1,
+            }
+        });
+        res.status(200).json({
+            success: true,
+            message: "Rides found successfully.",
+            rides
+        });
+    }
+    catch (error) {
+        console.error(`Unable to get rides: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.getRides = getRides;
 const cancelRidePassenger = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.userId;
     const id = req.params.id;
@@ -179,7 +220,13 @@ const requestRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
     if (!userId)
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     try {
-        const ride = yield ride_1.rideModel.findOne({ id });
+        const [user, ride] = yield Promise.all([
+            user_1.UserModel.findOne({ id: userId }, {}),
+            ride_1.rideModel.findOne({ id }, {}),
+        ]);
+        // const ride = await rideModel.findOne({ id });
+        if (!user)
+            return next((0, http_errors_1.default)(404, "User not found."));
         if (!ride)
             return next((0, http_errors_1.default)(404, "Ride not found."));
         if (ride.userId === userId)
@@ -187,18 +234,35 @@ const requestRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         const amountOfSeatsLeft = ride.numberOfSeats - validSeats;
         if (amountOfSeatsLeft < 0)
             return next((0, http_errors_1.default)(400, "Requested seats exceed the available seats."));
-        const newPassengers = [...ride.passengers, { id: userId, seats: validSeats }];
-        const newNoOfSeats = amountOfSeatsLeft;
-        const updatedRide = yield ride_1.rideModel.updateOneById(ride.id, {
-            passengers: newPassengers,
-            numberOfSeats: newNoOfSeats,
-        });
-        if (!updatedRide)
-            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        const params = {
+            userId: ride.userId,
+            type: notification_1.NotificationType.RIDE_REQUEST,
+            from: ride.from,
+            to: ride.to,
+            triggeredById: userId,
+            seats: validSeats,
+            isRead: false,
+            rideId: id,
+            triggeredByAvatarUrl: user.avatarUrl,
+            triggeredByFirstName: user.firstName,
+            triggeredByLastName: user.lastName,
+            triggeredByUsername: user.username,
+        };
+        const existingRequest = yield notification_1.NotificationModel.findOne({
+            userId: ride.userId,
+            type: notification_1.NotificationType.RIDE_REQUEST,
+            triggeredById: userId,
+            from: ride.from,
+            to: ride.to,
+            rideId: id
+        }, {});
+        if (existingRequest)
+            return next((0, http_errors_1.default)(400, "You have already requested this ride. Please wait for the driver's response."));
+        yield notification_1.NotificationModel.insertOne(params);
         res.status(200).json({
             status: "success",
-            message: "Ride requested successfully.",
-            ride: updatedRide
+            message: "Ride request sent successfully. You will be notified once the driver responds.",
+            // ride: updatedRide
         });
     }
     catch (error) {
@@ -224,3 +288,120 @@ const getRide = (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
     }
 });
 exports.getRide = getRide;
+const acceptRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { passengerId, notificationId } = req.body;
+    const driverId = req.userId;
+    const rideId = req.params.id;
+    if (!driverId)
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    if (!passengerId || !notificationId)
+        return next((0, http_errors_1.default)(400, "The 'passengerId'  and 'notificationId' field is required in the request body."));
+    try {
+        const [notification, passenger, driver, ride] = yield Promise.all([
+            notification_1.NotificationModel.findOne({ id: notificationId }, {}),
+            user_1.UserModel.findOne({ id: passengerId }, {}),
+            user_1.UserModel.findOne({ id: driverId }, {}),
+            ride_1.rideModel.findOne({ id: rideId }, {}),
+        ]);
+        if (!notification)
+            return next((0, http_errors_1.default)(404, "Notification not found."));
+        if (!passenger)
+            return next((0, http_errors_1.default)(404, "Passenger not found."));
+        if (!driver)
+            return next((0, http_errors_1.default)(404, "Driver not found."));
+        if (!ride)
+            return next((0, http_errors_1.default)(404, "Ride not found."));
+        if (notification.type !== notification_1.NotificationType.RIDE_REQUEST) {
+            return next((0, http_errors_1.default)(400, "You can only accept  notifications of type 'RIDE_REQUEST'."));
+        }
+        if (ride.userId !== driverId)
+            return next((0, http_errors_1.default)(403, "You can't accept this ride because you're not the driver."));
+        const validSeats = notification.seats;
+        const amountOfSeatsLeft = ride.numberOfSeats - validSeats;
+        if (amountOfSeatsLeft < 0)
+            return next((0, http_errors_1.default)(400, "Requested seats exceed the available seats."));
+        const newPassengers = [...ride.passengers, { id: passengerId, seats: validSeats }];
+        const newNoOfSeats = amountOfSeatsLeft;
+        const updatedRide = yield ride_1.rideModel.updateOneById(ride.id, {
+            passengers: newPassengers,
+            numberOfSeats: newNoOfSeats,
+        });
+        if (!updatedRide)
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        yield notification_1.NotificationModel.insertOne({
+            userId: passengerId,
+            type: notification_1.NotificationType.RIDE_ACCEPTED,
+            from: notification.from,
+            to: notification.to,
+            triggeredById: driverId,
+            seats: notification.seats,
+            isRead: false,
+            rideId,
+            triggeredByAvatarUrl: driver.avatarUrl,
+            triggeredByFirstName: driver.firstName,
+            triggeredByLastName: driver.lastName,
+            triggeredByUsername: driver.username,
+        });
+        yield notification_1.NotificationModel.deleteOneById(notification.id);
+        res.status(200).json({
+            status: "success",
+            message: "Ride accepted successfully."
+        });
+    }
+    catch (error) {
+        console.error(`Unable to accept ride request: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.acceptRideRequest = acceptRideRequest;
+const rejectRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { notificationId, passengerId } = req.body;
+    const driverId = req.userId;
+    const rideId = req.params.id;
+    if (!driverId)
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    if (!passengerId || !notificationId)
+        return next((0, http_errors_1.default)(400, "The 'passengerId'  and 'notificationId' field is required in the request body."));
+    try {
+        const [notification, ride, driver] = yield Promise.all([
+            notification_1.NotificationModel.findOne({ id: notificationId }, {}),
+            ride_1.rideModel.findOne({ id: rideId }, {}),
+            user_1.UserModel.findOne({ id: driverId }, {})
+        ]);
+        if (!notification)
+            return next((0, http_errors_1.default)(404, "Notification not found."));
+        if (!ride)
+            return next((0, http_errors_1.default)(404, "Ride not found."));
+        if (!driver)
+            return next((0, http_errors_1.default)(404, "Driver not found."));
+        if (notification.type !== notification_1.NotificationType.RIDE_REQUEST) {
+            return next((0, http_errors_1.default)(400, "You can only reject  notifications of type 'RIDE_REQUEST'."));
+        }
+        if (ride.userId !== driverId)
+            return next((0, http_errors_1.default)(403, "You can't reject this ride because you're not the driver."));
+        yield notification_1.NotificationModel.insertOne({
+            userId: passengerId,
+            type: notification_1.NotificationType.RIDE_REJECTED,
+            from: notification.from,
+            to: notification.to,
+            triggeredById: driverId,
+            seats: notification.seats,
+            isRead: false,
+            rideId,
+            triggeredByAvatarUrl: driver.avatarUrl,
+            triggeredByFirstName: driver.firstName,
+            triggeredByLastName: driver.lastName,
+            triggeredByUsername: driver.username,
+        });
+        yield notification_1.NotificationModel.deleteOneById(notification.id);
+        res.status(200).json({
+            status: "success",
+            message: "Ride rejected successfully.",
+        });
+    }
+    catch (error) {
+        console.error(`Unable to reject ride request: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.rejectRideRequest = rejectRideRequest;
