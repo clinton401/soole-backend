@@ -116,11 +116,24 @@ const updateUserDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, 
         const validatedData = index_1.UpdateProfileSchema.parse(values);
         if (!validatedData || Object.keys(validatedData).length < 1)
             return next((0, http_errors_1.default)(400, "At least one field must be provided."));
+        if (validatedData.phone) {
+            const phoneExists = yield user_1.UserModel.findOne({ phone: validatedData.phone });
+            if (phoneExists) {
+                return next((0, http_errors_1.default)(400, "Phone number already exists."));
+            }
+        }
+        if (validatedData.email) {
+            const emailExists = yield user_1.UserModel.findOne({ email: validatedData.email.toLowerCase() });
+            if (emailExists) {
+                return next((0, http_errors_1.default)(400, "Email already exists."));
+            }
+        }
         const fieldsToUpdate = Object.fromEntries(Object.entries(validatedData).filter(([key, value]) => value !== undefined));
+        const validFields = Object.assign(Object.assign(Object.assign({}, fieldsToUpdate), (validatedData.email ? { email: validatedData.email.toLowerCase() } : {})), (validatedData.username ? { username: validatedData.username.toLowerCase() } : {}));
         const user = yield user_1.UserModel.findOne({ id: userId }, {});
         if (!user)
             return next((0, http_errors_1.default)(404, "User not found."));
-        const updatedUser = yield user_1.UserModel.updateOneById(userId, fieldsToUpdate);
+        const updatedUser = yield user_1.UserModel.updateOneById(userId, validFields);
         if (!updatedUser)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         res.status(200).json({

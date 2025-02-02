@@ -37,6 +37,8 @@ const zod_1 = require("zod");
 const password_utils_1 = require("../lib/password-utils");
 const access_tokens_1 = require("../middlewares/access-tokens");
 const reset_code_1 = require("../nobox/record-structures/reset-code");
+const wallet_1 = require("../nobox/record-structures/wallet");
+const wallet_2 = require("../data/wallet");
 (0, dotenv_1.config)();
 const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const values = req.body;
@@ -53,6 +55,10 @@ const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         const user = yield user_1.UserModel.insertOne(Object.assign(Object.assign({}, validatedFields.data), { isNumberVerified: false }));
         if (!user)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        const walletExists = yield (0, wallet_2.findWalletByUserId)(user.id);
+        if (!walletExists) {
+            yield (0, wallet_2.createWallet)(user.id, wallet_1.WalletType.USER);
+        }
         const params = {
             userId: user.id,
         };
@@ -207,7 +213,7 @@ const completeProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
             return next((0, http_errors_1.default)(400, "Email already registered. Please use a different one"));
         const { confirmPassword } = validatedData, cleanedData = __rest(validatedData, ["confirmPassword"]);
         const hashedPassword = yield (0, password_utils_1.hashPassword)(cleanedData.password);
-        const dataToBeUpdated = Object.assign(Object.assign({}, cleanedData), { password: hashedPassword });
+        const dataToBeUpdated = Object.assign(Object.assign({}, cleanedData), { email: validatedData.email.toLowerCase(), username: validatedData.username.toLowerCase(), password: hashedPassword });
         const updatedUser = yield user_1.UserModel.updateOneById(userId, dataToBeUpdated);
         if (!updatedUser)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
@@ -248,7 +254,7 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
         };
         user = yield user_1.UserModel.findOne({ phone: contactInfo }, {});
         if (!user) {
-            user = yield user_1.UserModel.findOne({ email: contactInfo }, {});
+            user = yield user_1.UserModel.findOne({ email: contactInfo.toLowerCase() }, {});
         }
         if (!user) {
             return next((0, http_errors_1.default)(400, "User not found. Check phone number or email and try again."));
@@ -278,7 +284,7 @@ const sendResetCode = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         let user;
         user = yield user_1.UserModel.findOne({ phone: contactInfo }, {});
         if (!user) {
-            user = yield user_1.UserModel.findOne({ email: contactInfo }, {});
+            user = yield user_1.UserModel.findOne({ email: contactInfo.toLowerCase() }, {});
         }
         if (!user) {
             return next((0, http_errors_1.default)(400, "User not found. Check phone number or email and try again."));

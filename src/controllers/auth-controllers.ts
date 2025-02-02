@@ -12,6 +12,8 @@ import { ZodError } from "zod";
 import { hashPassword, validatePassword } from "../lib/password-utils";
 import { generateAccessToken } from "../middlewares/access-tokens";
 import { ResetCodeModel } from "../nobox/record-structures/reset-code";
+import { WalletModel, WalletStatus, WalletType } from "../nobox/record-structures/wallet";
+import {  findWalletByUserId, createWallet } from "../data/wallet";
 
 
 config();
@@ -40,6 +42,13 @@ export const register = async (
     const user = await UserModel.insertOne({ ...validatedFields.data, isNumberVerified: false });
 
     if (!user) return next(createError(500, unknown_error));
+
+    const walletExists = await findWalletByUserId(user.id);
+    if (!walletExists) {
+      await createWallet(user.id, WalletType.USER)
+     
+    }
+
     const params = {
       userId: user.id,
     };
@@ -193,6 +202,8 @@ export const completeProfile = async (req: Request, res: Response, next: NextFun
     const hashedPassword = await hashPassword(cleanedData.password)
     const dataToBeUpdated = {
       ...cleanedData,
+      email: validatedData.email.toLowerCase(),
+      username: validatedData.username.toLowerCase(),
       password: hashedPassword
     }
     const updatedUser = await UserModel.updateOneById(userId, dataToBeUpdated);
@@ -240,7 +251,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     };
     user = await UserModel.findOne({ phone: contactInfo }, {});
     if (!user) {
-      user = await UserModel.findOne({ email: contactInfo }, {})
+      user = await UserModel.findOne({ email: contactInfo.toLowerCase() }, {})
     }
 
     if (!user) {
@@ -274,7 +285,7 @@ export const sendResetCode = async (req: Request, res: Response, next: NextFunct
     } | null;
     user = await UserModel.findOne({ phone: contactInfo }, {});
     if (!user) {
-      user = await UserModel.findOne({ email: contactInfo }, {})
+      user = await UserModel.findOne({ email: contactInfo.toLowerCase() }, {})
     }
     if (!user) {
       return next(createError(400, "User not found. Check phone number or email and try again."))

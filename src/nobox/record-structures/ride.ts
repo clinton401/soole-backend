@@ -5,11 +5,12 @@ interface Ride {
   userId: string;
   from: string;
   to: string;
-  status: "ACTIVE" | "CANCELLED" | "COMPLETED";
+  status: "ACTIVE"| "ONGOING" | "CANCELLED" | "COMPLETED";
   date?: string;
   passengers: {
     seats: number;
     id: string;
+    completed: boolean;
   }[];
   userAvatarUrl?: string;
   userFirstName?: string;
@@ -20,9 +21,8 @@ interface Ride {
   vehicleModel?: string;
   color?: string;
   plateNumber?: string;
-  // changed the numberOfSeats to number also made it required
   numberOfSeats: number;
-  pricePerSeat?: number;
+  pricePerSeat: number;
 }
 
 export const RideStructure: Space<Ride> = {
@@ -92,7 +92,7 @@ export const RideStructure: Space<Ride> = {
     pricePerSeat: {
       description: "Price Per Seat",
       type: Number,
-      required: false,
+      required: true,
     },
     // Missing properties added below
     userAvatarUrl: {

@@ -18,3 +18,4 @@ const notFound = (req, res, next) => {
     return next((0, http_errors_1.default)(404, "No route matches your request"));
 };
 exports.notFound = notFound;
+;

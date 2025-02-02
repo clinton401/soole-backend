@@ -94,13 +94,31 @@ export const updateUserDetails = async (req: Request, res: Response, next: NextF
 
         if (!validatedData || Object.keys(validatedData).length < 1) return next(createError(400, "At least one field must be provided."));
 
+        if (validatedData.phone) {
+            const phoneExists = await UserModel.findOne({ phone: validatedData.phone });
+            if (phoneExists) {
+                return next(createError(400, "Phone number already exists."));
+            }
+        }
+        if (validatedData.email) {
+            const emailExists = await UserModel.findOne({ email: validatedData.email.toLowerCase() });
+            if (emailExists) {
+                return next(createError(400, "Email already exists."));
+            }
+        }
+
         const fieldsToUpdate = Object.fromEntries(
             Object.entries(validatedData).filter(([key, value]) => value !== undefined)
         );
+        const validFields = {
+            ...fieldsToUpdate,
+            ...(validatedData.email ? { email: validatedData.email.toLowerCase() } : {}),
+            ...(validatedData.username ? { username: validatedData.username.toLowerCase() } : {}),
 
+        }
         const user = await UserModel.findOne({ id: userId }, {});
         if (!user) return next(createError(404, "User not found."));
-        const updatedUser = await UserModel.updateOneById(userId, fieldsToUpdate);
+        const updatedUser = await UserModel.updateOneById(userId, validFields);
         if (!updatedUser) return next(createError(500, unknown_error));
         res.status(200).json({
             status: "success",

@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateOneById = exports.findMany = exports.findUnique = exports.insertNewMessage = void 0;
 const message_1 = require("../nobox/record-structures/message");
+const utils_1 = require("../lib/utils");
 const insertNewMessage = (conversationId, senderId, receiverId, content) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const newConversation = yield message_1.MessageModel.insertOne({
@@ -39,17 +40,7 @@ const findUnique = (id) => __awaiter(void 0, void 0, void 0, function* () {
 exports.findUnique = findUnique;
 const findMany = (conversationId) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const options = {
-            paramRelationship: 'And',
-            pagination: {
-                limit: 20,
-                page: 1,
-            },
-            sort: {
-                by: "createdAt",
-                order: "desc",
-            },
-        };
+        const options = (0, utils_1.paginationOptions)();
         const messages = yield message_1.MessageModel.find({ conversationId }, options);
         return messages;
     }

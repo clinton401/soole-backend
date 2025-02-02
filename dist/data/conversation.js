@@ -10,19 +10,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.findUnique = exports.insertNewConversation = exports.getUserTotalConversations = void 0;
+const utils_1 = require("../lib/utils");
 const conversation_1 = require("../nobox/record-structures/conversation");
 const getUserTotalConversations = (userId) => __awaiter(void 0, void 0, void 0, function* () {
-    const options = {
-        pagination: {
-            limit: 20,
-            page: 1,
-        },
-        sort: {
-            by: "createdAt",
-            order: "desc",
-        },
-    };
     try {
+        const options = (0, utils_1.paginationOptions)();
         const convo1 = yield conversation_1.ConversationModel.find({ participant1Id: userId }, options);
         const convo2 = yield conversation_1.ConversationModel.find({ participant2Id: userId }, options);
         const totalConvo = [...convo1, ...convo2];

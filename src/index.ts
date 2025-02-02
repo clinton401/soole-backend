@@ -1,20 +1,9 @@
-import express, { Request, Response } from "express";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import { config } from "dotenv";
-import auth from "./routes/auth";
-import ride from "./routes/ride";
-import user from "./routes/user";
-import { foundError, notFound } from "./controllers/error-controllers";
-import {
-  isAuthenticated,
-  verifyAccessToken,
-} from "./middlewares/access-tokens";
-import {uploadImage} from "./controllers/auth-controllers";
-import upload from "./middlewares/upload"
-import notification from "./routes/notification";
-import conversation from "./routes/conversation";
-import createHardcodedUser from "./init";
+import api from "./api";
 
+import { foundError, notFound } from "./controllers/error-controllers";
 config();
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -30,19 +19,14 @@ app.set("trust proxy", 1);
 // createHardcodedUser();
 // app.use(express.static(path.join(__dirname, '../frontend')));
 
-app.use("/api/auth", isAuthenticated, auth);
-app.use("/api/rides", verifyAccessToken, ride);
-app.use("/api/user", verifyAccessToken, user);
-app.use("/api/notifications", verifyAccessToken, notification);
-app.use("/api/conversations", verifyAccessToken, conversation);
-
+app.use("/api", api)
 
 
 
 app.get("/",  (req: Request, res: Response) => {
   res.status(200).json({ message: "Welcome to the Soole backend" });
 });
-app.post("/api/upload-images",upload.single('image'),  uploadImage)
+
 app.all("*", notFound);
 app.use(foundError);
 

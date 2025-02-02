@@ -16,22 +16,13 @@ exports.readNotifications = exports.getNotifications = void 0;
 const notification_1 = require("../nobox/record-structures/notification");
 const http_errors_1 = __importDefault(require("http-errors"));
 const variables_1 = require("../lib/variables");
+const utils_1 = require("../lib/utils");
 const getNotifications = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.userId;
     if (!userId)
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     try {
-        const options = {
-            pagination: {
-                limit: 30,
-                page: 1,
-            },
-            sort: {
-                by: "createdAt",
-                order: "desc",
-            },
-        };
-        const notifications = yield notification_1.NotificationModel.find({ userId }, options);
+        const notifications = yield notification_1.NotificationModel.find({ userId }, (0, utils_1.paginationOptions)());
         res.status(200).json({
             success: true,
             message: "Notifications found successfully.",

@@ -18,3 +18,4 @@ export const foundError = (
 export const notFound = (req: Request, res: Response, next: NextFunction) => {
   return next(createError(404, "No route matches your request"));
 };
+;

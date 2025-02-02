@@ -1,23 +1,10 @@
-
+import {paginationOptions} from "../lib/utils"
 import { ConversationModel } from "../nobox/record-structures/conversation";
 
 export const getUserTotalConversations = async (userId: string) => {
-    type SortOptions = {
-        by: "createdAt" | "id" | "updatedAt";
-        order: "asc" | "desc";
-    };
-
-    const options = {
-        pagination: {
-            limit: 20,
-            page: 1,
-        },
-        sort: {
-            by: "createdAt",
-            order: "desc",
-        } as SortOptions,
-    };
+    
     try {
+        const options = paginationOptions()
         const convo1 = await ConversationModel.find({ participant1Id: userId }, options);
         const convo2 = await ConversationModel.find({ participant2Id: userId }, options);
         const totalConvo = [...convo1, ...convo2];

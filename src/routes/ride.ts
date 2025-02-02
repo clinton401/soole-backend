@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createRide, searchRides, requestRide, cancelRideDriver, cancelRidePassenger, getRide, acceptRideRequest, rejectRideRequest, getRides } from "../controllers/ride-controller";
+import { createRide, searchRides, requestRide, cancelRideDriver, cancelRidePassenger, getRide, acceptRideRequest, rejectRideRequest, getRides, startRide, passengerConfirmCompletion, driverConfirmCompletion } from "../controllers/ride-controller";
 
 const ride = Router();
 
@@ -12,5 +12,11 @@ ride.post("/:id/request/accept", acceptRideRequest);
 ride.post("/:id/request/reject", rejectRideRequest);
 ride.post("/:id/cancel/driver", cancelRideDriver);
 ride.post("/:id/cancel/passenger", cancelRidePassenger);
+
+// new routes
+
+ride.post("/:id/start", startRide);
+ride.post("/:id/completed/passenger", passengerConfirmCompletion);
+ride.post("/:id/completed/driver", driverConfirmCompletion);
 
 export default ride;

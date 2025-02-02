@@ -1,5 +1,5 @@
 import { MessageModel } from "../nobox/record-structures/message";
-
+import {paginationOptions} from "../lib/utils"
 
 
 export const insertNewMessage = async (conversationId: string, senderId: string, receiverId: string, content: string) => {
@@ -27,22 +27,7 @@ export const findUnique = async (id: string) => {
 }
 export const findMany = async (conversationId: string) => {
     try {
-        type SortOptions = {
-            by: "createdAt" | "id" | "updatedAt";
-            order: "asc" | "desc";
-        };
-
-        const options = {
-            paramRelationship: 'And' as "And" | "Or" | undefined,
-            pagination: {
-                limit: 20,
-                page: 1,
-            },
-            sort: {
-                by: "createdAt",
-                order: "desc",
-            } as SortOptions,
-        };
+        const options = paginationOptions()
 
         const messages = await MessageModel.find({ conversationId }, options);
         return messages;

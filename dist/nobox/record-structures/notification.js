@@ -6,7 +6,12 @@ var NotificationType;
 (function (NotificationType) {
     NotificationType["RIDE_REQUEST"] = "RIDE_REQUEST";
     NotificationType["RIDE_ACCEPTED"] = "RIDE_ACCEPTED";
+    NotificationType["RIDE_STARTED"] = "RIDE_STARTED";
+    NotificationType["RIDE_COMPLETETED_DRIVER"] = "RIDE_COMPLETETED_DRIVER";
+    NotificationType["RIDE_COMPLETETED_PASSENGER"] = "RIDE_COMPLETETED_PASSENGER";
     NotificationType["RIDE_REJECTED"] = "RIDE_REJECTED";
+    NotificationType["RIDE_CANCELLED_BY_DRIVER"] = "RIDE_CANCELLED_BY_DRIVER";
+    NotificationType["RIDE_CANCELLED_BY_PASSENGER"] = "RIDE_CANCELLED_BY_PASSENGER";
 })(NotificationType || (exports.NotificationType = NotificationType = {}));
 exports.NotificationStructure = {
     space: "Notification",

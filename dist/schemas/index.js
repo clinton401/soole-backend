@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UpdateProfileSchema = exports.ScheduleTripSchema = exports.CompleteProfileSchema = exports.OtpSchema = exports.RegisterSchema = void 0;
+exports.RegisterAdminSchema = exports.UpdateProfileSchema = exports.ScheduleTripSchema = exports.CompleteProfileSchema = exports.OtpSchema = exports.RegisterSchema = void 0;
 const zod_1 = require("zod");
 exports.RegisterSchema = zod_1.z.object({
     phone: zod_1.z
@@ -185,3 +185,27 @@ exports.UpdateProfileSchema = zod_1.z
         .min(1, { message: "Avatar public ID must not be empty if provided." })
         .optional(),
 }).optional();
+exports.RegisterAdminSchema = zod_1.z.object({
+    username: zod_1.z
+        .string()
+        .trim()
+        .min(3, { message: "Username must be at least 3 characters long." })
+        .max(50, { message: "Username must not exceed 50 characters." }),
+    workEmail: zod_1.z
+        .string()
+        .trim()
+        .email({ message: "Invalid  email format." }),
+    personalEmail: zod_1.z
+        .string()
+        .trim()
+        .email({ message: "Invalid  email format." }),
+    password: zod_1.z
+        .string()
+        .trim()
+        .min(6, { message: "Password must be at least 6 characters long." }),
+    phone: zod_1.z
+        .string()
+        .regex(/^\d+$/, { message: "Phone number must contain only digits." })
+        .min(10, { message: "Phone number must be at least 10 digits long." })
+        .max(15, { message: "Phone number must not exceed 15 digits." }),
+});

@@ -1,0 +1,49 @@
+import { Space } from "nobox-client";
+import { createRowSchema } from "../config";
+
+export interface Admin {
+  phone: string;
+  username: string;
+  password: string;
+  workEmail: string;
+  personalEmail: string;
+}
+
+export const AdminStructure: Space<Admin> = {
+  space: "Admin",
+  description: "A Record Space for admins",
+  structure: {
+    phone: {
+      description: "Admin's Phone Number",
+      required: true,
+      type: String,
+    },
+    password: {
+      description: "Admin's Password",
+      required: true,
+      type: String,
+      // hashed: true
+    },
+    
+   
+   
+    workEmail: {
+      description: "Admin's Work Email Address",
+      required: true,
+      type: String,
+    },
+    personalEmail: {
+      description: "Admin's Personal Email Address",
+      required: true,
+      type: String,
+    },
+    username: {
+        description: "Admin username",
+        required: true,
+        type: String
+    }
+    
+  },
+};
+
+export const AdminModel = createRowSchema<Admin>(AdminStructure);

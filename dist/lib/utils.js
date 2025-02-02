@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
+exports.hasSufficientBalance = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
 const validator_1 = __importDefault(require("validator"));
 const errorHandler = (error, code) => {
     return {
@@ -81,3 +81,40 @@ const validateExpiryDate = (expiryDate) => {
     return;
 };
 exports.validateExpiryDate = validateExpiryDate;
+const zodErrorHandler = (err) => {
+    const errors = err.errors.map((e) => ({
+        path: e.path.join("."),
+        message: e.message,
+    }));
+    return errors;
+};
+exports.zodErrorHandler = zodErrorHandler;
+const hasAtLeastOneProperty = (obj) => {
+    return Object.keys(obj).length > 0;
+};
+exports.hasAtLeastOneProperty = hasAtLeastOneProperty;
+function isValidNumber(value) {
+    const parsed = Number(value);
+    return !isNaN(parsed) && parsed >= 1;
+}
+exports.isValidNumber = isValidNumber;
+const hasDecimal = (num) => !Number.isInteger(num);
+exports.hasDecimal = hasDecimal;
+const paginationOptions = () => {
+    const options = {
+        pagination: {
+            limit: 25,
+            page: 1,
+        },
+        sort: {
+            by: "createdAt",
+            order: "desc",
+        },
+    };
+    return options;
+};
+exports.paginationOptions = paginationOptions;
+const hasSufficientBalance = (balance, rideCost) => {
+    return balance >= rideCost;
+};
+exports.hasSufficientBalance = hasSufficientBalance;

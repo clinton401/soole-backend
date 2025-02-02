@@ -12,12 +12,16 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.rejectRideRequest = exports.acceptRideRequest = exports.getRide = exports.requestRide = exports.cancelRideDriver = exports.cancelRidePassenger = exports.getRides = exports.searchRides = exports.createRide = void 0;
+exports.driverConfirmCompletion = exports.passengerConfirmCompletion = exports.startRide = exports.rejectRideRequest = exports.acceptRideRequest = exports.getRide = exports.requestRide = exports.cancelRideDriver = exports.cancelRidePassenger = exports.getRides = exports.searchRides = exports.createRide = void 0;
 const http_errors_1 = __importDefault(require("http-errors"));
 const ride_1 = require("../nobox/record-structures/ride");
 const user_1 = require("../nobox/record-structures/user");
+const wallet_1 = require("../nobox/record-structures/wallet");
 const notification_1 = require("../nobox/record-structures/notification");
 const variables_1 = require("../lib/variables");
+const payout_1 = require("../nobox/record-structures/payout");
+const wallet_2 = require("../data/wallet");
+const utils_1 = require("../lib/utils");
 const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { from, to, date, estimatedTime, carImages, vehicleModel, color, plateNumber, numberOfSeats, pricePerSeat, } = req.body;
@@ -32,10 +36,19 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         if (isNaN(validNumberOfSeats) || validNumberOfSeats <= 0) {
             return next((0, http_errors_1.default)(400, "Number of seats is required and must be greater than 0."));
         }
+        if ((0, utils_1.hasDecimal)(validNumberOfSeats)) {
+            return next((0, http_errors_1.default)(400, "Invalid number of seats: Please enter a whole number without decimals."));
+        }
         // if (!validNumberOfSeats) return next(createError(400, "Number of seats is required."))
-        const user = yield user_1.UserModel.findOne({ id: userId }, {});
+        // const user = await UserModel.findOne({ id: userId }, {});
+        const [user, wallet] = yield Promise.all([
+            user_1.UserModel.findOne({ id: userId }, {}),
+            (0, wallet_2.findWalletByUserId)(userId, wallet_1.WalletType.DRIVER)
+        ]);
         if (!user)
             return next((0, http_errors_1.default)(404, "User not found."));
+        if (!wallet)
+            return next((0, http_errors_1.default)(400, "You need to create a driver's wallet before creating a ride."));
         const ride = yield ride_1.rideModel.insertOne({
             userId,
             from: from.toLowerCase(),
@@ -121,7 +134,7 @@ const searchRides = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
 exports.searchRides = searchRides;
 const getRides = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { filter } = req.query;
-    const validFilters = ['active', 'completed', 'cancelled'];
+    const validFilters = ['active', 'completed', 'cancelled', "ongoing"];
     const selectedFilter = validFilters.includes(filter === null || filter === void 0 ? void 0 : filter.toLowerCase()) ? filter.toLowerCase() : 'active';
     const filterVariable = selectedFilter.toUpperCase();
     const userId = req.userId;
@@ -133,7 +146,7 @@ const getRides = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             status: filterVariable
         }, {
             pagination: {
-                limit: 20,
+                limit: 25,
                 page: 1,
             }
         });
@@ -155,15 +168,31 @@ const cancelRidePassenger = (req, res, next) => __awaiter(void 0, void 0, void 0
     if (!userId)
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     try {
-        const ride = yield ride_1.rideModel.findOne({ id });
+        const [ride, user] = yield Promise.all([ride_1.rideModel.findOne({ id }), user_1.UserModel.findOne({ id: userId })]);
         if (!ride)
             return next((0, http_errors_1.default)(404, "Ride not found."));
-        const foundPassenger = ride.passengers.find(passenger => passenger.id === userId);
-        if (!foundPassenger) {
+        if (!user)
+            return next((0, http_errors_1.default)(404, "User not found."));
+        if (ride.status !== "ACTIVE") {
+            return next((0, http_errors_1.default)(400, "This ride is not active and cannot be cancelled."));
+        }
+        const foundPassengers = ride.passengers.filter(passenger => passenger.id === userId);
+        if (foundPassengers.length === 0) {
             return next((0, http_errors_1.default)(400, "You can't cancel this ride because you're not a passenger."));
         }
+        const wallet = yield (0, wallet_2.findWalletByUserId)(foundPassengers[0].id);
+        if (!wallet) {
+            return next((0, http_errors_1.default)(400, "No wallet found for this user"));
+        }
+        const refundAmount = foundPassengers.reduce((total, passenger) => total + passenger.seats * ride.pricePerSeat, 0);
+        // Refund passenger
+        const refundSuccess = yield (0, wallet_2.addToWallet)(wallet.id, refundAmount, wallet.balance);
+        if (!refundSuccess) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
         const newPassengers = ride.passengers.filter(passenger => passenger.id !== userId);
-        const newNoOfSeats = Math.max(ride.numberOfSeats + foundPassenger.seats, 0);
+        const totalSeatsToAdd = foundPassengers.reduce((total, passenger) => total + passenger.seats, 0);
+        const newNoOfSeats = Math.max(ride.numberOfSeats + totalSeatsToAdd, 0);
         const updatedRide = yield ride_1.rideModel.updateOneById(ride.id, {
             passengers: newPassengers,
             numberOfSeats: newNoOfSeats,
@@ -171,10 +200,35 @@ const cancelRidePassenger = (req, res, next) => __awaiter(void 0, void 0, void 0
         if (!updatedRide) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
+        yield notification_1.NotificationModel.insertOne({
+            userId: ride.userId,
+            type: notification_1.NotificationType.RIDE_CANCELLED_BY_PASSENGER,
+            from: ride.from,
+            to: ride.to,
+            triggeredById: user.id,
+            seats: totalSeatsToAdd,
+            isRead: false,
+            rideId: id,
+            triggeredByAvatarUrl: user.avatarUrl,
+            triggeredByFirstName: user.firstName,
+            triggeredByLastName: user.lastName,
+            triggeredByUsername: user.username,
+        });
+        const payouts = yield payout_1.PayoutModel.find({
+            userId: ride.userId,
+            requesterId: user.id,
+            rideId: ride.id
+        });
+        for (const payout of payouts) {
+            yield payout_1.PayoutModel.updateOneById(payout.id, {
+                status: payout_1.PayoutStatus.FAILED
+            });
+        }
         res.status(200).json({
             status: "success",
             message: "Ride successfully cancelled.",
             ride: updatedRide,
+            wallet: refundSuccess
         });
     }
     catch (error) {
@@ -189,14 +243,60 @@ const cancelRideDriver = (req, res, next) => __awaiter(void 0, void 0, void 0, f
     if (!driverId)
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     try {
-        const ride = yield ride_1.rideModel.findOne({ id });
+        const [ride, driver] = yield Promise.all([ride_1.rideModel.findOne({ id }), user_1.UserModel.findOne({ id: driverId })]);
         if (!ride)
             return next((0, http_errors_1.default)(404, "Ride not found."));
+        if (!driver)
+            return next((0, http_errors_1.default)(404, "User not found."));
+        if (ride.status !== "ACTIVE") {
+            return next((0, http_errors_1.default)(400, "This ride is not active and cannot be cancelled."));
+        }
         if (ride.userId !== driverId)
             return next((0, http_errors_1.default)(400, "You can't cancel this ride because you're not the driver."));
         const updatedRide = yield ride_1.rideModel.updateOneById(ride.id, { status: "CANCELLED" });
         if (!updatedRide)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        for (const passenger of ride.passengers) {
+            try {
+                const wallet = yield (0, wallet_2.findWalletByUserId)(passenger.id);
+                if (wallet) {
+                    const refundAmount = passenger.seats * ride.pricePerSeat;
+                    // Refund passenger
+                    const refundSuccess = yield (0, wallet_2.addToWallet)(wallet.id, refundAmount, wallet.balance);
+                    if (!refundSuccess) {
+                        console.error(`Failed to refund user ${passenger.id}`);
+                        continue;
+                    }
+                }
+                yield notification_1.NotificationModel.insertOne({
+                    userId: passenger.id,
+                    type: notification_1.NotificationType.RIDE_CANCELLED_BY_DRIVER,
+                    from: ride.from,
+                    to: ride.to,
+                    triggeredById: driverId,
+                    seats: passenger.seats,
+                    isRead: false,
+                    rideId: id,
+                    triggeredByAvatarUrl: driver.avatarUrl,
+                    triggeredByFirstName: driver.firstName,
+                    triggeredByLastName: driver.lastName,
+                    triggeredByUsername: driver.username,
+                });
+                const payouts = yield payout_1.PayoutModel.find({
+                    userId: driverId,
+                    requesterId: passenger.id,
+                    rideId: ride.id
+                });
+                for (const payout of payouts) {
+                    yield payout_1.PayoutModel.updateOneById(payout.id, {
+                        status: payout_1.PayoutStatus.FAILED
+                    });
+                }
+            }
+            catch (error) {
+                console.error(`Error processing passenger ${passenger.id}:`, error);
+            }
+        }
         res.status(200).json({
             status: "success",
             message: "Ride successfully cancelled.",
@@ -217,23 +317,37 @@ const requestRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
     if (isNaN(validSeats) || validSeats <= 0) {
         return next((0, http_errors_1.default)(400, "Number of seats is required and must be greater than 0."));
     }
+    if ((0, utils_1.hasDecimal)(validSeats)) {
+        return next((0, http_errors_1.default)(400, "Invalid number of seats: Please enter a whole number without decimals."));
+    }
     if (!userId)
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     try {
-        const [user, ride] = yield Promise.all([
+        const [user, ride, wallet] = yield Promise.all([
             user_1.UserModel.findOne({ id: userId }, {}),
             ride_1.rideModel.findOne({ id }, {}),
+            (0, wallet_2.findWalletByUserId)(userId)
         ]);
         // const ride = await rideModel.findOne({ id });
         if (!user)
             return next((0, http_errors_1.default)(404, "User not found."));
         if (!ride)
             return next((0, http_errors_1.default)(404, "Ride not found."));
+        if (ride.status !== "ACTIVE") {
+            return next((0, http_errors_1.default)(400, "This ride is not active and cannot be requested."));
+        }
+        if (!wallet)
+            return next((0, http_errors_1.default)(400, "You need to create a wallet before requesting a ride."));
         if (ride.userId === userId)
             return next((0, http_errors_1.default)(400, "You can't request this ride because you're the driver."));
         const amountOfSeatsLeft = ride.numberOfSeats - validSeats;
         if (amountOfSeatsLeft < 0)
             return next((0, http_errors_1.default)(400, "Requested seats exceed the available seats."));
+        const rideCost = ride.pricePerSeat * validSeats;
+        const isSufficient = (0, utils_1.hasSufficientBalance)(wallet.balance, rideCost);
+        if (!isSufficient) {
+            return next((0, http_errors_1.default)(400, "Insufficient balance. Please fund your wallet."));
+        }
         const params = {
             userId: ride.userId,
             type: notification_1.NotificationType.RIDE_REQUEST,
@@ -258,7 +372,26 @@ const requestRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         }, {});
         if (existingRequest)
             return next((0, http_errors_1.default)(400, "You have already requested this ride. Please wait for the driver's response."));
-        yield notification_1.NotificationModel.insertOne(params);
+        const newNotification = yield notification_1.NotificationModel.insertOne(params);
+        if (!newNotification) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        yield (0, wallet_2.payForRide)(wallet.id, rideCost, wallet.balance);
+        const userName = `${user.firstName} ${user.lastName}`;
+        const payout = yield payout_1.PayoutModel.insertOne({
+            userId: ride.userId,
+            requesterId: userId,
+            pickupLocation: ride.from,
+            dropoffLocation: ride.to,
+            amount: rideCost,
+            userName,
+            rideId: ride.id,
+            status: payout_1.PayoutStatus.PENDING,
+            type: payout_1.PayoutType.RIDE_PAYMENT
+        });
+        if (!payout) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
         res.status(200).json({
             status: "success",
             message: "Ride request sent successfully. You will be notified once the driver responds.",
@@ -311,6 +444,9 @@ const acceptRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
             return next((0, http_errors_1.default)(404, "Driver not found."));
         if (!ride)
             return next((0, http_errors_1.default)(404, "Ride not found."));
+        if (ride.status !== "ACTIVE") {
+            return next((0, http_errors_1.default)(400, "You can only accept requests for active rides."));
+        }
         if (notification.type !== notification_1.NotificationType.RIDE_REQUEST) {
             return next((0, http_errors_1.default)(400, "You can only accept  notifications of type 'RIDE_REQUEST'."));
         }
@@ -320,7 +456,10 @@ const acceptRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
         const amountOfSeatsLeft = ride.numberOfSeats - validSeats;
         if (amountOfSeatsLeft < 0)
             return next((0, http_errors_1.default)(400, "Requested seats exceed the available seats."));
-        const newPassengers = [...ride.passengers, { id: passengerId, seats: validSeats }];
+        const newPassengers = [...ride.passengers, {
+                id: passengerId, seats: validSeats,
+                completed: false
+            }];
         const newNoOfSeats = amountOfSeatsLeft;
         const updatedRide = yield ride_1.rideModel.updateOneById(ride.id, {
             passengers: newPassengers,
@@ -328,7 +467,7 @@ const acceptRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
         });
         if (!updatedRide)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
-        yield notification_1.NotificationModel.insertOne({
+        const newNotification = yield notification_1.NotificationModel.insertOne({
             userId: passengerId,
             type: notification_1.NotificationType.RIDE_ACCEPTED,
             from: notification.from,
@@ -342,10 +481,14 @@ const acceptRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
             triggeredByLastName: driver.lastName,
             triggeredByUsername: driver.username,
         });
+        if (!newNotification) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        ;
         yield notification_1.NotificationModel.deleteOneById(notification.id);
         res.status(200).json({
             status: "success",
-            message: "Ride accepted successfully."
+            message: "Ride accepted successfully.",
         });
     }
     catch (error) {
@@ -374,12 +517,25 @@ const rejectRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
             return next((0, http_errors_1.default)(404, "Ride not found."));
         if (!driver)
             return next((0, http_errors_1.default)(404, "Driver not found."));
+        if (ride.status !== "ACTIVE") {
+            return next((0, http_errors_1.default)(400, "You can only reject requests for active rides."));
+        }
         if (notification.type !== notification_1.NotificationType.RIDE_REQUEST) {
             return next((0, http_errors_1.default)(400, "You can only reject  notifications of type 'RIDE_REQUEST'."));
         }
         if (ride.userId !== driverId)
             return next((0, http_errors_1.default)(403, "You can't reject this ride because you're not the driver."));
-        yield notification_1.NotificationModel.insertOne({
+        const wallet = yield (0, wallet_2.findWalletByUserId)(notification.triggeredById);
+        if (!wallet) {
+            return next((0, http_errors_1.default)(400, "No wallet found for this user"));
+        }
+        const refundAmount = notification.seats * ride.pricePerSeat;
+        // Refund passenger
+        const refundSuccess = yield (0, wallet_2.addToWallet)(wallet.id, refundAmount, wallet.balance);
+        if (!refundSuccess) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        const newNotification = yield notification_1.NotificationModel.insertOne({
             userId: passengerId,
             type: notification_1.NotificationType.RIDE_REJECTED,
             from: notification.from,
@@ -393,6 +549,19 @@ const rejectRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
             triggeredByLastName: driver.lastName,
             triggeredByUsername: driver.username,
         });
+        if (!newNotification) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        const payouts = yield payout_1.PayoutModel.find({
+            userId: ride.userId,
+            requesterId: notification.triggeredById,
+            rideId: ride.id
+        });
+        for (const payout of payouts) {
+            yield payout_1.PayoutModel.updateOneById(payout.id, {
+                status: payout_1.PayoutStatus.FAILED
+            });
+        }
         yield notification_1.NotificationModel.deleteOneById(notification.id);
         res.status(200).json({
             status: "success",
@@ -405,3 +574,202 @@ const rejectRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
     }
 });
 exports.rejectRideRequest = rejectRideRequest;
+const startRide = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.params.id;
+    const driverId = req.userId;
+    if (!driverId) {
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    }
+    try {
+        const [ride, driver] = yield Promise.all([ride_1.rideModel.findOne({ id }), user_1.UserModel.findOne({ id: driverId })]);
+        if (!ride) {
+            return next((0, http_errors_1.default)(404, "Ride not found."));
+        }
+        if (!driver) {
+            return next((0, http_errors_1.default)(404, "User not found."));
+        }
+        if (ride.userId !== driverId) {
+            return next((0, http_errors_1.default)(403, "You can't start this ride because you're not the driver."));
+        }
+        if (ride.status !== "ACTIVE") {
+            return next((0, http_errors_1.default)(400, "This ride is not active and cannot be started."));
+        }
+        const updatedRide = yield ride_1.rideModel.updateOneById(ride.id, {
+            status: "ONGOING"
+        });
+        if (!updatedRide) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        for (const passenger of ride.passengers) {
+            try {
+                yield notification_1.NotificationModel.insertOne({
+                    userId: passenger.id,
+                    type: notification_1.NotificationType.RIDE_STARTED,
+                    from: ride.from,
+                    to: ride.to,
+                    triggeredById: driverId,
+                    seats: passenger.seats,
+                    isRead: false,
+                    rideId: id,
+                    triggeredByAvatarUrl: driver.avatarUrl,
+                    triggeredByFirstName: driver.firstName,
+                    triggeredByLastName: driver.lastName,
+                    triggeredByUsername: driver.username,
+                });
+            }
+            catch (error) {
+                console.error(`Error processing passenger ${passenger.id}:`, error);
+            }
+        }
+        res.json({
+            status: "success",
+            message: "Ride started successfully",
+            ride: updatedRide
+        });
+    }
+    catch (error) {
+        console.error(`Unable to start ride: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.startRide = startRide;
+const passengerConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const id = req.params.id;
+    const userId = req.userId;
+    if (!userId) {
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    }
+    try {
+        const [ride, user] = yield Promise.all([ride_1.rideModel.findOne({ id }), user_1.UserModel.findOne({ id: userId })]);
+        if (!ride) {
+            return next((0, http_errors_1.default)(404, "Ride not found."));
+        }
+        if (!user) {
+            return next((0, http_errors_1.default)(404, "User not found."));
+        }
+        if (ride.status !== "COMPLETED") {
+            return next((0, http_errors_1.default)(400, "You can only confirm completion for a ride that has been marked as completed by the driver."));
+        }
+        const wallet = yield (0, wallet_2.findWalletByUserId)(ride.userId, wallet_1.WalletType.DRIVER);
+        if (!wallet) {
+            return next((0, http_errors_1.default)(404, "No wallet found for the driver"));
+        }
+        const foundPassengers = ride.passengers.filter(passenger => passenger.id === userId);
+        if (foundPassengers.length === 0) {
+            return next((0, http_errors_1.default)(400, "You can't cancel this ride because you're not a passenger."));
+        }
+        const isMarkedAsCompleted = foundPassengers.every(passenger => passenger.completed === true);
+        if (isMarkedAsCompleted) {
+            return next((0, http_errors_1.default)(400, "You have already marked this ride as completed."));
+        }
+        const updatedPassengers = ride.passengers.map(passenger => {
+            return passenger.id === userId ? Object.assign(Object.assign({}, passenger), { completed: true }) : passenger;
+        });
+        const updatedRide = yield ride_1.rideModel.updateOneById(ride.id, {
+            passengers: updatedPassengers
+        });
+        if (!updatedRide) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        const allCompleted = updatedRide.passengers.every(passenger => passenger.completed === true);
+        if (allCompleted) {
+            let totalPrice = 0;
+            updatedRide.passengers.forEach(passenger => {
+                totalPrice += passenger.seats * ride.pricePerSeat;
+            });
+            yield (0, wallet_2.addToWallet)(wallet.id, totalPrice, wallet.balance);
+            yield notification_1.NotificationModel.insertOne({
+                userId: ride.userId,
+                type: notification_1.NotificationType.RIDE_COMPLETETED_DRIVER,
+                from: ride.from,
+                to: ride.to,
+                triggeredById: userId,
+                seats: ride.numberOfSeats,
+                isRead: false,
+                rideId: id,
+                triggeredByAvatarUrl: user.avatarUrl,
+                triggeredByFirstName: user.firstName,
+                triggeredByLastName: user.lastName,
+                triggeredByUsername: user.username,
+            });
+            const payouts = yield payout_1.PayoutModel.find({
+                userId: ride.userId,
+                requesterId: user.id,
+                rideId: ride.id
+            });
+            for (const payout of payouts) {
+                yield payout_1.PayoutModel.updateOneById(payout.id, {
+                    status: payout_1.PayoutStatus.SUCCESSFUL
+                });
+            }
+        }
+        res.json({
+            status: "success",
+            message: "Ride marked as completed successfully",
+            ride: updatedRide
+        });
+    }
+    catch (error) {
+        console.error(`Unable to complete ride as passenger: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.passengerConfirmCompletion = passengerConfirmCompletion;
+const driverConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const driverId = req.userId;
+    const id = req.params.id;
+    if (!driverId) {
+        next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    }
+    try {
+        const [ride, driver] = yield Promise.all([ride_1.rideModel.findOne({ id }), user_1.UserModel.findOne({ id: driverId })]);
+        if (!ride) {
+            return next((0, http_errors_1.default)(404, "Ride not found."));
+        }
+        if (!driver) {
+            return next((0, http_errors_1.default)(404, "User not found."));
+        }
+        if (ride.status !== "ONGOING") {
+            return next((0, http_errors_1.default)(400, "You can only confirm completion for an ongoing ride."));
+        }
+        if (ride.userId !== driverId)
+            return next((0, http_errors_1.default)(400, "You can't mark this as completed ride because you're not the driver."));
+        const updatedRide = yield ride_1.rideModel.updateOneById(ride.id, {
+            status: "COMPLETED"
+        });
+        if (!updatedRide) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        for (const passenger of ride.passengers) {
+            try {
+                yield notification_1.NotificationModel.insertOne({
+                    userId: passenger.id,
+                    type: notification_1.NotificationType.RIDE_COMPLETETED_PASSENGER,
+                    from: ride.from,
+                    to: ride.to,
+                    triggeredById: driverId,
+                    seats: passenger.seats,
+                    isRead: false,
+                    rideId: id,
+                    triggeredByAvatarUrl: driver.avatarUrl,
+                    triggeredByFirstName: driver.firstName,
+                    triggeredByLastName: driver.lastName,
+                    triggeredByUsername: driver.username,
+                });
+            }
+            catch (error) {
+                console.error(`Error processing passenger ${passenger.id}:`, error);
+            }
+        }
+        res.json({
+            status: "success",
+            message: "Ride marked as completed successfully. You will receive your payment once all passengers confirm the ride completion.",
+            ride: updatedRide
+        });
+    }
+    catch (error) {
+        console.error(`Unable to complete ride as driver: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.driverConfirmCompletion = driverConfirmCompletion;

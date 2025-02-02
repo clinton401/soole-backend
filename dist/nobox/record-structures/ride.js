@@ -69,7 +69,7 @@ exports.RideStructure = {
         pricePerSeat: {
             description: "Price Per Seat",
             type: Number,
-            required: false,
+            required: true,
         },
         // Missing properties added below
         userAvatarUrl: {
