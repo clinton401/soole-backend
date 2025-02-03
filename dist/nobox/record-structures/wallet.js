@@ -66,6 +66,16 @@ exports.WalletStructure = {
             required: false,
             type: String,
         },
+        recipientCode: {
+            description: "recipient code from paystack",
+            required: false,
+            type: String,
+        },
+        prevBankName: {
+            description: "last bank name user for transfers",
+            required: false,
+            type: String,
+        },
     },
 };
 exports.WalletModel = (0, config_1.createRowSchema)(exports.WalletStructure);

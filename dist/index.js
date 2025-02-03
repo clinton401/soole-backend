@@ -15,7 +15,7 @@ app.use((0, cors_1.default)({
     origin: "http://localhost:3000",
     credentials: true,
 }));
-app.use(express_1.default.json());
+app.use(express_1.default.json({ verify: (req, res, buf) => { req.rawBody = buf.toString(); } }));
 app.set("trust proxy", 1);
 // createHardcodedUser();
 // app.use(express.static(path.join(__dirname, '../frontend')));

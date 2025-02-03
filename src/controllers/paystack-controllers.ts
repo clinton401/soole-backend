@@ -4,10 +4,13 @@ import axios from "axios";
 import createError from "http-errors"
 import { unauthorized_error, server_error, unknown_error } from "../lib/variables";
 import { UserModel } from "../nobox/record-structures/user";
-import { WalletModel } from "../nobox/record-structures/wallet";
-import { isValidNumber } from "../lib/utils"
+import { PayoutModel, PayoutStatus, PayoutType } from "../nobox/record-structures/payout";
+import { WalletModel, WalletStatus, WalletType, Wallet } from "../nobox/record-structures/wallet";
+import { isValidNumber, hasDecimal } from "../lib/utils"
 import { TransactionModel, TransactionType, TransactionStatus } from "../nobox/record-structures/transaction";
-import { addToUserWalletBalance } from "../data/wallet";
+import { addToUserWalletBalance, findWalletByUserId, deductFromWallet } from "../data/wallet";
+import { validatePassword } from "../lib/password-utils";
+import crypto from "crypto"
 config();
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
@@ -22,58 +25,127 @@ const paystackHeaders = {
 };
 
 
-// export const verifyReference = async (req: Request, res: Response, next: NextFunction) => {
-//     const reference = req.params.reference;
-
-//     try {
-
-//         const response = await axios.get(`${PAYSTACK_BASE_URL}/transaction/verify/${reference}`, {
-//             headers: paystackHeaders,
-//         });
-//         const transaction = await TransactionModel.findOne({ reference });
-//         if (!transaction) {
-//             return next(createError("Transaction not found."))
-//         };
-//         if (transaction.status === TransactionStatus.SUCCESS) {
-//             return next(createError(400, "This transaction has already been verified."))
-//         }
-//         if (response.data.data.status === "success") {
-//             const { authorization } = response.data.data;
-//             // const email = customer.email;
+export const paystackWebhook = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
 
 
-//             const wallet = await WalletModel.findOne({ userId: transaction.userId });
-//             if (!wallet) {
-//                 return next(createError(404, "No wallet found for this user"))
-//             }
-//             const updatedTransaction = await TransactionModel.updateOneById(transaction.id, {
-//                 status: TransactionStatus.SUCCESS
-//             });
-//             if (!updatedTransaction) {
-//                 return next(createError(500, unknown_error));
+        // Verify webhook signature
+        const hash = crypto.createHmac("sha512", PAYSTACK_SECRET_KEY).update(JSON.stringify(req.body)).digest("hex");
+        if (hash !== req.headers["x-paystack-signature"]) {
+            return next(createError(401, "Unauthorized webhook request."));
+        }
 
-//             }
+        const event = req.body;
+        console.log("Paystack webhook received:", event);
 
-
-//             const updatedWallet = await addToWalletBalance(wallet, transaction, authorization?.authorization_code);
-//             res.status(200).json({
-//                 success: true, message: "Wallet funded successfully", wallet: updatedWallet
-//             });
-//             return
-//         } else {
-//             const updatedTransaction = await TransactionModel.updateOneById(transaction.id, {
-//                 status: TransactionStatus.FAILED
-//             });
-//             if (!updatedTransaction) {
-//                 return next(createError(500, unknown_error));
-
-//             }
-//             return next(createError(400, "Transaction verification failed"))
-//         }
+        if (event.event === "charge.success") {
+            const reference = event.data.reference;
 
 
-//     } catch (error) {
-//         console.error(`Unable to verify paystack reference: ${error}`);
-//         return next(createError(500, server_error))
-//     }
-// }
+            const transaction = await TransactionModel.findOne({ reference });
+            if (!transaction) {
+                return next(createError(404, "Transaction not found."));
+            }
+
+            if (transaction.status === TransactionStatus.SUCCESS) {
+                res.status(200).json({ success: true, message: "Transaction already processed." });
+                return;
+            }
+
+
+
+            const updatedTransaction = await TransactionModel.updateOneById(transaction.id, {
+                status: TransactionStatus.SUCCESS,
+            });
+
+            if (!updatedTransaction) {
+                return next(createError(500, "Failed to update transaction status."));
+            }
+
+            // Find user's wallet
+            const wallet = await findWalletByUserId(transaction.userId);
+            if (!wallet) {
+                return next(createError(404, "No wallet found for this user."));
+            }
+
+            if (wallet.status === WalletStatus.SUSPENDED) {
+                return next(createError(400, "Wallet is suspended. Please contact support."));
+            }
+
+
+
+            const updatedWallet = await addToUserWalletBalance(wallet, transaction, event.data.authorization?.authorization_code);
+
+            res.status(200).json({
+                success: true,
+                message: "Wallet funded successfully via webhook.",
+                wallet: updatedWallet,
+            });
+            return;
+        }
+
+        if (event.event === "transfer.success") {
+            const transferReference = event.data.reference;
+            const payout = await PayoutModel.findOne({ reference: transferReference });
+
+            if (!payout) {
+                return next(createError(404, "Transfer record not found."));
+            }
+
+            if (payout.status === PayoutStatus.SUCCESSFUL) {
+                 res.status(200).json({ success: true, message: "Transfer already processed." });
+                 return;
+            }
+
+          await PayoutModel.updateOneById(payout.id, { status: PayoutStatus.SUCCESSFUL });
+           
+
+            const wallet = await findWalletByUserId(payout.userId);
+            if (!wallet) {
+                return next(createError(404, "No wallet found for this user."));
+            }
+
+            if (wallet.status === WalletStatus.SUSPENDED) {
+                return next(createError(400, "Wallet is suspended. Please contact support."));
+            }
+            if (wallet.balance < payout.amount) {
+                return next(createError(400, "Insufficient funds in your wallet to complete this transfer"));
+    
+            }
+            await deductFromWallet(wallet.id, payout.amount, wallet.balance);
+
+            res.status(200).json({ success: true, message: "Transfer successfully processed." });
+            return;
+        }
+        if (event.event === "transfer.failed") {
+            console.log("Fund transfer failed:", event.data);
+
+            const transferReference = event.data.reference;
+            const payout = await PayoutModel.findOne({ reference: transferReference });
+
+            if (!payout) {
+                return next(createError(404, "Transfer record not found."));
+            }
+
+         await PayoutModel.updateOneById(payout.id, { status: PayoutStatus.FAILED });
+
+           
+
+            res.status(200).json({ success: true, message: "Transfer marked as failed, and user refunded." });
+            return;
+        }
+
+        
+
+
+        res.status(200).json({ success: true, message: "Event received, but not processed." });
+
+    } catch (error) {
+        console.error("Paystack Webhook Error:", error);
+        return next(createError(500, "An error occurred while processing the webhook."));
+    }
+};
+
+
+
+

@@ -8,4 +8,5 @@ wallet.post("/create", wallet_controllers_1.createUserWallet);
 wallet.post("/user/charge", wallet_controllers_1.chargeUserSavedCard);
 wallet.get("/user/verify/:reference", wallet_controllers_1.verifyUserReference);
 wallet.get("/", wallet_controllers_1.getWallet);
+wallet.post("/transfer-funds", wallet_controllers_1.transferFunds);
 exports.default = wallet;

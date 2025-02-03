@@ -53,9 +53,9 @@ export const addToWallet = async (walletId: string, rideCost: number, prevBalanc
         throw error
     }
 }
-export const payForRide = async (walletId: string, rideCost: number, prevBalance: number) => {
+export const deductFromWallet = async (walletId: string, amount: number, prevBalance: number) => {
     try {
-        const balance = prevBalance - rideCost;
+        const balance = prevBalance - amount;
         
         const lastTransactionAt = new Date().toISOString();
         const updatedWallet = await WalletModel.updateOneById(walletId, {

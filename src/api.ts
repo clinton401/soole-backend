@@ -22,7 +22,7 @@ api.use("/rides", verifyAccessToken, ride);
 api.use("/user", verifyAccessToken, user);
 api.use("/notifications", verifyAccessToken, notification);
 api.use("/conversations", verifyAccessToken, conversation);
-api.use("/paystack", verifyAccessToken, paystack);
+api.use("/paystack", paystack);
 api.use("/wallet", verifyAccessToken, wallet);
 api.use("/transactions", verifyAccessToken, transaction);
 api.use("/reviews", verifyAccessToken, review);

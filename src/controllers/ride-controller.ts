@@ -6,7 +6,7 @@ import { WalletModel, WalletType } from "../nobox/record-structures/wallet";
 import { NotificationModel, NotificationType } from "../nobox/record-structures/notification";
 import { server_error, unknown_error, unauthorized_error } from "../lib/variables";
 import { PayoutModel, PayoutType, PayoutStatus } from "../nobox/record-structures/payout";
-import { findWalletByUserId, payForRide, addToWallet } from "../data/wallet"
+import { findWalletByUserId, deductFromWallet, addToWallet } from "../data/wallet"
 import { hasSufficientBalance, hasDecimal } from "../lib/utils"
 
 export const createRide = async (
@@ -410,7 +410,7 @@ export const requestRide = async (req: Request, res: Response, next: NextFunctio
     if (!newNotification) {
       return next(createError(500, unknown_error))
     }
-    await payForRide(wallet.id, rideCost, wallet.balance);
+    await deductFromWallet(wallet.id, rideCost, wallet.balance);
     const userName = `${user.firstName} ${user.lastName}`
     const payout = await PayoutModel.insertOne({
       userId: ride.userId,

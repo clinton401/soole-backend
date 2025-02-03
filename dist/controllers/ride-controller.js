@@ -376,7 +376,7 @@ const requestRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         if (!newNotification) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        yield (0, wallet_2.payForRide)(wallet.id, rideCost, wallet.balance);
+        yield (0, wallet_2.deductFromWallet)(wallet.id, rideCost, wallet.balance);
         const userName = `${user.firstName} ${user.lastName}`;
         const payout = yield payout_1.PayoutModel.insertOne({
             userId: ride.userId,

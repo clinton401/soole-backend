@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createWallet = exports.payForRide = exports.addToWallet = exports.findWalletByUserId = exports.addToUserWalletBalance = void 0;
+exports.createWallet = exports.deductFromWallet = exports.addToWallet = exports.findWalletByUserId = exports.addToUserWalletBalance = void 0;
 const wallet_1 = require("../nobox/record-structures/wallet");
 const variables_1 = require("../lib/variables");
 const addToUserWalletBalance = (wallet, transaction, authorizationCode) => __awaiter(void 0, void 0, void 0, function* () {
@@ -57,9 +57,9 @@ const addToWallet = (walletId, rideCost, prevBalance) => __awaiter(void 0, void 
     }
 });
 exports.addToWallet = addToWallet;
-const payForRide = (walletId, rideCost, prevBalance) => __awaiter(void 0, void 0, void 0, function* () {
+const deductFromWallet = (walletId, amount, prevBalance) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const balance = prevBalance - rideCost;
+        const balance = prevBalance - amount;
         const lastTransactionAt = new Date().toISOString();
         const updatedWallet = yield wallet_1.WalletModel.updateOneById(walletId, {
             balance,
@@ -74,7 +74,7 @@ const payForRide = (walletId, rideCost, prevBalance) => __awaiter(void 0, void 0
         throw error;
     }
 });
-exports.payForRide = payForRide;
+exports.deductFromWallet = deductFromWallet;
 const createWallet = (userId, type) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const total = 0.00;

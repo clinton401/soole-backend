@@ -61,7 +61,12 @@ exports.PayoutStructure = {
             description: "Type of payout transaction",
             type: String,
             required: true
-        }
+        },
+        reference: {
+            description: "Unique reference for this transfer",
+            required: false,
+            type: String,
+        },
     }
 };
 exports.PayoutModel = (0, config_1.createRowSchema)(exports.PayoutStructure);

@@ -14,7 +14,7 @@ app.use(
     credentials: true,
   })
 );
-app.use(express.json());
+app.use(express.json({ verify: (req: Request, res, buf) => { req.rawBody = buf.toString(); } }));
 app.set("trust proxy", 1);
 // createHardcodedUser();
 // app.use(express.static(path.join(__dirname, '../frontend')));

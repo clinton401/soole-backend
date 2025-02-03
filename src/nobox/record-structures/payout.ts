@@ -14,7 +14,7 @@ export enum PayoutType {
 
 interface Payout {
     userId: string;
-rideId?: string;
+    rideId?: string;
     requesterId: string;
     pickupLocation?: string;
     dropoffLocation?: string;
@@ -22,6 +22,7 @@ rideId?: string;
     userName: string;
     status: PayoutStatus;
     type: PayoutType;
+    reference?: string;
 }
 
 export const PayoutStructure: Space<Payout> = {
@@ -63,7 +64,7 @@ export const PayoutStructure: Space<Payout> = {
             type: String,
             required: true
         },
-       
+
         status: {
             description: "Status of the payout transaction",
             type: String,
@@ -73,7 +74,12 @@ export const PayoutStructure: Space<Payout> = {
             description: "Type of payout transaction",
             type: String,
             required: true
-        }
+        },
+        reference: {
+            description: "Unique reference for this transfer",
+            required: false,
+            type: String,
+          },
     }
 };
 

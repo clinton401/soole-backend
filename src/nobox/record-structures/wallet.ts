@@ -21,6 +21,8 @@ export interface Wallet {
   isDefaultPaymentMethod: boolean;
   lastTransactionAt?: string;
   authorizationCode?: string;  
+  recipientCode?: string;
+  prevBankName?: string;
 }
 
 export const WalletStructure: Space<Wallet> = {
@@ -74,6 +76,16 @@ export const WalletStructure: Space<Wallet> = {
     },
     authorizationCode: {
       description: "Authorization code from paystack",
+      required: false,
+      type: String,
+    },
+    recipientCode: {
+      description: "recipient code from paystack",
+      required: false,
+      type: String,
+    },
+    prevBankName: {
+      description: "last bank name user for transfers",
       required: false,
       type: String,
     },

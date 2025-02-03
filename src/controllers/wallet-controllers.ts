@@ -4,10 +4,12 @@ import axios from "axios";
 import createError from "http-errors"
 import { unauthorized_error, server_error, unknown_error } from "../lib/variables";
 import { UserModel } from "../nobox/record-structures/user";
+import { PayoutModel, PayoutStatus, PayoutType } from "../nobox/record-structures/payout";
 import { WalletModel, WalletStatus, WalletType } from "../nobox/record-structures/wallet";
 import { isValidNumber, hasDecimal } from "../lib/utils"
 import { TransactionModel, TransactionType, TransactionStatus } from "../nobox/record-structures/transaction";
 import { addToUserWalletBalance, findWalletByUserId, createWallet } from "../data/wallet";
+import { validatePassword } from "../lib/password-utils";
 config();
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
@@ -53,7 +55,6 @@ export const userWalletFundingInitialization = async (req: Request, res: Respons
         return next(createError(401, unauthorized_error))
     }
     const validAmount = Number(amount)
-console.log(hasDecimal(validAmount))
     if (!isValidNumber(amount)) {
         return next(createError(400, "Make sure 'amount' is a number greater than or equal to 1."))
     }
@@ -226,7 +227,7 @@ export const verifyUserReference = async (req: Request, res: Response, next: Nex
             return next(createError(400, "This transaction has already been verified."))
         }
         if (response.data.data.status === "success") {
-            const { authorization } = response.data.data;
+            // const { authorization } = response.data.data;
             // const email = customer.email;
 
 
@@ -247,9 +248,9 @@ export const verifyUserReference = async (req: Request, res: Response, next: Nex
             }
 
 
-            const updatedWallet = await addToUserWalletBalance(wallet, transaction, authorization?.authorization_code);
+            // const updatedWallet = await addToUserWalletBalance(wallet, transaction, authorization?.authorization_code);
             res.status(200).json({
-                success: true, message: "Wallet funded successfully", wallet: updatedWallet
+                success: true, message: "Transaction verified successfully. Wallet will be updated via webhook."
             });
             return
         } else {
@@ -296,25 +297,167 @@ export const getWallet = async (req: Request, res: Response, next: NextFunction)
     }
 }
 
-// export const createDriverWallet = async (req: Request, res: Response, next: NextFunction) => {
-//     const userId = req.userId;
-//     if (!userId) {
-//         return next(createError(401, unauthorized_error))
-//     }
-//     try {
-//         const walletExists = await findWalletByUserId(userId, WalletType.DRIVER);
-//         if (walletExists) {
-//             return next(createError(400, "You already have an active wallet."))
-//         }
-//         const wallet = await createWallet(userId, WalletType.DRIVER);
+const createTransferRecipient = async (bank_name: string, account_number: string) => {
+    try {
 
-//         res.status(201).json({
-//             status: "success",
-//             message: "Wallet created successfully",
-//             wallet
-//         })
-//     } catch (error) {
-//         console.error(`Unable to create driver wallet: ${error}`);
-//         return next(createError(500, server_error))
-//     }
-// }
+        const response = await axios.get(`${PAYSTACK_BASE_URL}/bank`, {
+            headers: paystackHeaders,
+        });
+
+        if (!response?.data?.status) {
+            throw new Error("Failed to fetch banks from Paystack");
+        }
+        const banks = response.data.data;
+
+// console.log({banks})
+
+        const bank = banks.find((b: any) => b.name.toLowerCase() === bank_name.toLowerCase());
+        if (!bank) throw new Error("Invalid bank name provided");
+
+        const bank_code = bank.code;
+
+        // Create the recipient
+        const recipientResponse = await axios.post(`${PAYSTACK_BASE_URL}/transferrecipient`, {
+            type: "nuban",
+            name: "Recipient Name", // Change as needed
+            account_number,
+            bank_code,
+            currency: "NGN",
+        }, {
+            headers: paystackHeaders,
+        });
+        if (!recipientResponse?.data?.status) {
+            throw new Error("Failed to create transfer recipient");
+        }
+        return recipientResponse.data.data.recipient_code;
+
+    } catch (error) {
+        throw error;
+    }
+};
+
+
+
+const initiateTransfer = async (recipient_code: string, amount: number) => {
+    try {
+
+        const transferResponse = await axios.post(`${PAYSTACK_BASE_URL}/transfer`, {
+            source: "balance",
+            amount: amount * 100,
+            recipient: recipient_code,
+            reason: "Wallet withdrawal",
+        }, {
+            headers: paystackHeaders,
+        });
+
+        if (!transferResponse.data.status) {
+            // throw new Error("Failed to initiate transfer");
+            return undefined
+        }
+        // const balance = wallet.balance - amount;
+
+        // const lastTransactionAt = new Date().toISOString();
+
+        return transferResponse.data.data;
+
+    } catch (error) {
+        console.error(`Unable to inititate transfer: ${error}`);
+        return undefined
+        // throw error;
+    }
+};
+
+
+
+export const transferFunds = async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.userId;
+    if (!userId) {
+        return next(createError(401, unauthorized_error));
+    }
+    try {
+        const { bank_name, account_number, amount, password } = req.body;
+        if (!password) {
+            return next(createError(401, "Password is required"))
+        }
+        const user = await UserModel.findOne({ id: userId });
+        if (!user) {
+            return next(createError("User not found."))
+        }
+        if (!user.password) {
+            return next(createError(400, "Password not found for this user"))
+        }
+
+        const isPasswordCorrect = await validatePassword(password, user.password);
+
+        if (!isPasswordCorrect) {
+            return next(createError(400, "Password is incorrect"))
+        }
+
+        if (!bank_name || !account_number || !amount) {
+            return next(new Error("Bank name, account number, and amount are required"));
+        }
+        const validAmount = Number(amount)
+        if (!isValidNumber(amount)) {
+            return next(createError(400, "Make sure 'amount' is a number greater than or equal to 1."))
+        }
+        if (hasDecimal(validAmount)) {
+            return next(createError(400, "Invalid amount: Please enter a whole number without decimals."))
+        }
+
+        const wallet = await findWalletByUserId(userId, WalletType.DRIVER);
+        if (!wallet) {
+            return next(createError(404, "No wallet found for this user"))
+        }
+        if (wallet.balance < amount) {
+            return next(createError(400, "Insufficient funds in your wallet to complete this transfer"));
+
+        }
+
+        let recipient_code;
+        if (wallet?.recipientCode && wallet?.prevBankName?.toLowerCase() === bank_name.toLowerCase()) {
+            recipient_code = wallet.recipientCode
+        } else {
+            recipient_code = await createTransferRecipient(bank_name, account_number);
+        }
+
+
+        const transferData = await initiateTransfer(recipient_code, validAmount);
+        
+        const updatedWallet = await WalletModel.updateOneById(wallet.id, {
+            recipientCode: recipient_code,
+            prevBankName: bank_name.toLowerCase()
+        });
+        if (!updatedWallet) {
+            throw new Error("Unable to update wallet")
+        }
+        console.log({transferData})
+
+        if(transferData) {
+            const reference = transferData?.reference;
+        const userName = `${user.firstName} ${user.lastName}`
+        const payout = await PayoutModel.insertOne({
+            userId: wallet.userId,
+            requesterId: wallet.userId,
+            amount: validAmount,
+            userName,
+            type: PayoutType.WITHDRAWAL,
+            status: PayoutStatus.PENDING,
+            reference
+        })
+        if (!payout) {
+            throw new Error(unknown_error)
+        }
+    }
+        
+
+        res.status(200).json({
+            success: true,
+            message: "Transfer initiated successfully",
+            data: transferData,
+        });
+
+    } catch (error) {
+        console.error("Error processing transfer:", error);
+        return next(createError(500, server_error));
+    }
+};

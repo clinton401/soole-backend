@@ -23,7 +23,7 @@ api.use("/rides", access_tokens_1.verifyAccessToken, ride_1.default);
 api.use("/user", access_tokens_1.verifyAccessToken, user_1.default);
 api.use("/notifications", access_tokens_1.verifyAccessToken, notification_1.default);
 api.use("/conversations", access_tokens_1.verifyAccessToken, conversation_1.default);
-api.use("/paystack", access_tokens_1.verifyAccessToken, paystack_1.default);
+api.use("/paystack", paystack_1.default);
 api.use("/wallet", access_tokens_1.verifyAccessToken, wallet_1.default);
 api.use("/transactions", access_tokens_1.verifyAccessToken, transaction_1.default);
 api.use("/reviews", access_tokens_1.verifyAccessToken, review_1.default);
