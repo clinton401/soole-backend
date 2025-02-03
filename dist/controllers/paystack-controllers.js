@@ -39,7 +39,7 @@ const paystackWebhook = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
             return next((0, http_errors_1.default)(401, "Unauthorized webhook request."));
         }
         const event = req.body;
-        console.log("Paystack webhook received:", event);
+        // console.log("Paystack webhook received:", event);
         if (event.event === "charge.success") {
             const reference = event.data.reference;
             const transaction = yield transaction_1.TransactionModel.findOne({ reference });
@@ -98,7 +98,7 @@ const paystackWebhook = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
             return;
         }
         if (event.event === "transfer.failed") {
-            console.log("Fund transfer failed:", event.data);
+            // console.log("Fund transfer failed:", event.data);
             const transferReference = event.data.reference;
             const payout = yield payout_1.PayoutModel.findOne({ reference: transferReference });
             if (!payout) {

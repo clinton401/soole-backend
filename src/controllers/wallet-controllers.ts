@@ -430,7 +430,7 @@ export const transferFunds = async (req: Request, res: Response, next: NextFunct
         if (!updatedWallet) {
             throw new Error("Unable to update wallet")
         }
-        console.log({transferData})
+        // console.log({transferData})
 
         if(transferData) {
             const reference = transferData?.reference;

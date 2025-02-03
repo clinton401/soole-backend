@@ -36,7 +36,7 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
         }
 
         const event = req.body;
-        console.log("Paystack webhook received:", event);
+        // console.log("Paystack webhook received:", event);
 
         if (event.event === "charge.success") {
             const reference = event.data.reference;
@@ -118,7 +118,7 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
             return;
         }
         if (event.event === "transfer.failed") {
-            console.log("Fund transfer failed:", event.data);
+            // console.log("Fund transfer failed:", event.data);
 
             const transferReference = event.data.reference;
             const payout = await PayoutModel.findOne({ reference: transferReference });

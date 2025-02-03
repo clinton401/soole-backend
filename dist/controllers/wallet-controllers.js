@@ -390,7 +390,7 @@ const transferFunds = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         if (!updatedWallet) {
             throw new Error("Unable to update wallet");
         }
-        console.log({ transferData });
+        // console.log({transferData})
         if (transferData) {
             const reference = transferData === null || transferData === void 0 ? void 0 : transferData.reference;
             const userName = `${user.firstName} ${user.lastName}`;
