@@ -40,7 +40,7 @@ const findUnique = (id) => __awaiter(void 0, void 0, void 0, function* () {
 exports.findUnique = findUnique;
 const findMany = (conversationId) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const options = (0, utils_1.paginationOptions)();
+        const options = (0, utils_1.paginationOptions)("asc");
         const messages = yield message_1.MessageModel.find({ conversationId }, options);
         return messages;
     }

@@ -116,7 +116,7 @@ type SortOptions = {
   by: "createdAt" | "id" | "updatedAt";
   order: "asc" | "desc";
 };
-export const paginationOptions = () => {
+export const paginationOptions = (order: "desc" | "asc" = "desc") => {
 
   const options = {
     pagination: {
@@ -125,7 +125,7 @@ export const paginationOptions = () => {
     },
     sort: {
       by: "createdAt",
-      order: "desc",
+      order,
     } as SortOptions,
   };
   return options

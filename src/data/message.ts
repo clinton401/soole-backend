@@ -27,7 +27,7 @@ export const findUnique = async (id: string) => {
 }
 export const findMany = async (conversationId: string) => {
     try {
-        const options = paginationOptions()
+        const options = paginationOptions("asc")
 
         const messages = await MessageModel.find({ conversationId }, options);
         return messages;

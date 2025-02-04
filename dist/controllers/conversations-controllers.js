@@ -16,6 +16,7 @@ exports.markConversationAsRead = exports.deleteConversation = exports.markMessag
 const variables_1 = require("../lib/variables");
 const http_errors_1 = __importDefault(require("http-errors"));
 const conversation_1 = require("../nobox/record-structures/conversation");
+const __1 = require("..");
 const conversation_2 = require("../data/conversation");
 const message_1 = require("../data/message");
 const getUserConversations = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -76,18 +77,11 @@ const createMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         const message = yield (0, message_1.insertNewMessage)(conversationId, userId, receiverId, content);
         if (!message)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
-        const now = new Date().toLocaleString('en-US', {
-            month: '2-digit',
-            day: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false,
-        });
+        const now = new Date().toISOString();
         const updatedConversation = yield conversation_1.ConversationModel.updateOneById(conversationId, { lastMessage: content, lastMessageDate: now });
         if (!updatedConversation)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        __1.io.emit("message", message);
         res.status(201).json({
             status: "success",
             message: "message sent successfully",
@@ -101,9 +95,7 @@ const createMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, func
 });
 exports.createMessage = createMessage;
 const getConversationMessages = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { conversationId } = req.body;
-    if (!conversationId)
-        return next((0, http_errors_1.default)(400, "'conversationId' is required"));
+    const conversationId = req.params.id;
     try {
         const messages = yield (0, message_1.findMany)(conversationId);
         res.status(200).json({

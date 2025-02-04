@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { server_error, unknown_error, unauthorized_error } from "../lib/variables";
 import createError from "http-errors";
 import { ConversationModel } from "../nobox/record-structures/conversation";
+import { io } from "..";
 import { getUserTotalConversations, insertNewConversation, findUnique as findUniqueConvo } from "../data/conversation";
 import { insertNewMessage, findMany as findManyMessages, findUnique as findUniqueMessage, updateOneById as updateMesageById } from "../data/message";
 
@@ -56,17 +57,10 @@ export const createMessage = async (req: Request, res: Response, next: NextFunct
         if (conversationExists.participant1Id !== userId && conversationExists.participant2Id !== userId) return next(createError(403, "You can't send a message because you are not a member of this conversation."))
         const message = await insertNewMessage(conversationId, userId, receiverId, content);
         if (!message) return next(createError(500, unknown_error));
-        const now = new Date().toLocaleString('en-US', {
-            month: '2-digit',
-            day: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false,
-        });
+        const now = new Date().toISOString();
         const updatedConversation = await ConversationModel.updateOneById(conversationId, { lastMessage: content, lastMessageDate: now });
         if (!updatedConversation) return next(createError(500, unknown_error));
+        io.emit("message", message);
         res.status(201).json({
             status: "success",
             message: "message sent successfully",
@@ -78,8 +72,7 @@ export const createMessage = async (req: Request, res: Response, next: NextFunct
     }
 }
 export const getConversationMessages = async (req: Request, res: Response, next: NextFunction) => {
-    const { conversationId } = req.body
-    if (!conversationId) return next(createError(400, "'conversationId' is required"))
+    const  conversationId  = req.params.id
     try {
         const messages = await findManyMessages(conversationId);
         res.status(200).json({

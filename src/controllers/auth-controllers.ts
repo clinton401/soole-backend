@@ -48,6 +48,11 @@ export const register = async (
       await createWallet(user.id, WalletType.USER)
      
     }
+    const driverWalletExists = await findWalletByUserId(user.id, WalletType.DRIVER);
+    if (!driverWalletExists) {
+      await createWallet(user.id, WalletType.DRIVER)
+     
+    }
 
     const params = {
       userId: user.id,

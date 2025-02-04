@@ -59,6 +59,10 @@ const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         if (!walletExists) {
             yield (0, wallet_2.createWallet)(user.id, wallet_1.WalletType.USER);
         }
+        const driverWalletExists = yield (0, wallet_2.findWalletByUserId)(user.id, wallet_1.WalletType.DRIVER);
+        if (!driverWalletExists) {
+            yield (0, wallet_2.createWallet)(user.id, wallet_1.WalletType.DRIVER);
+        }
         const params = {
             userId: user.id,
         };
