@@ -27,10 +27,25 @@ const getAllUsersForAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
     try {
         const options = (0, utils_1.adminPaginationOptions)(currentPage, pageSize);
         const users = yield user_1.UserModel.find({ status }, options);
+        if (!users) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        const { totalLength: totalUsers, totalPages, nextPage } = (0, utils_1.getPageInfo)(users, pageSize, currentPage);
+        res.json({
+            status: "success",
+            message: "Users found successfully",
+            data: {
+                users,
+                totalUsers,
+                totalPages,
+                currentPage,
+                nextPage
+            }
+        });
     }
     catch (error) {
         console.error(`Unable to get all users for admin: ${error}`);
-        return (0, http_errors_1.default)(500, variables_1.server_error);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
     }
 });
 exports.getAllUsersForAdmin = getAllUsersForAdmin;

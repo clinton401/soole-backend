@@ -16,19 +16,21 @@ import transaction from "./routes/transaction";
 import review from "./routes/review";
 import payout from "./routes/payout";
 import adminAuth from "./routes/admin-auth";
-import adminRides from "./routes/admin-ride"
+import adminRides from "./routes/admin-ride";
+import adminUser from "./routes/admin-user";
+import {verifyUserStatus} from "./middlewares/user"
 const api = Router();
 
 api.use("/auth", isAuthenticated, auth);
-api.use("/rides", verifyAccessToken, ride);
-api.use("/user", verifyAccessToken, user);
-api.use("/notifications", verifyAccessToken, notification);
-api.use("/conversations", verifyAccessToken, conversation);
+api.use("/rides", verifyAccessToken, verifyUserStatus, ride);
+api.use("/user", verifyAccessToken, verifyUserStatus, user);
+api.use("/notifications", verifyAccessToken, verifyUserStatus,  notification);
+api.use("/conversations", verifyAccessToken, verifyUserStatus,  conversation);
 api.use("/paystack", paystack);
-api.use("/wallet", verifyAccessToken, wallet);
-api.use("/transactions", verifyAccessToken, transaction);
-api.use("/reviews", verifyAccessToken, review);
-api.use("/payout", verifyAccessToken, payout);
+api.use("/wallet", verifyAccessToken, verifyUserStatus, wallet);
+api.use("/transactions", verifyAccessToken, verifyUserStatus , transaction);
+api.use("/reviews", verifyAccessToken, verifyUserStatus, review);
+api.use("/payout", verifyAccessToken, verifyUserStatus, payout);
 api.post("/upload-images",upload.single('image'),  uploadImage)
 
 
@@ -37,6 +39,7 @@ api.post("/upload-images",upload.single('image'),  uploadImage)
 
 
 api.use("/admin/auth", isAuthenticated, adminAuth);
-api.use("/admin/rides", verifyAccessToken, adminRides)
+api.use("/admin/rides", verifyAccessToken, adminRides);
+api.use("/admin/user", verifyAccessToken, adminUser);
 
 export default api

@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hasSufficientBalance = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
+exports.hasSufficientBalance = exports.getPageInfo = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
 const validator_1 = __importDefault(require("validator"));
 const errorHandler = (error, code) => {
     return {
@@ -127,6 +127,17 @@ const adminPaginationOptions = (page, limit) => {
     };
 };
 exports.adminPaginationOptions = adminPaginationOptions;
+const getPageInfo = (data, pageSize, currentPage) => {
+    const totalLength = data.length;
+    const totalPages = Math.ceil(totalLength / pageSize);
+    const nextPage = currentPage < totalPages ? currentPage + 1 : null;
+    return {
+        totalLength,
+        totalPages,
+        nextPage
+    };
+};
+exports.getPageInfo = getPageInfo;
 const hasSufficientBalance = (balance, rideCost) => {
     return balance >= rideCost;
 };

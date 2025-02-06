@@ -144,6 +144,18 @@ export const adminPaginationOptions = (page: number, limit: number) => {
 };
 }
 
+export const getPageInfo  = (data: any[], pageSize: number, currentPage: number ) => {
+  
+  const totalLength = data.length
+        const totalPages = Math.ceil(totalLength / pageSize);
+        const nextPage = currentPage < totalPages ? currentPage + 1 : null;
+  return {
+totalLength,
+totalPages,
+nextPage
+  }
+}
+
 export const hasSufficientBalance = (balance: number, rideCost: number ) => {
   return balance >= rideCost;
 }

@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import { rideModel, Ride } from "../nobox/record-structures/ride";
 import createError from "http-errors";
 import { server_error, unauthorized_error, unknown_error } from "../lib/variables"
-import { type SortOptions, adminPaginationOptions } from "../lib/utils"
+import { getPageInfo, adminPaginationOptions } from "../lib/utils"
 
 
 
@@ -39,9 +39,8 @@ export const getAllRidesForAdmin = async (req: Request, res: Response, next: Nex
         if(!rides) {
             return next(createError(500, unknown_error))
         }
-        const totalRides = rides.length
-        const totalPages = Math.ceil(totalRides / pageSize);
-        const nextPage = currentPage < totalPages ? currentPage + 1 : null;
+       const {totalLength: totalRides, totalPages, nextPage }  = getPageInfo(rides, pageSize, currentPage)
+        
         res.json({
             status: "success",
             message: "Rides found successfully",
