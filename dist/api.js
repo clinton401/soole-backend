@@ -17,6 +17,8 @@ const wallet_1 = __importDefault(require("./routes/wallet"));
 const transaction_1 = __importDefault(require("./routes/transaction"));
 const review_1 = __importDefault(require("./routes/review"));
 const payout_1 = __importDefault(require("./routes/payout"));
+const admin_auth_1 = __importDefault(require("./routes/admin-auth"));
+const admin_ride_1 = __importDefault(require("./routes/admin-ride"));
 const api = (0, express_1.Router)();
 api.use("/auth", access_tokens_1.isAuthenticated, auth_1.default);
 api.use("/rides", access_tokens_1.verifyAccessToken, ride_1.default);
@@ -29,4 +31,7 @@ api.use("/transactions", access_tokens_1.verifyAccessToken, transaction_1.defaul
 api.use("/reviews", access_tokens_1.verifyAccessToken, review_1.default);
 api.use("/payout", access_tokens_1.verifyAccessToken, payout_1.default);
 api.post("/upload-images", upload_1.default.single('image'), auth_controllers_1.uploadImage);
+// Admin routes 
+api.use("/admin/auth", access_tokens_1.isAuthenticated, admin_auth_1.default);
+api.use("/admin/rides", access_tokens_1.verifyAccessToken, admin_ride_1.default);
 exports.default = api;

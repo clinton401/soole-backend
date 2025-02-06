@@ -15,6 +15,8 @@ import wallet from "./routes/wallet";
 import transaction from "./routes/transaction";
 import review from "./routes/review";
 import payout from "./routes/payout";
+import adminAuth from "./routes/admin-auth";
+import adminRides from "./routes/admin-ride"
 const api = Router();
 
 api.use("/auth", isAuthenticated, auth);
@@ -28,5 +30,13 @@ api.use("/transactions", verifyAccessToken, transaction);
 api.use("/reviews", verifyAccessToken, review);
 api.use("/payout", verifyAccessToken, payout);
 api.post("/upload-images",upload.single('image'),  uploadImage)
+
+
+
+// Admin routes 
+
+
+api.use("/admin/auth", isAuthenticated, adminAuth);
+api.use("/admin/rides", verifyAccessToken, adminRides)
 
 export default api

@@ -45,8 +45,8 @@ export const createRide = async (
       return next(createError(400, "Number of seats is required and must be greater than 0."));
     }
     if (hasDecimal(validNumberOfSeats)) {
-            return next(createError(400, "Invalid number of seats: Please enter a whole number without decimals."))
-        }
+      return next(createError(400, "Invalid number of seats: Please enter a whole number without decimals."))
+    }
     // if (!validNumberOfSeats) return next(createError(400, "Number of seats is required."))
     // const user = await UserModel.findOne({ id: userId }, {});
     const [user, wallet] = await Promise.all([
@@ -74,12 +74,16 @@ export const createRide = async (
       userFirstName: user.firstName,
       userLastName: user.lastName,
       userUsername: user.username,
+      adminViewable: true
     });
 
     if (!ride) {
       return next(createError(500, "Failed to create the ride."));
     }
-
+    const totalRides = user.totalRides ? user.totalRides + 1 : 1;
+    await UserModel.updateOneById(user.id, {
+      totalRides
+    })
     res.status(201).json({
       success: true,
       message: "Ride created successfully.",
@@ -212,7 +216,7 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
     if (!wallet) {
       return next(createError(400, "No wallet found for this user"))
     }
-   const refundAmount = foundPassengers.reduce((total, passenger) => total + passenger.seats * ride.pricePerSeat, 0);
+    const refundAmount = foundPassengers.reduce((total, passenger) => total + passenger.seats * ride.pricePerSeat, 0);
 
     // Refund passenger
     const refundSuccess = await addToWallet(wallet.id, refundAmount, wallet.balance);
@@ -335,6 +339,11 @@ export const cancelRideDriver = async (req: Request, res: Response, next: NextFu
 
       }
     }
+    const totalRides = Math.max(0, driver.totalRides ? driver.totalRides - 1 : 0);
+
+    await UserModel.updateOneById(driver.id, {
+      totalRides
+    })
     res.status(200).json({
       status: "success",
       message: "Ride successfully cancelled.",
@@ -358,7 +367,7 @@ export const requestRide = async (req: Request, res: Response, next: NextFunctio
   }
   if (hasDecimal(validSeats)) {
     return next(createError(400, "Invalid number of seats: Please enter a whole number without decimals."))
-}
+  }
 
   if (!userId) return next(createError(401, unauthorized_error));
   try {
@@ -481,7 +490,7 @@ export const acceptRideRequest = async (req: Request, res: Response, next: NextF
     if (amountOfSeatsLeft < 0) return next(createError(400, "Requested seats exceed the available seats."));
     const newPassengers = [...ride.passengers, {
       id: passengerId, seats: validSeats,
-      completed: false
+      completed: false,
     }]
     const newNoOfSeats = amountOfSeatsLeft;
 
@@ -546,7 +555,7 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
       return next(createError(400, "You can only reject  notifications of type 'RIDE_REQUEST'."));
     }
     if (ride.userId !== driverId) return next(createError(403, "You can't reject this ride because you're not the driver."));
-    
+
     const wallet = await findWalletByUserId(notification.triggeredById)
     if (!wallet) {
       return next(createError(400, "No wallet found for this user"))
@@ -683,7 +692,7 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
     if (ride.status !== "COMPLETED") {
       return next(createError(400, "You can only confirm completion for a ride that has been marked as completed by the driver."));
     }
-    
+
     const wallet = await findWalletByUserId(ride.userId, WalletType.DRIVER);
     if (!wallet) {
       return next(createError(404, "No wallet found for the driver"))
@@ -732,7 +741,7 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
         userId: ride.userId,
         requesterId: user.id,
         rideId: ride.id
-  
+
       })
       for (const payout of payouts) {
         await PayoutModel.updateOneById(payout.id, {
@@ -741,6 +750,11 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
       }
 
     }
+    const totalTrips = user.totalTrips ? user.totalTrips + 1 : 1;
+
+await UserModel.updateOneById(user.id, {
+  totalTrips
+})
 
     res.json({
       status: "success",

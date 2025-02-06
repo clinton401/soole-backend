@@ -1,7 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UserModel = exports.UserStructure = void 0;
+exports.UserModel = exports.UserStructure = exports.UserStatus = void 0;
 const config_1 = require("../config");
+var UserStatus;
+(function (UserStatus) {
+    UserStatus["SUSPENDED"] = "SUSPENDED";
+    UserStatus["ACTIVE"] = "ACTIVE";
+    UserStatus["INACTIVE"] = "INACTIVE";
+    UserStatus["DEACTIVATED"] = "DEACTIVATED";
+})(UserStatus || (exports.UserStatus = UserStatus = {}));
 exports.UserStructure = {
     space: "User",
     description: "A Record Space for Users",
@@ -65,6 +72,21 @@ exports.UserStructure = {
         email: {
             description: "User's  Email Address",
             required: false,
+            type: String,
+        },
+        totalTrips: {
+            description: "Total amount of trips a user has",
+            required: true,
+            type: Number,
+        },
+        totalRides: {
+            description: "Total amount of rides a user created",
+            required: true,
+            type: Number,
+        },
+        status: {
+            description: "Status of the user",
+            required: true,
             type: String,
         },
     },

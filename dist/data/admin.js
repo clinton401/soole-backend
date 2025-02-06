@@ -17,7 +17,7 @@ const validateUniqueAdminIdentifiers = (personalEmail, phone, username) => __awa
     try {
         const isEmailTaken = yield admin_1.AdminModel.findOne({ personalEmail: personalEmail.toLowerCase() });
         if (isEmailTaken) {
-            return "Email is already in use.";
+            return "Personal email is already in use.";
         }
         const isPhoneTaken = yield admin_1.AdminModel.findOne({ phone });
         if (isPhoneTaken) {

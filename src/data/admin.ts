@@ -16,7 +16,7 @@ export const validateUniqueAdminIdentifiers = async (
 
         const isEmailTaken = await AdminModel.findOne({ personalEmail: personalEmail.toLowerCase() });
         if (isEmailTaken) {
-            return "Email is already in use.";
+            return "Personal email is already in use.";
         }
 
         const isPhoneTaken = await AdminModel.findOne({ phone });

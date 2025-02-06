@@ -92,6 +92,12 @@ exports.RideStructure = {
             type: String,
             required: false,
         },
+        adminViewable: {
+            description: "Should admin be able to view this data",
+            type: String,
+            required: true,
+            defaultValue: true
+        },
     },
 };
 exports.rideModel = (0, config_1.createRowSchema)(exports.RideStructure);

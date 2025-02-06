@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.hasSufficientBalance = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
+exports.hasSufficientBalance = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
 const validator_1 = __importDefault(require("validator"));
 const errorHandler = (error, code) => {
     return {
@@ -114,6 +114,19 @@ const paginationOptions = (order = "desc") => {
     return options;
 };
 exports.paginationOptions = paginationOptions;
+const adminPaginationOptions = (page, limit) => {
+    return {
+        pagination: {
+            limit,
+            page,
+        },
+        sort: {
+            by: "createdAt",
+            order: "desc",
+        },
+    };
+};
+exports.adminPaginationOptions = adminPaginationOptions;
 const hasSufficientBalance = (balance, rideCost) => {
     return balance >= rideCost;
 };

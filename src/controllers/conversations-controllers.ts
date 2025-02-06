@@ -13,7 +13,6 @@ export const getUserConversations = async (req: Request, res: Response, next: Ne
 
     if (!userId) return next(createError(401, unauthorized_error));
     try {
-
         const conversations = await getUserTotalConversations(userId);
         res.status(200).json({
             status: "success",
@@ -48,9 +47,9 @@ export const createConversation = async (req: Request, res: Response, next: Next
 export const createMessage = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.userId;
     const conversationId = req.params.id
-    const {  content, receiverId } = req.body
+    const { content, receiverId } = req.body
     if (!userId) return next(createError(401, unauthorized_error));
-    if (  !receiverId || !content || content.length < 1) return next(createError(400, "All fields are required. The 'content' field must contain at least one character."))
+    if (!receiverId || !content || content.length < 1) return next(createError(400, "All fields are required. The 'content' field must contain at least one character."))
     try {
         const conversationExists = await findUniqueConvo(conversationId);
         if (!conversationExists) return next(createError(404, "Conversation not found or has been deleted."));
@@ -72,7 +71,7 @@ export const createMessage = async (req: Request, res: Response, next: NextFunct
     }
 }
 export const getConversationMessages = async (req: Request, res: Response, next: NextFunction) => {
-    const  conversationId  = req.params.id
+    const conversationId = req.params.id
     try {
         const messages = await findManyMessages(conversationId);
         res.status(200).json({
@@ -157,12 +156,12 @@ export const deleteConversation = async (req: Request, res: Response, next: Next
     }
 };
 
-export const markConversationAsRead = async(req: Request, res: Response, next:NextFunction) => {
+export const markConversationAsRead = async (req: Request, res: Response, next: NextFunction) => {
     const conversationId = req.params.id;
     const userId = req.userId;
 
     if (!userId) return next(createError(401, unauthorized_error));
-    try{
+    try {
         const conversation = await findUniqueConvo(conversationId);
         if (!conversation) {
             return next(createError(404, "Conversation not found."));
@@ -189,7 +188,7 @@ export const markConversationAsRead = async(req: Request, res: Response, next:Ne
             status: "success",
             message: "Conversation marked as read successfully.",
         });
-    }catch(error) {
+    } catch (error) {
         console.error(`Error while marking conversation as read: ${error}`);
         next(createError(500, server_error));
     }

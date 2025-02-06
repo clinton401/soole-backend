@@ -1,6 +1,11 @@
 import { Space } from "nobox-client";
 import { createRowSchema } from "../config";
-
+export enum UserStatus {
+  SUSPENDED = "SUSPENDED",
+  ACTIVE = "ACTIVE",
+  INACTIVE = "INACTIVE",
+  DEACTIVATED= "DEACTIVATED"
+}
 export interface User {
   phone: string;
   firstName?: string;
@@ -14,6 +19,9 @@ export interface User {
   username?: string;
   avatarPublicId?: string;
   email?: string;
+  totalTrips: number;
+  status: UserStatus;
+  totalRides: number;
 }
 
 export const UserStructure: Space<User> = {
@@ -81,7 +89,24 @@ export const UserStructure: Space<User> = {
       required: false,
       type: String,
     },
-    
+    totalTrips: {
+      description: "Total amount of trips a user has",
+      required: true,
+      type: Number,
+    },
+    totalRides: {
+      description: "Total amount of rides a user created",
+      required: true,
+      type: Number,
+    },
+   
+    status: {
+      description: "Status of the user",
+      required: true,
+      type: String,
+    },
+
+
   },
 };
 

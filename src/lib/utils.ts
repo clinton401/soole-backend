@@ -112,7 +112,7 @@ export function isValidNumber(value: string): boolean {
 }
 
 export const hasDecimal = (num: number): boolean => !Number.isInteger(num);
-type SortOptions = {
+export type SortOptions = {
   by: "createdAt" | "id" | "updatedAt";
   order: "asc" | "desc";
 };
@@ -129,6 +129,19 @@ export const paginationOptions = (order: "desc" | "asc" = "desc") => {
     } as SortOptions,
   };
   return options
+};
+
+export const adminPaginationOptions = (page: number, limit: number) => {
+ return {
+    pagination: {
+        limit,
+        page,
+    },
+    sort: {
+        by: "createdAt",
+        order: "desc",
+    } as SortOptions,
+};
 }
 
 export const hasSufficientBalance = (balance: number, rideCost: number ) => {

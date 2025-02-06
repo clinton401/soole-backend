@@ -1,7 +1,7 @@
 import { Space, ReturnObject } from "nobox-client";
 import { createRowSchema } from "../config";
 
-interface Ride {
+export interface Ride {
   userId: string;
   from: string;
   to: string;
@@ -23,6 +23,7 @@ interface Ride {
   plateNumber?: string;
   numberOfSeats: number;
   pricePerSeat: number;
+  adminViewable: boolean;
 }
 
 export const RideStructure: Space<Ride> = {
@@ -114,6 +115,12 @@ export const RideStructure: Space<Ride> = {
       description: "Username of the user",
       type: String,
       required: false,
+    },
+    adminViewable : {
+      description: "Should admin be able to view this data",
+      type: String,
+      required: true,
+      defaultValue: true
     },
   },
 };

@@ -67,10 +67,15 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             userFirstName: user.firstName,
             userLastName: user.lastName,
             userUsername: user.username,
+            adminViewable: true
         });
         if (!ride) {
             return next((0, http_errors_1.default)(500, "Failed to create the ride."));
         }
+        const totalRides = user.totalRides ? user.totalRides + 1 : 1;
+        yield user_1.UserModel.updateOneById(user.id, {
+            totalRides
+        });
         res.status(201).json({
             success: true,
             message: "Ride created successfully.",
@@ -297,6 +302,10 @@ const cancelRideDriver = (req, res, next) => __awaiter(void 0, void 0, void 0, f
                 console.error(`Error processing passenger ${passenger.id}:`, error);
             }
         }
+        const totalRides = Math.max(0, driver.totalRides ? driver.totalRides - 1 : 0);
+        yield user_1.UserModel.updateOneById(driver.id, {
+            totalRides
+        });
         res.status(200).json({
             status: "success",
             message: "Ride successfully cancelled.",
@@ -458,7 +467,7 @@ const acceptRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
             return next((0, http_errors_1.default)(400, "Requested seats exceed the available seats."));
         const newPassengers = [...ride.passengers, {
                 id: passengerId, seats: validSeats,
-                completed: false
+                completed: false,
             }];
         const newNoOfSeats = amountOfSeatsLeft;
         const updatedRide = yield ride_1.rideModel.updateOneById(ride.id, {
@@ -703,6 +712,10 @@ const passengerConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0,
                 });
             }
         }
+        const totalTrips = user.totalTrips ? user.totalTrips + 1 : 1;
+        yield user_1.UserModel.updateOneById(user.id, {
+            totalTrips
+        });
         res.json({
             status: "success",
             message: "Ride marked as completed successfully",
