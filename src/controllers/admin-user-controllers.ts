@@ -41,3 +41,68 @@ const {totalLength: totalUsers, totalPages, nextPage }  = getPageInfo(users, pag
     return next(createError(500, server_error))
 }
 }
+
+export const suspendUser = async(req: Request, res: Response, next: NextFunction) => {
+    const userId = req.params.id;
+
+
+    try{
+
+        const user = await UserModel.findOne({id: userId});
+        if(!user) {
+            return next(createError(404, "User not found."))
+        }
+        if(user.status === UserStatus.DEACTIVATED) {
+            return next(createError(403, "Cannot suspend a deactivated account."))
+        }
+        if(user.status === UserStatus.SUSPENDED) {
+            return next(createError(403, "This account is already suspended."))
+        }
+const updatedUser = await UserModel.updateOneById(user.id, {
+
+    status: UserStatus.SUSPENDED
+});
+if(!updatedUser) {
+    return next(createError(500, unknown_error))
+}
+
+res.json({
+    status: "success",
+    message: "Account suspended successsfully",
+    user: updatedUser
+})
+    }catch(error){
+        console.error(`Unable to suspend user: ${error}`);
+        return next(createError(500, server_error))
+    }
+}
+
+
+export const reactivateUser = async(req: Request, res: Response, next: NextFunction) => {
+    const userId = req.params.id;
+    try{
+const user = await UserModel.findOne({id: userId});
+if(!user) {
+    return next(createError(404, "User not found."))
+}
+if(user.status === UserStatus.ACTIVE) {
+    return next(createError(403, "This account is already active." ))
+}
+
+const updatedUser = await UserModel.updateOneById(user.id, {
+
+status: UserStatus.ACTIVE
+});
+if(!updatedUser) {
+return next(createError(500, unknown_error))
+}
+res.json({
+    status: "success",
+    message: "Account successfully reactivated.",
+    user: updatedUser
+})
+    }catch(error){
+        console.error(`Unable to reactivate user: ${error}`);
+        return next(createError(500, server_error));
+    }
+}

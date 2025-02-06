@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAllUsersForAdmin = void 0;
+exports.reactivateUser = exports.suspendUser = exports.getAllUsersForAdmin = void 0;
 const user_1 = require("../nobox/record-structures/user");
 const variables_1 = require("../lib/variables");
 const utils_1 = require("../lib/utils");
@@ -49,3 +49,62 @@ const getAllUsersForAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
     }
 });
 exports.getAllUsersForAdmin = getAllUsersForAdmin;
+const suspendUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.params.id;
+    try {
+        const user = yield user_1.UserModel.findOne({ id: userId });
+        if (!user) {
+            return next((0, http_errors_1.default)(404, "User not found."));
+        }
+        if (user.status === user_1.UserStatus.DEACTIVATED) {
+            return next((0, http_errors_1.default)(403, "Cannot suspend a deactivated account."));
+        }
+        if (user.status === user_1.UserStatus.SUSPENDED) {
+            return next((0, http_errors_1.default)(403, "This account is already suspended."));
+        }
+        const updatedUser = yield user_1.UserModel.updateOneById(user.id, {
+            status: user_1.UserStatus.SUSPENDED
+        });
+        if (!updatedUser) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        res.json({
+            status: "success",
+            message: "Account suspended successsfully",
+            user: updatedUser
+        });
+    }
+    catch (error) {
+        console.error(`Unable to suspend user: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.suspendUser = suspendUser;
+const reactivateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.params.id;
+    try {
+        const user = yield user_1.UserModel.findOne({ id: userId });
+        if (!user) {
+            return next((0, http_errors_1.default)(404, "User not found."));
+        }
+        if (user.status === user_1.UserStatus.ACTIVE) {
+            return next((0, http_errors_1.default)(403, "This account is already active."));
+        }
+        const updatedUser = yield user_1.UserModel.updateOneById(user.id, {
+            status: user_1.UserStatus.ACTIVE
+        });
+        if (!updatedUser) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        res.json({
+            status: "success",
+            message: "Account successfully reactivated.",
+            user: updatedUser
+        });
+    }
+    catch (error) {
+        console.error(`Unable to reactivate user: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.reactivateUser = reactivateUser;

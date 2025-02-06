@@ -36,5 +36,5 @@ api.post("/upload-images", upload_1.default.single('image'), auth_controllers_1.
 // Admin routes 
 api.use("/admin/auth", access_tokens_1.isAuthenticated, admin_auth_1.default);
 api.use("/admin/rides", access_tokens_1.verifyAccessToken, admin_ride_1.default);
-api.use("/admin/user", access_tokens_1.verifyAccessToken, admin_user_1.default);
+api.use("/admin/users", access_tokens_1.verifyAccessToken, admin_user_1.default);
 exports.default = api;
