@@ -23,7 +23,7 @@ export const getAllRidesForAdmin = async (req: Request, res: Response, next: Nex
     const currentPage = Math.max(1, Number(page) || 1);
     const pageSize = 15;
     const options = adminPaginationOptions(currentPage, pageSize);
-   
+
     try {
 
         let rides: Ride[] = []
@@ -36,11 +36,11 @@ export const getAllRidesForAdmin = async (req: Request, res: Response, next: Nex
 
             rides = await rideModel.find({ adminViewable: true }, options);
         }
-        if(!rides) {
+        if (!rides) {
             return next(createError(500, unknown_error))
         }
-       const {totalLength: totalRides, totalPages, nextPage }  = getPageInfo(rides, pageSize, currentPage)
-        
+        const { totalLength: totalRides, totalPages, nextPage } = getPageInfo(rides, pageSize, currentPage)
+
         res.json({
             status: "success",
             message: "Rides found successfully",

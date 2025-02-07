@@ -8,26 +8,33 @@ type FullAdmin = Admin & {
     updatedAt: string;
 };
 export const validateUniqueAdminIdentifiers = async (
-    personalEmail: string,
-    phone: string,
-    username: string
+    personalEmail?: string,
+    phone?: string,
+    username?: string
 ): Promise<string | null> => {
     try {
+        if (!personalEmail && !phone && !username) {
+            return "At least one field is required"
+        }
 
+        if(personalEmail){
         const isEmailTaken = await AdminModel.findOne({ personalEmail: personalEmail.toLowerCase() });
         if (isEmailTaken) {
             return "Personal email is already in use.";
         }
-
+    }
+    if(phone){
         const isPhoneTaken = await AdminModel.findOne({ phone });
         if (isPhoneTaken) {
             return "Phone number is already in use.";
         }
-
+    }
+if(username){
         const isUsernameTaken = await AdminModel.findOne({ username: username.toLowerCase() });
         if (isUsernameTaken) {
             return "Username is already in use.";
         }
+    }
 
 
         return null;

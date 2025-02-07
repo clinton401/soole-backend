@@ -1,11 +1,21 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AdminModel = exports.AdminStructure = void 0;
+exports.AdminModel = exports.AdminStructure = exports.AdminRole = void 0;
 const config_1 = require("../config");
+var AdminRole;
+(function (AdminRole) {
+    AdminRole["ADMIN"] = "ADMIN";
+    AdminRole["SUPER_ADMIN"] = "SUPER_ADMIN";
+})(AdminRole || (exports.AdminRole = AdminRole = {}));
 exports.AdminStructure = {
     space: "Admin",
     description: "A Record Space for admins",
     structure: {
+        role: {
+            description: "Role of the user",
+            required: true,
+            type: String
+        },
         phone: {
             description: "Admin's Phone Number",
             required: true,

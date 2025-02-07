@@ -1,11 +1,15 @@
 import { Space } from "nobox-client";
 import { createRowSchema } from "../config";
-
+export enum AdminRole {
+  ADMIN = "ADMIN",
+  SUPER_ADMIN = "SUPER_ADMIN"
+}
 export interface Admin {
   phone: string;
   username: string;
   password: string;
   workEmail: string;
+  role: AdminRole;
   personalEmail: string;
 }
 
@@ -13,6 +17,11 @@ export const AdminStructure: Space<Admin> = {
   space: "Admin",
   description: "A Record Space for admins",
   structure: {
+    role: {
+      description: "Role of the user",
+      required: true,
+      type: String
+    },
     phone: {
       description: "Admin's Phone Number",
       required: true,
@@ -24,9 +33,9 @@ export const AdminStructure: Space<Admin> = {
       type: String,
       // hashed: true
     },
-    
-   
-   
+
+
+
     workEmail: {
       description: "Admin's Work Email Address",
       required: true,
@@ -38,11 +47,11 @@ export const AdminStructure: Space<Admin> = {
       type: String,
     },
     username: {
-        description: "Admin username",
-        required: true,
-        type: String
+      description: "Admin username",
+      required: true,
+      type: String
     }
-    
+
   },
 };
 

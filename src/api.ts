@@ -15,6 +15,7 @@ import wallet from "./routes/wallet";
 import transaction from "./routes/transaction";
 import review from "./routes/review";
 import payout from "./routes/payout";
+import admin from "./routes/admin";
 import adminAuth from "./routes/admin-auth";
 import adminRides from "./routes/admin-ride";
 import adminUser from "./routes/admin-user";
@@ -41,5 +42,6 @@ api.post("/upload-images",upload.single('image'),  uploadImage)
 api.use("/admin/auth", isAuthenticated, adminAuth);
 api.use("/admin/rides", verifyAccessToken, adminRides);
 api.use("/admin/users", verifyAccessToken, adminUser);
+api.use("/admin", verifyAccessToken, admin);
 
 export default api

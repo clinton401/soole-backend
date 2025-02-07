@@ -15,17 +15,26 @@ const variables_1 = require("../lib/variables");
 const utils_1 = require("../lib/utils");
 const validateUniqueAdminIdentifiers = (personalEmail, phone, username) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const isEmailTaken = yield admin_1.AdminModel.findOne({ personalEmail: personalEmail.toLowerCase() });
-        if (isEmailTaken) {
-            return "Personal email is already in use.";
+        if (!personalEmail && !phone && !username) {
+            return "At least one field is required";
         }
-        const isPhoneTaken = yield admin_1.AdminModel.findOne({ phone });
-        if (isPhoneTaken) {
-            return "Phone number is already in use.";
+        if (personalEmail) {
+            const isEmailTaken = yield admin_1.AdminModel.findOne({ personalEmail: personalEmail.toLowerCase() });
+            if (isEmailTaken) {
+                return "Personal email is already in use.";
+            }
         }
-        const isUsernameTaken = yield admin_1.AdminModel.findOne({ username: username.toLowerCase() });
-        if (isUsernameTaken) {
-            return "Username is already in use.";
+        if (phone) {
+            const isPhoneTaken = yield admin_1.AdminModel.findOne({ phone });
+            if (isPhoneTaken) {
+                return "Phone number is already in use.";
+            }
+        }
+        if (username) {
+            const isUsernameTaken = yield admin_1.AdminModel.findOne({ username: username.toLowerCase() });
+            if (isUsernameTaken) {
+                return "Username is already in use.";
+            }
         }
         return null;
     }

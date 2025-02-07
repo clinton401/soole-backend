@@ -12,31 +12,127 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.login = exports.register = void 0;
+exports.getAdminDetails = exports.resetAdminPassword = exports.updateAdminProfile = exports.addNewAdmin = exports.removeFromSuperAdmin = exports.makeSuperAdmin = void 0;
+const admin_1 = require("../nobox/record-structures/admin");
 const http_errors_1 = __importDefault(require("http-errors"));
 const variables_1 = require("../lib/variables");
-const index_1 = require("../schemas/index");
+const schemas_1 = require("../schemas");
+const dotenv_1 = require("dotenv");
 const utils_1 = require("../lib/utils");
-const zod_1 = require("zod");
-const admin_1 = require("../data/admin");
+const admin_2 = require("../data/admin");
 const password_utils_1 = require("../lib/password-utils");
-const access_tokens_1 = require("../middlewares/access-tokens");
-const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+const zod_1 = require("zod");
+(0, dotenv_1.config)();
+const makeSuperAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.userId;
+    const id = req.params.id;
+    if (!userId) {
+        return next((0, http_errors_1.default)(4011, variables_1.unauthorized_error));
+    }
+    ;
+    if (userId === id) {
+        return next((0, http_errors_1.default)("You can not make yourself a super admin"));
+    }
+    try {
+        const [superAdmin, admin] = yield Promise.all([
+            (0, admin_2.findAdminById)(userId),
+            (0, admin_2.findAdminById)(id),
+        ]);
+        if (!superAdmin) {
+            return next((0, http_errors_1.default)(404, "User not found."));
+        }
+        if (!admin) {
+            return next((0, http_errors_1.default)(404, "Admin not found."));
+        }
+        if (superAdmin.role !== admin_1.AdminRole.SUPER_ADMIN) {
+            return next((0, http_errors_1.default)(403, "You need super admin privileges to perform this action."));
+        }
+        if (admin.role === admin_1.AdminRole.SUPER_ADMIN) {
+            return next((0, http_errors_1.default)(400, "The user is already a super admin."));
+        }
+        const updatedAdmin = yield admin_1.AdminModel.updateOneById(id, {
+            role: admin_1.AdminRole.SUPER_ADMIN
+        });
+        if (!updatedAdmin) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        res.json({
+            status: "success",
+            message: "User made a super admin successfully",
+            user: updatedAdmin
+        });
+    }
+    catch (error) {
+        console.error(`Unable to make admin a super admin: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.makeSuperAdmin = makeSuperAdmin;
+const removeFromSuperAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.userId;
+    const id = req.params.id;
+    if (!userId) {
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    }
+    ;
+    if (userId === id) {
+        return next((0, http_errors_1.default)("You can not remove yourself as a super admin"));
+    }
+    try {
+        const [superAdmin, admin] = yield Promise.all([
+            (0, admin_2.findAdminById)(userId),
+            (0, admin_2.findAdminById)(id),
+        ]);
+        if (!superAdmin) {
+            return next((0, http_errors_1.default)(404, "User not found."));
+        }
+        if (!admin) {
+            return next((0, http_errors_1.default)(404, "Admin not found."));
+        }
+        if (superAdmin.role !== admin_1.AdminRole.SUPER_ADMIN) {
+            return next((0, http_errors_1.default)(403, "You need super admin privileges to perform this action."));
+        }
+        if (admin.role === admin_1.AdminRole.ADMIN) {
+            return next((0, http_errors_1.default)(400, "The user is not a super admin"));
+        }
+        const updatedAdmin = yield admin_1.AdminModel.updateOneById(id, {
+            role: admin_1.AdminRole.ADMIN
+        });
+        if (!updatedAdmin) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        res.json({
+            status: "success",
+            message: "User removed as super admin successfully",
+            user: updatedAdmin
+        });
+    }
+    catch (error) {
+        console.error(`Unable to remove user from super admin: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.removeFromSuperAdmin = removeFromSuperAdmin;
+const addNewAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const values = req.body;
     try {
-        const validatedData = index_1.RegisterAdminSchema.parse(values);
-        const { personalEmail, phone, password, username, workEmail } = validatedData;
-        const uniqueError = yield (0, admin_1.validateUniqueAdminIdentifiers)(personalEmail.toLowerCase(), phone, username.toLowerCase());
+        const validatedData = schemas_1.AddNewAdminSchema.parse(values);
+        const password = process.env.NEW_ADMIN_PASSWORD;
+        if (!password) {
+            return next((0, http_errors_1.default)(400, "New admin password is required in the environment variable"));
+        }
+        const { personalEmail, phone, username, workEmail } = validatedData;
+        const uniqueError = yield (0, admin_2.validateUniqueAdminIdentifiers)(personalEmail.toLowerCase(), phone, username.toLowerCase());
         if (uniqueError) {
             return next((0, http_errors_1.default)(400, uniqueError));
         }
         const hashedPassword = yield (0, password_utils_1.hashPassword)(password);
         const data = Object.assign(Object.assign({}, validatedData), { password: hashedPassword, personalEmail: personalEmail.toLowerCase(), workEmail: workEmail.toLowerCase(), username: username.toLowerCase() });
-        const admin = yield (0, admin_1.createAdmin)(data);
-        res.status(201).json({ status: "success", message: "User created successfully!. Verification code sent to your messages", admin: (0, utils_1.userHandler)(admin) });
+        const admin = yield (0, admin_2.createAdmin)(Object.assign(Object.assign({}, data), { role: admin_1.AdminRole.ADMIN }));
+        res.status(201).json({ status: "success", message: "New admin added successfully", admin: (0, utils_1.userHandler)(admin) });
     }
     catch (error) {
-        console.error(`Unable to register admin: ${error}`);
+        console.error(`Unable to add new admin: ${error}`);
         if (error instanceof zod_1.ZodError) {
             const errors = (0, utils_1.zodErrorHandler)(error);
             res.status(400).json({
@@ -48,27 +144,103 @@ const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         return next((0, http_errors_1.default)(500, variables_1.server_error));
     }
 });
-exports.register = register;
-const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { contactInfo, password } = req.body;
-    if (!password || !contactInfo) {
-        return next((0, http_errors_1.default)(400, "Incomplete credentials"));
+exports.addNewAdmin = addNewAdmin;
+const updateAdminProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.userId;
+    const values = req.body;
+    if (!userId) {
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     }
     try {
-        const admin = yield (0, admin_1.checkAdminExists)(contactInfo);
+        const validatedData = schemas_1.UpdateAdminProfileSchema.parse(values);
+        if (!validatedData || Object.keys(validatedData).length < 1)
+            return next((0, http_errors_1.default)(400, "At least one field must be provided."));
+        const admin = yield (0, admin_2.findAdminById)(userId);
         if (!admin) {
-            return next((0, http_errors_1.default)(404, variables_1.admin_not_found));
+            return next((0, http_errors_1.default)(404, "User not found"));
         }
-        const isPasswordValid = yield (0, password_utils_1.validatePassword)(password, admin.password);
-        if (!isPasswordValid) {
-            return next((0, http_errors_1.default)(401, "Invalid credentials. Check password and try again"));
+        const uniqueError = yield (0, admin_2.validateUniqueAdminIdentifiers)(validatedData === null || validatedData === void 0 ? void 0 : validatedData.personalEmail, validatedData === null || validatedData === void 0 ? void 0 : validatedData.phone, validatedData === null || validatedData === void 0 ? void 0 : validatedData.username);
+        if (uniqueError) {
+            return next((0, http_errors_1.default)(400, uniqueError));
         }
-        const access_token = (0, access_tokens_1.generateAccessToken)(admin.id);
-        res.status(200).json({ status: "success", message: "Login successful.", admin: (0, utils_1.userHandler)(admin), access_token });
+        const fieldsToUpdate = Object.fromEntries(Object.entries(validatedData).filter(([key, value]) => value !== undefined));
+        const validFields = Object.assign(Object.assign(Object.assign({}, fieldsToUpdate), (validatedData.personalEmail ? { personalEmail: validatedData.personalEmail.toLowerCase() } : {})), (validatedData.username ? { username: validatedData.username.toLowerCase() } : {}));
+        const updatedUser = yield admin_1.AdminModel.updateOneById(userId, validFields);
+        if (!updatedUser)
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        res.status(200).json({
+            status: "success",
+            message: "Updated user details successfully",
+            user: (0, utils_1.userHandler)(updatedUser)
+        });
     }
     catch (error) {
-        console.error(`Unable to login admin: ${error}`);
+        console.error(`Unable to update admin profile: ${error}`);
+        if (error instanceof zod_1.ZodError) {
+            const errors = (0, utils_1.zodErrorHandler)(error);
+            res.status(400).json({
+                success: false,
+                error: errors,
+            });
+            return;
+        }
         return next((0, http_errors_1.default)(500, variables_1.server_error));
     }
 });
-exports.login = login;
+exports.updateAdminProfile = updateAdminProfile;
+const resetAdminPassword = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { oldPassword, newPassword, confirmPassword } = req.body;
+    const userId = req.userId;
+    if (!userId)
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    if (!oldPassword || !newPassword || !confirmPassword)
+        return next((0, http_errors_1.default)(400, "All fields are required."));
+    if (oldPassword.length < 6 || newPassword.length < 6 || confirmPassword.length < 6)
+        return next((0, http_errors_1.default)(400, "All fields must be at least 6 characters long."));
+    if (newPassword !== confirmPassword)
+        return next((0, http_errors_1.default)(400, "New password and confirm password do not match."));
+    try {
+        const admin = yield (0, admin_2.findAdminById)(userId);
+        if (!admin)
+            return next((0, http_errors_1.default)(404, "User not found."));
+        const isOldPasswordCorrect = yield (0, password_utils_1.validatePassword)(oldPassword, admin.password);
+        if (!isOldPasswordCorrect)
+            return next((0, http_errors_1.default)(400, "The old password you entered is incorrect."));
+        const isPasswordTheSameAsLastOne = yield (0, password_utils_1.validatePassword)(newPassword, admin.password);
+        if (isPasswordTheSameAsLastOne)
+            return next((0, http_errors_1.default)(400, "New password cannot be the same as the current one"));
+        const hashedPassword = yield (0, password_utils_1.hashPassword)(newPassword);
+        yield admin_1.AdminModel.updateOneById(admin.id, { password: hashedPassword });
+        res.status(200).json({
+            status: "success",
+            message: "Password changed successfully",
+        });
+    }
+    catch (error) {
+        console.error(`Unable to  reset admin password: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.resetAdminPassword = resetAdminPassword;
+const getAdminDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.userId;
+    if (!userId) {
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    }
+    try {
+        const admin = yield (0, admin_2.findAdminById)(userId);
+        if (!admin) {
+            return next((0, http_errors_1.default)(404, "User not found."));
+        }
+        res.json({
+            status: "success",
+            message: "Admin details retrieved successfully",
+            user: (0, utils_1.userHandler)(admin)
+        });
+    }
+    catch (error) {
+        console.error(`Unable to get admin details: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.getAdminDetails = getAdminDetails;

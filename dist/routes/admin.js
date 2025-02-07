@@ -1,0 +1,12 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const admin_controllers_1 = require("../controllers/admin-controllers");
+const admin = (0, express_1.Router)();
+admin.patch("/super-admin/:id/promote", admin_controllers_1.makeSuperAdmin);
+admin.patch("/super-admin/:id/demote", admin_controllers_1.removeFromSuperAdmin);
+admin.post("/create", admin_controllers_1.addNewAdmin);
+admin.put("/me/update", admin_controllers_1.updateAdminProfile);
+admin.patch("/me/update/password", admin_controllers_1.resetAdminPassword);
+admin.get("/me", admin_controllers_1.getAdminDetails);
+exports.default = admin;
