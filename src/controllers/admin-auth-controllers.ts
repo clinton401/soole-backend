@@ -8,6 +8,7 @@ import { ZodError } from "zod";
 import {validateUniqueAdminIdentifiers, createAdmin, findAdmin, checkAdminExists} from "../data/admin";
 import {hashPassword, validatePassword} from "../lib/password-utils";
 import { generateAccessToken } from "../middlewares/access-tokens";
+import { createAdminRequest } from "../data/admin-request";
 export const register = async (req: Request, res: Response, next: NextFunction) => {
     const values = req.body;
 
@@ -28,11 +29,12 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
             personalEmail: personalEmail.toLowerCase(),
             workEmail: workEmail.toLowerCase(),
             username: username.toLowerCase(),
+            adminViewable: true
         }
-        const admin = await createAdmin({...data, role: AdminRole.SUPER_ADMIN});
-         res.status(201).json({ status: "success", message: "User created successfully!", admin: userHandler(admin) });
+     await createAdminRequest({...data});
+         res.status(201).json({ status: "success", message: "Admin request submitted! You'll receive an email once it's reviewed." });
     } catch (error) {
-        console.error(`Unable to register admin: ${error}`);
+        console.error(`Unable to send admin request: ${error}`);
         if (error instanceof ZodError) {
             const errors = zodErrorHandler(error);
             res.status(400).json({

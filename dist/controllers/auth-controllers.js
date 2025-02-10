@@ -52,6 +52,9 @@ const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         const isNumberAvailable = yield user_1.UserModel.findOne({ phone });
         if (isNumberAvailable)
             return next((0, http_errors_1.default)(400, "Phone number already registered. Please use a different number or log in if you already have an account."));
+        // const yesterday = new Date();
+        // yesterday.setDate(yesterday.getDate() - 1);
+        // const analyticsDate = dateToInt(yesterday);
         const user = yield user_1.UserModel.insertOne(Object.assign(Object.assign({}, validatedFields.data), { isNumberVerified: false, totalTrips: 0, totalRides: 0, status: user_1.UserStatus.ACTIVE }));
         if (!user)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));

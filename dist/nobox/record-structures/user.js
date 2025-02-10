@@ -89,6 +89,11 @@ exports.UserStructure = {
             required: true,
             type: String,
         },
+        // analyticsDate : {
+        //   description: "Analytics date for the user ",
+        //   required: true,
+        //   type: Number,
+        // },
     },
 };
 exports.UserModel = (0, config_1.createRowSchema)(exports.UserStructure);

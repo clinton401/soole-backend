@@ -15,29 +15,29 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.login = exports.register = void 0;
 const http_errors_1 = __importDefault(require("http-errors"));
 const variables_1 = require("../lib/variables");
-const admin_1 = require("../nobox/record-structures/admin");
 const index_1 = require("../schemas/index");
 const utils_1 = require("../lib/utils");
 const zod_1 = require("zod");
-const admin_2 = require("../data/admin");
+const admin_1 = require("../data/admin");
 const password_utils_1 = require("../lib/password-utils");
 const access_tokens_1 = require("../middlewares/access-tokens");
+const admin_request_1 = require("../data/admin-request");
 const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const values = req.body;
     try {
         const validatedData = index_1.RegisterAdminSchema.parse(values);
         const { personalEmail, phone, password, username, workEmail } = validatedData;
-        const uniqueError = yield (0, admin_2.validateUniqueAdminIdentifiers)(personalEmail.toLowerCase(), phone, username.toLowerCase());
+        const uniqueError = yield (0, admin_1.validateUniqueAdminIdentifiers)(personalEmail.toLowerCase(), phone, username.toLowerCase());
         if (uniqueError) {
             return next((0, http_errors_1.default)(400, uniqueError));
         }
         const hashedPassword = yield (0, password_utils_1.hashPassword)(password);
-        const data = Object.assign(Object.assign({}, validatedData), { password: hashedPassword, personalEmail: personalEmail.toLowerCase(), workEmail: workEmail.toLowerCase(), username: username.toLowerCase() });
-        const admin = yield (0, admin_2.createAdmin)(Object.assign(Object.assign({}, data), { role: admin_1.AdminRole.SUPER_ADMIN }));
-        res.status(201).json({ status: "success", message: "User created successfully!", admin: (0, utils_1.userHandler)(admin) });
+        const data = Object.assign(Object.assign({}, validatedData), { password: hashedPassword, personalEmail: personalEmail.toLowerCase(), workEmail: workEmail.toLowerCase(), username: username.toLowerCase(), adminViewable: true });
+        yield (0, admin_request_1.createAdminRequest)(Object.assign({}, data));
+        res.status(201).json({ status: "success", message: "Admin request submitted! You'll receive an email once it's reviewed." });
     }
     catch (error) {
-        console.error(`Unable to register admin: ${error}`);
+        console.error(`Unable to send admin request: ${error}`);
         if (error instanceof zod_1.ZodError) {
             const errors = (0, utils_1.zodErrorHandler)(error);
             res.status(400).json({
@@ -56,7 +56,7 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
         return next((0, http_errors_1.default)(400, "Incomplete credentials"));
     }
     try {
-        const admin = yield (0, admin_2.checkAdminExists)(contactInfo);
+        const admin = yield (0, admin_1.checkAdminExists)(contactInfo);
         if (!admin) {
             return next((0, http_errors_1.default)(404, variables_1.admin_not_found));
         }

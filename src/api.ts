@@ -19,7 +19,9 @@ import admin from "./routes/admin";
 import adminAuth from "./routes/admin-auth";
 import adminRides from "./routes/admin-ride";
 import adminUser from "./routes/admin-user";
+import adminRequest from "./routes/admin-request";
 import {verifyUserStatus} from "./middlewares/user"
+import { checkSuperAdmin } from "./middlewares/admins";
 const api = Router();
 
 api.use("/auth", isAuthenticated, auth);
@@ -42,6 +44,6 @@ api.post("/upload-images",upload.single('image'),  uploadImage)
 api.use("/admin/auth", isAuthenticated, adminAuth);
 api.use("/admin/rides", verifyAccessToken, adminRides);
 api.use("/admin/users", verifyAccessToken, adminUser);
+api.use("/admin/requests", verifyAccessToken, checkSuperAdmin, adminRequest);
 api.use("/admin", verifyAccessToken, admin);
-
 export default api

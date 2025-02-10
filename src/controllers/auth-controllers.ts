@@ -2,7 +2,7 @@ import { Response, Request, NextFunction } from "express";
 import { RegisterSchema, OtpSchema, CompleteProfileSchema } from "../schemas";
 import createError from "http-errors";
 import { UserModel, User, UserStatus } from "../nobox/record-structures/user";
-import { otpGenerator, hasExpired, userHandler } from "../lib/utils";
+import { otpGenerator, hasExpired, userHandler,dateToInt } from "../lib/utils";
 import { server_error, unknown_error } from "../lib/variables";
 import { NumberVerificationModel } from "../nobox/record-structures/number-verification";
 import { config } from "dotenv";
@@ -39,6 +39,9 @@ export const register = async (
           "Phone number already registered. Please use a different number or log in if you already have an account."
         )
       );
+      // const yesterday = new Date();
+// yesterday.setDate(yesterday.getDate() - 1);
+// const analyticsDate = dateToInt(yesterday);
     const user = await UserModel.insertOne({ ...validatedFields.data, isNumberVerified: false, totalTrips: 0, totalRides: 0, status: UserStatus.ACTIVE });
 
     if (!user) return next(createError(500, unknown_error));

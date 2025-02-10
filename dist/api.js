@@ -21,7 +21,9 @@ const admin_1 = __importDefault(require("./routes/admin"));
 const admin_auth_1 = __importDefault(require("./routes/admin-auth"));
 const admin_ride_1 = __importDefault(require("./routes/admin-ride"));
 const admin_user_1 = __importDefault(require("./routes/admin-user"));
+const admin_request_1 = __importDefault(require("./routes/admin-request"));
 const user_2 = require("./middlewares/user");
+const admins_1 = require("./middlewares/admins");
 const api = (0, express_1.Router)();
 api.use("/auth", access_tokens_1.isAuthenticated, auth_1.default);
 api.use("/rides", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, ride_1.default);
@@ -38,5 +40,6 @@ api.post("/upload-images", upload_1.default.single('image'), auth_controllers_1.
 api.use("/admin/auth", access_tokens_1.isAuthenticated, admin_auth_1.default);
 api.use("/admin/rides", access_tokens_1.verifyAccessToken, admin_ride_1.default);
 api.use("/admin/users", access_tokens_1.verifyAccessToken, admin_user_1.default);
+api.use("/admin/requests", access_tokens_1.verifyAccessToken, admins_1.checkSuperAdmin, admin_request_1.default);
 api.use("/admin", access_tokens_1.verifyAccessToken, admin_1.default);
 exports.default = api;

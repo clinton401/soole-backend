@@ -22,6 +22,7 @@ export interface User {
   totalTrips: number;
   status: UserStatus;
   totalRides: number;
+  // analyticsDate: number;
 }
 
 export const UserStructure: Space<User> = {
@@ -105,6 +106,11 @@ export const UserStructure: Space<User> = {
       required: true,
       type: String,
     },
+    // analyticsDate : {
+    //   description: "Analytics date for the user ",
+    //   required: true,
+    //   type: Number,
+    // },
 
 
   },

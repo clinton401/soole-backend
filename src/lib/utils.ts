@@ -159,3 +159,37 @@ nextPage
 export const hasSufficientBalance = (balance: number, rideCost: number ) => {
   return balance >= rideCost;
 }
+
+export const dateToInt = (date: Date): number => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return parseInt(`${year}${month}${day}`, 10);
+}
+
+export const  calculateGrowth = (yesterday: number, today: number)  => {
+  if (yesterday === today) {
+      return { status: "draw", percentage: 0 };
+  }
+
+  const difference = today - yesterday;
+  const percentageChange = yesterday === 0 
+      ? today * 100 
+      : Math.abs((difference / yesterday) * 100); 
+
+  return {
+      status: today > yesterday ? "increase" : "decrease",
+      percentage: parseFloat(percentageChange.toFixed(2)) 
+  };
+}
+
+export const getDates = () => {
+  const todayDate = new Date();
+  const yesterdayDate = new Date();
+yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+
+  const today = dateToInt(todayDate);
+  const yesterday = dateToInt(yesterdayDate);
+  return {yesterday, today}
+}

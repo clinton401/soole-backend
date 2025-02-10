@@ -22,6 +22,8 @@ const utils_1 = require("../lib/utils");
 const admin_2 = require("../data/admin");
 const password_utils_1 = require("../lib/password-utils");
 const zod_1 = require("zod");
+const html_templates_1 = require("../lib/html-templates");
+const mail_1 = require("../data/mail");
 (0, dotenv_1.config)();
 const makeSuperAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.userId;
@@ -56,6 +58,8 @@ const makeSuperAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         if (!updatedAdmin) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
+        const { text, template, subject } = (0, html_templates_1.superAdminPromotionEmailTemplate)(updatedAdmin.personalEmail);
+        yield (0, mail_1.sendEmail)(updatedAdmin.personalEmail, subject, text, template);
         res.json({
             status: "success",
             message: "User made a super admin successfully",
@@ -101,6 +105,8 @@ const removeFromSuperAdmin = (req, res, next) => __awaiter(void 0, void 0, void 
         if (!updatedAdmin) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
+        const { text, template, subject } = (0, html_templates_1.superAdminDemotionEmailTemplate)(updatedAdmin.personalEmail);
+        yield (0, mail_1.sendEmail)(updatedAdmin.personalEmail, subject, text, template);
         res.json({
             status: "success",
             message: "User removed as super admin successfully",
@@ -129,6 +135,8 @@ const addNewAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         const hashedPassword = yield (0, password_utils_1.hashPassword)(password);
         const data = Object.assign(Object.assign({}, validatedData), { password: hashedPassword, personalEmail: personalEmail.toLowerCase(), workEmail: workEmail.toLowerCase(), username: username.toLowerCase() });
         const admin = yield (0, admin_2.createAdmin)(Object.assign(Object.assign({}, data), { role: admin_1.AdminRole.ADMIN }));
+        const { text, template, subject } = (0, html_templates_1.newAdminEmailTemplate)(admin.personalEmail, password);
+        yield (0, mail_1.sendEmail)(admin.personalEmail, subject, text, template);
         res.status(201).json({ status: "success", message: "New admin added successfully", admin: (0, utils_1.userHandler)(admin) });
     }
     catch (error) {
@@ -244,3 +252,30 @@ const getAdminDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.getAdminDetails = getAdminDetails;
+// export const getAnalytics = async (req: Request, res: Response, next: NextFunction) => {
+//     const { yesterday, today } = getDates();
+//     console.log({yesterday, today})
+//     try {
+//         const [yesterdayUsers, todayUsers] = await Promise.all([
+//             UserModel.find({analyticsDate: yesterday }),
+//             UserModel.find({ analyticsDate: today }),
+//         ]);
+//         console.log({yesterdayUsers, todayUsers})
+//         if (!yesterdayUsers || !todayUsers) {
+//             return next(createError(500, unknown_error))
+//         }
+//         const yesterdayUsersCount = yesterdayUsers.length;
+//         const todayUsersCount = todayUsers.length;
+//         const usersGrowth = calculateGrowth(yesterdayUsersCount, todayUsersCount);
+//         res.json({
+//             status: "success",
+//             message: "Analytics found successfully",
+//             data: {
+//                 users: usersGrowth
+//             }
+//         })
+//     } catch (error) {
+//         console.error(`Unable to get analytics for admin: ${error}`);
+//         return next(createError(500, server_error))
+//     }
+// }
