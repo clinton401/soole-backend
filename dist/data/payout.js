@@ -8,34 +8,50 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDriverPayouts = void 0;
+exports.getPayoutYearlyOverview = void 0;
 const payout_1 = require("../nobox/record-structures/payout");
-const utils_1 = require("../lib/utils");
-const http_errors_1 = __importDefault(require("http-errors"));
 const variables_1 = require("../lib/variables");
-const getDriverPayouts = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const userId = req.userId;
-    if (!userId) {
-        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
-    }
+const getPayoutYearlyOverview = (validYear) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const options = (0, utils_1.paginationOptions)();
-        const payouts = yield payout_1.PayoutModel.find({
-            userId
-        }, options);
-        res.json({
-            status: "success",
-            message: "Payouts received successfully",
-            payouts
+        const payouts = yield payout_1.PayoutModel.find({ adminViewable: true });
+        if (!payouts) {
+            throw new Error(variables_1.unknown_error);
+        }
+        const monthCounts = {
+            january: 0,
+            february: 0,
+            march: 0,
+            april: 0,
+            may: 0,
+            june: 0,
+            july: 0,
+            august: 0,
+            september: 0,
+            october: 0,
+            november: 0,
+            december: 0
+        };
+        payouts.forEach(payout => {
+            const createdAt = new Date(payout.createdAt);
+            const year = createdAt.getFullYear();
+            const monthIndex = createdAt.getMonth();
+            if (year === validYear) {
+                const monthNames = Object.keys(monthCounts);
+                const monthName = monthNames[monthIndex];
+                if (monthName) {
+                    monthCounts[monthName] += payout.amount;
+                }
+            }
         });
+        const monthCountsArray = Object.entries(monthCounts).map(([month, count]) => ({
+            month,
+            count,
+        }));
+        return monthCountsArray;
     }
     catch (error) {
-        console.error(`Unable to get driver's payouts: ${error}`);
-        return next((0, http_errors_1.default)(500, variables_1.server_error));
+        throw error;
     }
 });
-exports.getDriverPayouts = getDriverPayouts;
+exports.getPayoutYearlyOverview = getPayoutYearlyOverview;

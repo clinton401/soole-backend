@@ -64,11 +64,11 @@ exports.UserStructure = {
             required: false,
             type: String,
         },
-        avatarPublicId: {
-            description: "User's Avatar Publid ID",
-            required: false,
-            type: String,
-        },
+        // avatarPublicId: {
+        //   description: "User's Avatar Publid ID",
+        //   required: false,
+        //   type: String,
+        // },
         email: {
             description: "User's  Email Address",
             required: false,
@@ -89,11 +89,21 @@ exports.UserStructure = {
             required: true,
             type: String,
         },
-        // analyticsDate : {
-        //   description: "Analytics date for the user ",
-        //   required: true,
-        //   type: Number,
-        // },
+        analyticsDate: {
+            description: "Analytics date for the user ",
+            required: true,
+            type: String,
+        },
+        weekOfCreation: {
+            description: "Week number of the year when the user was created",
+            required: true,
+            type: String,
+        },
+        dayOfCreation: {
+            description: " day of the week when the user was created (in lowercase).",
+            required: true,
+            type: String,
+        },
     },
 };
 exports.UserModel = (0, config_1.createRowSchema)(exports.UserStructure);

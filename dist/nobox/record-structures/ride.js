@@ -98,6 +98,11 @@ exports.RideStructure = {
             required: true,
             defaultValue: true
         },
+        analyticsDate: {
+            description: "Analytics date for the user ",
+            required: true,
+            type: String,
+        },
     },
 };
 exports.rideModel = (0, config_1.createRowSchema)(exports.RideStructure);

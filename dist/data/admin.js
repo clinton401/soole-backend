@@ -13,9 +13,9 @@ exports.checkAdminExists = exports.findAdmin = exports.findAdminById = exports.c
 const admin_1 = require("../nobox/record-structures/admin");
 const variables_1 = require("../lib/variables");
 const utils_1 = require("../lib/utils");
-const validateUniqueAdminIdentifiers = (personalEmail, phone, username) => __awaiter(void 0, void 0, void 0, function* () {
+const validateUniqueAdminIdentifiers = (personalEmail, phone) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        if (!personalEmail && !phone && !username) {
+        if (!personalEmail && !phone) {
             return "At least one field is required";
         }
         if (personalEmail) {
@@ -30,12 +30,12 @@ const validateUniqueAdminIdentifiers = (personalEmail, phone, username) => __awa
                 return "Phone number is already in use.";
             }
         }
-        if (username) {
-            const isUsernameTaken = yield admin_1.AdminModel.findOne({ username: username.toLowerCase() });
-            if (isUsernameTaken) {
-                return "Username is already in use.";
-            }
-        }
+        // if(name){
+        //         const isNameTaken = await AdminModel.findOne({ name: name.toLowerCase() });
+        //         if (isNameTaken) {
+        //             return "name is already in use.";
+        //         }
+        //     }
         return null;
     }
     catch (error) {
@@ -85,7 +85,7 @@ const checkAdminExists = (info) => __awaiter(void 0, void 0, void 0, function* (
         let admin = null;
         admin = yield admin_1.AdminModel.findOne({ phone: info });
         if (!admin) {
-            admin = yield admin_1.AdminModel.findOne({ personalEmail: info });
+            admin = yield admin_1.AdminModel.findOne({ personalEmail: info.toLowerCase() });
         }
         return admin;
     }

@@ -3,7 +3,7 @@ import { createRowSchema } from "../config";
 
 export interface AdminRequest {
     phone: string;
-    username: string;
+    name: string;
     password: string;
     workEmail: string;
     personalEmail: string;
@@ -43,8 +43,8 @@ export const AdminRequestStructure: Space<AdminRequest> = {
             required: true,
             type: String,
         },
-        username: {
-            description: "Admin username",
+        name: {
+            description: "Admin name",
             required: true,
             type: String
         }

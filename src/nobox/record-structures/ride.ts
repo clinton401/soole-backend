@@ -24,6 +24,7 @@ export interface Ride {
   numberOfSeats: number;
   pricePerSeat: number;
   adminViewable: boolean;
+  analyticsDate: string
 }
 
 export const RideStructure: Space<Ride> = {
@@ -121,6 +122,11 @@ export const RideStructure: Space<Ride> = {
       type: String,
       required: true,
       defaultValue: true
+    },
+    analyticsDate : {
+      description: "Analytics date for the user ",
+      required: true,
+      type: String,
     },
   },
 };

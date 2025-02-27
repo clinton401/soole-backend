@@ -53,7 +53,7 @@ const acceptAdminRequest = (req, res, next) => __awaiter(void 0, void 0, void 0,
             return next((0, http_errors_1.default)(404, "Admin request not found."));
         }
         const { adminViewable, id: requestId, createdAt, updatedAt } = request, cleanedAdmin = __rest(request, ["adminViewable", "id", "createdAt", "updatedAt"]);
-        const uniqueError = yield (0, admin_2.validateUniqueAdminIdentifiers)(cleanedAdmin.personalEmail, cleanedAdmin.phone, cleanedAdmin.username);
+        const uniqueError = yield (0, admin_2.validateUniqueAdminIdentifiers)(cleanedAdmin.personalEmail, cleanedAdmin.phone);
         if (uniqueError) {
             const { template, text, subject } = (0, html_templates_1.rejectionEmailTemplate)(cleanedAdmin.personalEmail, uniqueError);
             yield (0, mail_1.sendEmail)(cleanedAdmin.personalEmail, subject, text, template);

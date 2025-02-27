@@ -21,6 +21,7 @@ const notification_1 = require("../nobox/record-structures/notification");
 const variables_1 = require("../lib/variables");
 const payout_1 = require("../nobox/record-structures/payout");
 const wallet_2 = require("../data/wallet");
+const notification_2 = require("../data/notification");
 const utils_1 = require("../lib/utils");
 const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
@@ -49,6 +50,9 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             return next((0, http_errors_1.default)(404, "User not found."));
         if (!wallet)
             return next((0, http_errors_1.default)(400, "You need to create a driver's wallet before creating a ride."));
+        const today = new Date();
+        // today.setDate(today.getDate() - 1);
+        const analyticsDate = (0, utils_1.dateToInt)(today);
         const ride = yield ride_1.rideModel.insertOne({
             userId,
             from: from.toLowerCase(),
@@ -67,7 +71,8 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             userFirstName: user.firstName,
             userLastName: user.lastName,
             userUsername: user.username,
-            adminViewable: true
+            adminViewable: true,
+            analyticsDate
         });
         if (!ride) {
             return next((0, http_errors_1.default)(500, "Failed to create the ride."));
@@ -205,7 +210,7 @@ const cancelRidePassenger = (req, res, next) => __awaiter(void 0, void 0, void 0
         if (!updatedRide) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        yield notification_1.NotificationModel.insertOne({
+        yield (0, notification_2.createNotification)({
             userId: ride.userId,
             type: notification_1.NotificationType.RIDE_CANCELLED_BY_PASSENGER,
             from: ride.from,
@@ -273,7 +278,7 @@ const cancelRideDriver = (req, res, next) => __awaiter(void 0, void 0, void 0, f
                         continue;
                     }
                 }
-                yield notification_1.NotificationModel.insertOne({
+                yield (0, notification_2.createNotification)({
                     userId: passenger.id,
                     type: notification_1.NotificationType.RIDE_CANCELLED_BY_DRIVER,
                     from: ride.from,
@@ -381,7 +386,7 @@ const requestRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         }, {});
         if (existingRequest)
             return next((0, http_errors_1.default)(400, "You have already requested this ride. Please wait for the driver's response."));
-        const newNotification = yield notification_1.NotificationModel.insertOne(params);
+        const newNotification = yield (0, notification_2.createNotification)(params);
         if (!newNotification) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
@@ -396,7 +401,8 @@ const requestRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
             userName,
             rideId: ride.id,
             status: payout_1.PayoutStatus.PENDING,
-            type: payout_1.PayoutType.RIDE_PAYMENT
+            type: payout_1.PayoutType.RIDE_PAYMENT,
+            adminViewable: true
         });
         if (!payout) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
@@ -476,7 +482,7 @@ const acceptRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
         });
         if (!updatedRide)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
-        const newNotification = yield notification_1.NotificationModel.insertOne({
+        const newNotification = yield (0, notification_2.createNotification)({
             userId: passengerId,
             type: notification_1.NotificationType.RIDE_ACCEPTED,
             from: notification.from,
@@ -544,7 +550,7 @@ const rejectRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
         if (!refundSuccess) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        const newNotification = yield notification_1.NotificationModel.insertOne({
+        const newNotification = yield (0, notification_2.createNotification)({
             userId: passengerId,
             type: notification_1.NotificationType.RIDE_REJECTED,
             from: notification.from,
@@ -611,7 +617,7 @@ const startRide = (req, res, next) => __awaiter(void 0, void 0, void 0, function
         }
         for (const passenger of ride.passengers) {
             try {
-                yield notification_1.NotificationModel.insertOne({
+                yield (0, notification_2.createNotification)({
                     userId: passenger.id,
                     type: notification_1.NotificationType.RIDE_STARTED,
                     from: ride.from,
@@ -687,7 +693,7 @@ const passengerConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0,
                 totalPrice += passenger.seats * ride.pricePerSeat;
             });
             yield (0, wallet_2.addToWallet)(wallet.id, totalPrice, wallet.balance);
-            yield notification_1.NotificationModel.insertOne({
+            yield (0, notification_2.createNotification)({
                 userId: ride.userId,
                 type: notification_1.NotificationType.RIDE_COMPLETETED_DRIVER,
                 from: ride.from,
@@ -755,7 +761,7 @@ const driverConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0, vo
         }
         for (const passenger of ride.passengers) {
             try {
-                yield notification_1.NotificationModel.insertOne({
+                yield (0, notification_2.createNotification)({
                     userId: passenger.id,
                     type: notification_1.NotificationType.RIDE_COMPLETETED_PASSENGER,
                     from: ride.from,

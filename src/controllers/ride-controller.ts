@@ -7,7 +7,8 @@ import { NotificationModel, NotificationType } from "../nobox/record-structures/
 import { server_error, unknown_error, unauthorized_error } from "../lib/variables";
 import { PayoutModel, PayoutType, PayoutStatus } from "../nobox/record-structures/payout";
 import { findWalletByUserId, deductFromWallet, addToWallet } from "../data/wallet"
-import { hasSufficientBalance, hasDecimal } from "../lib/utils"
+import { createNotification } from "../data/notification"
+import { hasSufficientBalance, hasDecimal, dateToInt } from "../lib/utils";
 
 export const createRide = async (
   req: Request,
@@ -55,7 +56,9 @@ export const createRide = async (
     ])
     if (!user) return next(createError(404, "User not found."));
     if (!wallet) return next(createError(400, "You need to create a driver's wallet before creating a ride."))
-
+      const today = new Date();
+    // today.setDate(today.getDate() - 1);
+    const analyticsDate = dateToInt(today);
     const ride = await rideModel.insertOne({
       userId,
       from: from.toLowerCase(),
@@ -74,7 +77,8 @@ export const createRide = async (
       userFirstName: user.firstName,
       userLastName: user.lastName,
       userUsername: user.username,
-      adminViewable: true
+      adminViewable: true,
+      analyticsDate
     });
 
     if (!ride) {
@@ -239,7 +243,7 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
       return next(createError(500, unknown_error));
     }
 
-    await NotificationModel.insertOne({
+    await createNotification({
       userId: ride.userId,
       type: NotificationType.RIDE_CANCELLED_BY_PASSENGER,
       from: ride.from,
@@ -307,7 +311,7 @@ export const cancelRideDriver = async (req: Request, res: Response, next: NextFu
             continue;
           }
         }
-        await NotificationModel.insertOne({
+        await createNotification({
           userId: passenger.id,
           type: NotificationType.RIDE_CANCELLED_BY_DRIVER,
           from: ride.from,
@@ -415,7 +419,7 @@ export const requestRide = async (req: Request, res: Response, next: NextFunctio
       rideId: id
     }, {});
     if (existingRequest) return next(createError(400, "You have already requested this ride. Please wait for the driver's response."));
-    const newNotification = await NotificationModel.insertOne(params);
+    const newNotification = await createNotification(params);
     if (!newNotification) {
       return next(createError(500, unknown_error))
     }
@@ -430,7 +434,8 @@ export const requestRide = async (req: Request, res: Response, next: NextFunctio
       userName,
       rideId: ride.id,
       status: PayoutStatus.PENDING,
-      type: PayoutType.RIDE_PAYMENT
+      type: PayoutType.RIDE_PAYMENT,
+      adminViewable: true
     })
     if (!payout) {
       return next(createError(500, unknown_error));
@@ -502,7 +507,7 @@ export const acceptRideRequest = async (req: Request, res: Response, next: NextF
 
 
 
-    const newNotification = await NotificationModel.insertOne({
+    const newNotification = await createNotification({
       userId: passengerId,
       type: NotificationType.RIDE_ACCEPTED,
       from: notification.from,
@@ -567,7 +572,7 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
     if (!refundSuccess) {
       return next(createError(500, unknown_error))
     }
-    const newNotification = await NotificationModel.insertOne({
+    const newNotification = await createNotification({
       userId: passengerId,
       type: NotificationType.RIDE_REJECTED,
       from: notification.from,
@@ -641,7 +646,7 @@ export const startRide = async (req: Request, res: Response, next: NextFunction)
     for (const passenger of ride.passengers) {
       try {
 
-        await NotificationModel.insertOne({
+        await createNotification({
           userId: passenger.id,
           type: NotificationType.RIDE_STARTED,
           from: ride.from,
@@ -723,7 +728,7 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
         totalPrice += passenger.seats * ride.pricePerSeat;
       });
       await addToWallet(wallet.id, totalPrice, wallet.balance);
-      await NotificationModel.insertOne({
+      await createNotification({
         userId: ride.userId,
         type: NotificationType.RIDE_COMPLETETED_DRIVER,
         from: ride.from,
@@ -797,7 +802,7 @@ export const driverConfirmCompletion = async (req: Request, res: Response, next:
     for (const passenger of ride.passengers) {
       try {
 
-        await NotificationModel.insertOne({
+        await createNotification({
           userId: passenger.id,
           type: NotificationType.RIDE_COMPLETETED_PASSENGER,
           from: ride.from,

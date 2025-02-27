@@ -9,7 +9,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteAdminRequestById = exports.findAdminRequestById = exports.createAdminRequest = void 0;
+exports.deleteAdminRequestById = exports.findAdminRequestById = exports.hasPendingAdminRequest = exports.createAdminRequest = void 0;
 const admin_request_1 = require("../nobox/record-structures/admin-request");
 const variables_1 = require("../lib/variables");
 const createAdminRequest = (data) => __awaiter(void 0, void 0, void 0, function* () {
@@ -25,6 +25,18 @@ const createAdminRequest = (data) => __awaiter(void 0, void 0, void 0, function*
     }
 });
 exports.createAdminRequest = createAdminRequest;
+const hasPendingAdminRequest = (personalEmail, phone) => __awaiter(void 0, void 0, void 0, function* () {
+    const isEmailRequested = yield admin_request_1.AdminRequestModel.findOne({ personalEmail: personalEmail.toLowerCase() });
+    if (isEmailRequested) {
+        return true;
+    }
+    const isPhoneRequested = yield admin_request_1.AdminRequestModel.findOne({ phone });
+    if (isPhoneRequested) {
+        return true;
+    }
+    return false;
+});
+exports.hasPendingAdminRequest = hasPendingAdminRequest;
 const findAdminRequestById = (id) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const request = yield admin_request_1.AdminRequestModel.findOne({ id });

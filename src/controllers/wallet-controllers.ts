@@ -442,7 +442,8 @@ export const transferFunds = async (req: Request, res: Response, next: NextFunct
             userName,
             type: PayoutType.WITHDRAWAL,
             status: PayoutStatus.PENDING,
-            reference
+            reference,
+            adminViewable: true
         })
         if (!payout) {
             throw new Error(unknown_error)

@@ -23,6 +23,7 @@ interface Payout {
     status: PayoutStatus;
     type: PayoutType;
     reference?: string;
+    adminViewable: boolean
 }
 
 export const PayoutStructure: Space<Payout> = {
@@ -79,6 +80,11 @@ export const PayoutStructure: Space<Payout> = {
             description: "Unique reference for this transfer",
             required: false,
             type: String,
+          },
+          adminViewable: {
+            description: "Is viewable by admin",
+            required: true,
+            type: Boolean,
           },
     }
 };

@@ -401,7 +401,8 @@ const transferFunds = (req, res, next) => __awaiter(void 0, void 0, void 0, func
                 userName,
                 type: payout_1.PayoutType.WITHDRAWAL,
                 status: payout_1.PayoutStatus.PENDING,
-                reference
+                reference,
+                adminViewable: true
             });
             if (!payout) {
                 throw new Error(variables_1.unknown_error);

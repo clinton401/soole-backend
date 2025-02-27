@@ -4,6 +4,7 @@ const express_1 = require("express");
 const user_controllers_1 = require("../controllers/user-controllers");
 const user = (0, express_1.Router)();
 user.get("/me", user_controllers_1.getUserDetails);
+user.post("/me/complaint", user_controllers_1.createComplaint);
 user.put("/me/update", user_controllers_1.updateUserDetails);
 user.put("/me/update/password", user_controllers_1.resetPassword);
 user.delete("/me/delete-account", user_controllers_1.deleteAccount);

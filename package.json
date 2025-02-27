@@ -26,6 +26,7 @@
     "nobox-client": "^1.12.12",
     "nodemailer": "^6.10.0",
     "socket.io": "^4.8.1",
+    "twilio": "^5.4.3",
     "validator": "^13.12.0",
     "zod": "^3.24.1"
   },

@@ -1,17 +1,17 @@
 
-import { NotificationModel, NotificationType } from "../nobox/record-structures/notification";
+import { NotificationModel, NotificationType, Notification } from "../nobox/record-structures/notification";
 import { User } from "../nobox/record-structures/user";
-
-type InsertOneParams = {
-    userId: string;
-    type: NotificationType;
-    from: string;
-    to : string;
-    triggeredById: string;
-    seats: number;
-    isRead: boolean;
-    user: User;
+import {unknown_error} from "../lib/variables";
+import { io } from "..";
+export const createNotification = async(data: Notification) => {
+try{
+const notification = await NotificationModel.insertOne(data);
+if(!notification) {
+    throw new Error(unknown_error)
 }
-export const insertOne = () => {
-
+io.emit("notifications", notification);
+return notification
+}catch(error){
+    throw error
+}
 }

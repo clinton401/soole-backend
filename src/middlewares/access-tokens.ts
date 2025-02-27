@@ -38,7 +38,7 @@ export const verifyAccessToken = (
     if (error.name === "TokenExpiredError") {
       return next(createError(401, "Token has expired. Please log in again."));
     }
-    return next(createError(403, "Access denied. Invalid token"));
+    return next(createError(401, "Access denied. Invalid token"));
   }
 };
 

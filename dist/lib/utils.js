@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getDates = exports.calculateGrowth = exports.dateToInt = exports.hasSufficientBalance = exports.getPageInfo = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
+exports.isValidImage = exports.getMonthName = exports.getDayOfWeek = exports.getWeekNumber = exports.getDates = exports.calculateGrowth = exports.dateToInt = exports.hasSufficientBalance = exports.getPageInfo = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
 const validator_1 = __importDefault(require("validator"));
 const errorHandler = (error, code) => {
     return {
@@ -114,7 +114,7 @@ const paginationOptions = (order = "desc") => {
     return options;
 };
 exports.paginationOptions = paginationOptions;
-const adminPaginationOptions = (page, limit) => {
+const adminPaginationOptions = (page, limit, order = "desc") => {
     return {
         pagination: {
             limit,
@@ -122,7 +122,7 @@ const adminPaginationOptions = (page, limit) => {
         },
         sort: {
             by: "createdAt",
-            order: "desc",
+            order,
         },
     };
 };
@@ -146,12 +146,12 @@ const dateToInt = (date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");
-    return parseInt(`${year}${month}${day}`, 10);
+    return String(parseInt(`${year}${month}${day}`, 10));
 };
 exports.dateToInt = dateToInt;
 const calculateGrowth = (yesterday, today) => {
     if (yesterday === today) {
-        return { status: "draw", percentage: 0 };
+        return { status: "draw", percentage: 0, count: today };
     }
     const difference = today - yesterday;
     const percentageChange = yesterday === 0
@@ -159,7 +159,8 @@ const calculateGrowth = (yesterday, today) => {
         : Math.abs((difference / yesterday) * 100);
     return {
         status: today > yesterday ? "increase" : "decrease",
-        percentage: parseFloat(percentageChange.toFixed(2))
+        percentage: parseFloat(percentageChange.toFixed(2)),
+        count: today
     };
 };
 exports.calculateGrowth = calculateGrowth;
@@ -167,8 +168,34 @@ const getDates = () => {
     const todayDate = new Date();
     const yesterdayDate = new Date();
     yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-    const today = (0, exports.dateToInt)(todayDate);
-    const yesterday = (0, exports.dateToInt)(yesterdayDate);
+    const today = String((0, exports.dateToInt)(todayDate));
+    const yesterday = String((0, exports.dateToInt)(yesterdayDate));
     return { yesterday, today };
 };
 exports.getDates = getDates;
+const getWeekNumber = (weeksAgo = 0) => {
+    const today = new Date();
+    today.setDate(today.getDate() - 7 * weeksAgo);
+    const startOfYear = new Date(today.getFullYear(), 0, 1);
+    const diff = today.getTime() - startOfYear.getTime();
+    const oneWeek = 7 * 24 * 60 * 60 * 1000;
+    return String(Math.ceil(diff / oneWeek));
+};
+exports.getWeekNumber = getWeekNumber;
+const getDayOfWeek = (date = new Date()) => {
+    const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+    return days[date.getDay()];
+};
+exports.getDayOfWeek = getDayOfWeek;
+const getMonthName = (date = new Date()) => {
+    const months = [
+        "january", "february", "march", "april", "may", "june",
+        "july", "august", "september", "october", "november", "december"
+    ];
+    return months[date.getMonth()];
+};
+exports.getMonthName = getMonthName;
+const isValidImage = (filename) => {
+    return /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(filename);
+};
+exports.isValidImage = isValidImage;

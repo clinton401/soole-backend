@@ -2,19 +2,19 @@ import { Response, Request, NextFunction } from "express";
 import { RegisterSchema, OtpSchema, CompleteProfileSchema } from "../schemas";
 import createError from "http-errors";
 import { UserModel, User, UserStatus } from "../nobox/record-structures/user";
-import { otpGenerator, hasExpired, userHandler,dateToInt } from "../lib/utils";
+import { otpGenerator, hasExpired, userHandler, dateToInt, getWeekNumber, getDayOfWeek } from "../lib/utils";
 import { server_error, unknown_error } from "../lib/variables";
 import { NumberVerificationModel } from "../nobox/record-structures/number-verification";
 import { config } from "dotenv";
-import cloudinary from "../config/cloudinary";
 import fs from 'fs';
 import { ZodError } from "zod";
 import { hashPassword, validatePassword } from "../lib/password-utils";
 import { generateAccessToken } from "../middlewares/access-tokens";
 import { ResetCodeModel } from "../nobox/record-structures/reset-code";
 import { WalletModel, WalletStatus, WalletType } from "../nobox/record-structures/wallet";
-import {  findWalletByUserId, createWallet } from "../data/wallet";
+import { findWalletByUserId, createWallet } from "../data/wallet";
 
+import {noboxUpload} from "../config/nobox-upload"
 
 config();
 export const register = async (
@@ -39,22 +39,24 @@ export const register = async (
           "Phone number already registered. Please use a different number or log in if you already have an account."
         )
       );
-      // const yesterday = new Date();
-// yesterday.setDate(yesterday.getDate() - 1);
-// const analyticsDate = dateToInt(yesterday);
-    const user = await UserModel.insertOne({ ...validatedFields.data, isNumberVerified: false, totalTrips: 0, totalRides: 0, status: UserStatus.ACTIVE });
+    const today = new Date();
+    // today.setDate(today.getDate() - 1);
+    const analyticsDate = dateToInt(today);
+    const dayOfCreation = getDayOfWeek();
+    const weekOfCreation =  getWeekNumber()
+    const user = await UserModel.insertOne({ ...validatedFields.data, isNumberVerified: false, totalTrips: 0, totalRides: 0, status: UserStatus.ACTIVE, analyticsDate, weekOfCreation, dayOfCreation });
 
     if (!user) return next(createError(500, unknown_error));
 
     const walletExists = await findWalletByUserId(user.id);
     if (!walletExists) {
       await createWallet(user.id, WalletType.USER)
-     
+
     }
     const driverWalletExists = await findWalletByUserId(user.id, WalletType.DRIVER);
     if (!driverWalletExists) {
       await createWallet(user.id, WalletType.DRIVER)
-     
+
     }
 
     const params = {
@@ -159,23 +161,20 @@ export const regenerateVerificationCode = async (req: Request, res: Response, ne
 
 export const uploadImage = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    if (!req.file) {
+    const file = req?.file
+    if (!file) {
       return next(createError(400, "No image uploaded"))
 
     }
     const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
-    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+    if (!allowedMimeTypes.includes(file.mimetype)) {
       return next(createError(400, 'Invalid file type. Only images are allowed.'));
     }
-    const upload_preset = process.env.CLOUDINARY_PRESET_NAME;
-    if (!upload_preset) return next(createError(400, "Cloudinary preset name is required"));
-    const filePath = req.file.path;
-
-
-    const result = await cloudinary.uploader.upload(filePath, {
-      upload_preset,
-    });
-    if (!result) return next(createError(500, unknown_error))
+    const filePath = file.path;
+    const fileBuffer = fs.readFileSync(filePath);
+    const convertedFile = new File([fileBuffer], file.originalname, { type: file.mimetype });
+    
+    const result = await noboxUpload(convertedFile)
     fs.unlink(filePath, (err) => {
       if (err) {
         console.error(`Failed to delete file: ${filePath}. Error: ${err.message}`);
@@ -185,8 +184,7 @@ export const uploadImage = async (req: Request, res: Response, next: NextFunctio
       success: true,
       message: 'Image uploaded successfully!',
       data: {
-        url: result.secure_url,
-        public_id: result.public_id
+        url: result.s3Link,
       }
 
     });
@@ -265,7 +263,10 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     if (!user) {
       return next(createError(400, "User not found. Check phone number or email and try again."))
     }
-
+    if (!user.isNumberVerified) {
+      res.status(400).json({ error: "Phone number not verified. Please verify to continue.", code: 400, user_id: user.id });
+      return;
+ }
     if (!user?.password) {
       return next(createError(404, "No password found for this user."))
     }

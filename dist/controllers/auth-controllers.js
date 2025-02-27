@@ -31,7 +31,6 @@ const utils_1 = require("../lib/utils");
 const variables_1 = require("../lib/variables");
 const number_verification_1 = require("../nobox/record-structures/number-verification");
 const dotenv_1 = require("dotenv");
-const cloudinary_1 = __importDefault(require("../config/cloudinary"));
 const fs_1 = __importDefault(require("fs"));
 const zod_1 = require("zod");
 const password_utils_1 = require("../lib/password-utils");
@@ -39,6 +38,7 @@ const access_tokens_1 = require("../middlewares/access-tokens");
 const reset_code_1 = require("../nobox/record-structures/reset-code");
 const wallet_1 = require("../nobox/record-structures/wallet");
 const wallet_2 = require("../data/wallet");
+const nobox_upload_1 = require("../config/nobox-upload");
 (0, dotenv_1.config)();
 const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const values = req.body;
@@ -52,10 +52,12 @@ const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         const isNumberAvailable = yield user_1.UserModel.findOne({ phone });
         if (isNumberAvailable)
             return next((0, http_errors_1.default)(400, "Phone number already registered. Please use a different number or log in if you already have an account."));
-        // const yesterday = new Date();
-        // yesterday.setDate(yesterday.getDate() - 1);
-        // const analyticsDate = dateToInt(yesterday);
-        const user = yield user_1.UserModel.insertOne(Object.assign(Object.assign({}, validatedFields.data), { isNumberVerified: false, totalTrips: 0, totalRides: 0, status: user_1.UserStatus.ACTIVE }));
+        const today = new Date();
+        // today.setDate(today.getDate() - 1);
+        const analyticsDate = (0, utils_1.dateToInt)(today);
+        const dayOfCreation = (0, utils_1.getDayOfWeek)();
+        const weekOfCreation = (0, utils_1.getWeekNumber)();
+        const user = yield user_1.UserModel.insertOne(Object.assign(Object.assign({}, validatedFields.data), { isNumberVerified: false, totalTrips: 0, totalRides: 0, status: user_1.UserStatus.ACTIVE, analyticsDate, weekOfCreation, dayOfCreation }));
         if (!user)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         const walletExists = yield (0, wallet_2.findWalletByUserId)(user.id);
@@ -169,22 +171,18 @@ const regenerateVerificationCode = (req, res, next) => __awaiter(void 0, void 0,
 exports.regenerateVerificationCode = regenerateVerificationCode;
 const uploadImage = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        if (!req.file) {
+        const file = req === null || req === void 0 ? void 0 : req.file;
+        if (!file) {
             return next((0, http_errors_1.default)(400, "No image uploaded"));
         }
         const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
-        if (!allowedMimeTypes.includes(req.file.mimetype)) {
+        if (!allowedMimeTypes.includes(file.mimetype)) {
             return next((0, http_errors_1.default)(400, 'Invalid file type. Only images are allowed.'));
         }
-        const upload_preset = process.env.CLOUDINARY_PRESET_NAME;
-        if (!upload_preset)
-            return next((0, http_errors_1.default)(400, "Cloudinary preset name is required"));
-        const filePath = req.file.path;
-        const result = yield cloudinary_1.default.uploader.upload(filePath, {
-            upload_preset,
-        });
-        if (!result)
-            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        const filePath = file.path;
+        const fileBuffer = fs_1.default.readFileSync(filePath);
+        const convertedFile = new File([fileBuffer], file.originalname, { type: file.mimetype });
+        const result = yield (0, nobox_upload_1.noboxUpload)(convertedFile);
         fs_1.default.unlink(filePath, (err) => {
             if (err) {
                 console.error(`Failed to delete file: ${filePath}. Error: ${err.message}`);
@@ -194,8 +192,7 @@ const uploadImage = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
             success: true,
             message: 'Image uploaded successfully!',
             data: {
-                url: result.secure_url,
-                public_id: result.public_id
+                url: result.s3Link,
             }
         });
     }
@@ -265,6 +262,10 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
         }
         if (!user) {
             return next((0, http_errors_1.default)(400, "User not found. Check phone number or email and try again."));
+        }
+        if (!user.isNumberVerified) {
+            res.status(400).json({ error: "Phone number not verified. Please verify to continue.", code: 400, user_id: user.id });
+            return;
         }
         if (!(user === null || user === void 0 ? void 0 : user.password)) {
             return next((0, http_errors_1.default)(404, "No password found for this user."));

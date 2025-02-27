@@ -10,7 +10,8 @@ import { isValidNumber, hasDecimal } from "../lib/utils"
 import { TransactionModel, TransactionType, TransactionStatus } from "../nobox/record-structures/transaction";
 import { addToUserWalletBalance, findWalletByUserId, deductFromWallet } from "../data/wallet";
 import { validatePassword } from "../lib/password-utils";
-import crypto from "crypto"
+import crypto from "crypto";
+import { io } from "..";
 config();
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
@@ -75,6 +76,8 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
 
 
             const updatedWallet = await addToUserWalletBalance(wallet, transaction, event.data.authorization?.authorization_code);
+            io.emit("wallet:funded", updatedWallet);
+            io.emit("transaction:success", updatedTransaction);
 
             res.status(200).json({
                 success: true,

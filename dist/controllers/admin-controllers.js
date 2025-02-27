@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAdminDetails = exports.resetAdminPassword = exports.updateAdminProfile = exports.addNewAdmin = exports.removeFromSuperAdmin = exports.makeSuperAdmin = void 0;
+exports.getRevenueOverview = exports.getUsersAnalytics = exports.getAnalytics = exports.getAdminDetails = exports.deleteAdminProfilePicture = exports.resetAdminPassword = exports.updateAdminProfile = exports.addNewAdmin = exports.removeFromSuperAdmin = exports.makeSuperAdmin = void 0;
 const admin_1 = require("../nobox/record-structures/admin");
 const http_errors_1 = __importDefault(require("http-errors"));
 const variables_1 = require("../lib/variables");
@@ -24,6 +24,10 @@ const password_utils_1 = require("../lib/password-utils");
 const zod_1 = require("zod");
 const html_templates_1 = require("../lib/html-templates");
 const mail_1 = require("../data/mail");
+const user_1 = require("../nobox/record-structures/user");
+const user_2 = require("../data/user");
+const ride_1 = require("../data/ride");
+const payout_1 = require("../data/payout");
 (0, dotenv_1.config)();
 const makeSuperAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.userId;
@@ -127,13 +131,13 @@ const addNewAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         if (!password) {
             return next((0, http_errors_1.default)(400, "New admin password is required in the environment variable"));
         }
-        const { personalEmail, phone, username, workEmail } = validatedData;
-        const uniqueError = yield (0, admin_2.validateUniqueAdminIdentifiers)(personalEmail.toLowerCase(), phone, username.toLowerCase());
+        const { personalEmail, phone, name, workEmail } = validatedData;
+        const uniqueError = yield (0, admin_2.validateUniqueAdminIdentifiers)(personalEmail.toLowerCase(), phone);
         if (uniqueError) {
             return next((0, http_errors_1.default)(400, uniqueError));
         }
         const hashedPassword = yield (0, password_utils_1.hashPassword)(password);
-        const data = Object.assign(Object.assign({}, validatedData), { password: hashedPassword, personalEmail: personalEmail.toLowerCase(), workEmail: workEmail.toLowerCase(), username: username.toLowerCase() });
+        const data = Object.assign(Object.assign({}, validatedData), { password: hashedPassword, personalEmail: personalEmail.toLowerCase(), workEmail: workEmail.toLowerCase(), name: name.toLowerCase() });
         const admin = yield (0, admin_2.createAdmin)(Object.assign(Object.assign({}, data), { role: admin_1.AdminRole.ADMIN }));
         const { text, template, subject } = (0, html_templates_1.newAdminEmailTemplate)(admin.personalEmail, password);
         yield (0, mail_1.sendEmail)(admin.personalEmail, subject, text, template);
@@ -167,12 +171,18 @@ const updateAdminProfile = (req, res, next) => __awaiter(void 0, void 0, void 0,
         if (!admin) {
             return next((0, http_errors_1.default)(404, "User not found"));
         }
-        const uniqueError = yield (0, admin_2.validateUniqueAdminIdentifiers)(validatedData === null || validatedData === void 0 ? void 0 : validatedData.personalEmail, validatedData === null || validatedData === void 0 ? void 0 : validatedData.phone, validatedData === null || validatedData === void 0 ? void 0 : validatedData.username);
-        if (uniqueError) {
-            return next((0, http_errors_1.default)(400, uniqueError));
+        const { personalEmail, phone, name, avatarUrl } = validatedData;
+        if (personalEmail || phone || name) {
+            const uniqueError = yield (0, admin_2.validateUniqueAdminIdentifiers)(personalEmail, phone);
+            if (uniqueError) {
+                return next((0, http_errors_1.default)(400, uniqueError));
+            }
+        }
+        if (avatarUrl && !(0, utils_1.isValidImage)(avatarUrl)) {
+            return next((0, http_errors_1.default)(400, "Inavlid avatar url image"));
         }
         const fieldsToUpdate = Object.fromEntries(Object.entries(validatedData).filter(([key, value]) => value !== undefined));
-        const validFields = Object.assign(Object.assign(Object.assign({}, fieldsToUpdate), (validatedData.personalEmail ? { personalEmail: validatedData.personalEmail.toLowerCase() } : {})), (validatedData.username ? { username: validatedData.username.toLowerCase() } : {}));
+        const validFields = Object.assign(Object.assign(Object.assign({}, fieldsToUpdate), (personalEmail ? { personalEmail: personalEmail.toLowerCase() } : {})), (name ? { name: name.toLowerCase() } : {}));
         const updatedUser = yield admin_1.AdminModel.updateOneById(userId, validFields);
         if (!updatedUser)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
@@ -230,6 +240,36 @@ const resetAdminPassword = (req, res, next) => __awaiter(void 0, void 0, void 0,
     }
 });
 exports.resetAdminPassword = resetAdminPassword;
+const deleteAdminProfilePicture = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.userId;
+    if (!userId) {
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    }
+    try {
+        const admin = yield (0, admin_2.findAdminById)(userId);
+        if (!admin) {
+            return next((0, http_errors_1.default)(404, "User not found."));
+        }
+        if (!(admin === null || admin === void 0 ? void 0 : admin.avatarUrl)) {
+            return next((0, http_errors_1.default)(400, "You don't have a profile picture to delete."));
+        }
+        const updatedAdmin = yield user_1.UserModel.updateOneById(userId, { avatarUrl: undefined });
+        if (!updatedAdmin) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        ;
+        res.json({
+            status: "success",
+            message: "Admin profile picture deleted successfully",
+            user: (0, utils_1.userHandler)(updatedAdmin)
+        });
+    }
+    catch (error) {
+        console.error(`Unable to delete admin profile picture: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.deleteAdminProfilePicture = deleteAdminProfilePicture;
 const getAdminDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.userId;
     if (!userId) {
@@ -252,30 +292,77 @@ const getAdminDetails = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.getAdminDetails = getAdminDetails;
-// export const getAnalytics = async (req: Request, res: Response, next: NextFunction) => {
-//     const { yesterday, today } = getDates();
-//     console.log({yesterday, today})
-//     try {
-//         const [yesterdayUsers, todayUsers] = await Promise.all([
-//             UserModel.find({analyticsDate: yesterday }),
-//             UserModel.find({ analyticsDate: today }),
-//         ]);
-//         console.log({yesterdayUsers, todayUsers})
-//         if (!yesterdayUsers || !todayUsers) {
-//             return next(createError(500, unknown_error))
-//         }
-//         const yesterdayUsersCount = yesterdayUsers.length;
-//         const todayUsersCount = todayUsers.length;
-//         const usersGrowth = calculateGrowth(yesterdayUsersCount, todayUsersCount);
-//         res.json({
-//             status: "success",
-//             message: "Analytics found successfully",
-//             data: {
-//                 users: usersGrowth
-//             }
-//         })
-//     } catch (error) {
-//         console.error(`Unable to get analytics for admin: ${error}`);
-//         return next(createError(500, server_error))
-//     }
-// }
+const getAnalytics = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { filter, year } = req.query;
+    let weeksAgo = 0;
+    const week = Number(filter);
+    if (week && week >= 1) {
+        weeksAgo = Math.floor(week);
+    }
+    let validYear = new Date().getFullYear();
+    if (year && (0, utils_1.isValidNumber)(year)) {
+        validYear = Number(year);
+    }
+    const { yesterday, today } = (0, utils_1.getDates)();
+    try {
+        const [usersGrowth, ridesGrowth, day_counts, month_counts] = yield Promise.all([
+            (0, user_2.getUserAnalytics)(yesterday, today),
+            (0, ride_1.getRideAnalytics)(yesterday, today),
+            (0, user_2.getUsersWeeklyGrowth)(weeksAgo),
+            (0, payout_1.getPayoutYearlyOverview)(validYear)
+        ]);
+        const { totalRidesGrowth, activeRidesGrowth, completedRidesGrowth } = ridesGrowth;
+        res.json({
+            status: "success",
+            message: "Analytics found successfully",
+            data: {
+                growth: {
+                    users: usersGrowth,
+                    total_rides: totalRidesGrowth,
+                    active_rides: activeRidesGrowth,
+                    completed_rides: completedRidesGrowth
+                },
+                day_counts,
+                month_counts
+            }
+        });
+    }
+    catch (error) {
+        console.error(`Unable to get analytics for admin: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.getAnalytics = getAnalytics;
+const getUsersAnalytics = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { filter } = req.query;
+    let weeksAgo = 0;
+    const week = Number(filter);
+    if (week && week >= 1) {
+        weeksAgo = Math.floor(week);
+    }
+    try {
+        const dayCounts = yield (0, user_2.getUsersWeeklyGrowth)(weeksAgo);
+        res.json({ status: "success", message: "Users analytics found succesfully", data: dayCounts });
+    }
+    catch (error) {
+        console.error(`Unable to get users anaylytics: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.getUsersAnalytics = getUsersAnalytics;
+const getRevenueOverview = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { year } = req.query;
+    let validYear = new Date().getFullYear();
+    if (year && (0, utils_1.isValidNumber)(year)) {
+        validYear = Number(year);
+    }
+    try {
+        const monthCounts = yield (0, payout_1.getPayoutYearlyOverview)(validYear);
+        res.json({ status: "success", message: "Payout overview found succesfully", data: monthCounts });
+    }
+    catch (error) {
+        console.error(`Unable to get revenue overview: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.getRevenueOverview = getRevenueOverview;

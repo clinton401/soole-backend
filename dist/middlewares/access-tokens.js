@@ -36,7 +36,7 @@ const verifyAccessToken = (req, res, next) => {
         if (error.name === "TokenExpiredError") {
             return next((0, http_errors_1.default)(401, "Token has expired. Please log in again."));
         }
-        return next((0, http_errors_1.default)(403, "Access denied. Invalid token"));
+        return next((0, http_errors_1.default)(401, "Access denied. Invalid token"));
     }
 };
 exports.verifyAccessToken = verifyAccessToken;

@@ -10,10 +10,10 @@ type FullAdmin = Admin & {
 export const validateUniqueAdminIdentifiers = async (
     personalEmail?: string,
     phone?: string,
-    username?: string
+    // name?: string
 ): Promise<string | null> => {
     try {
-        if (!personalEmail && !phone && !username) {
+        if (!personalEmail && !phone ) {
             return "At least one field is required"
         }
 
@@ -29,12 +29,12 @@ export const validateUniqueAdminIdentifiers = async (
             return "Phone number is already in use.";
         }
     }
-if(username){
-        const isUsernameTaken = await AdminModel.findOne({ username: username.toLowerCase() });
-        if (isUsernameTaken) {
-            return "Username is already in use.";
-        }
-    }
+// if(name){
+//         const isNameTaken = await AdminModel.findOne({ name: name.toLowerCase() });
+//         if (isNameTaken) {
+//             return "name is already in use.";
+//         }
+//     }
 
 
         return null;
@@ -85,7 +85,7 @@ export const checkAdminExists = async (info: string) => {
         let admin: FullAdmin | null = null;
         admin = await AdminModel.findOne({ phone: info });
         if (!admin) {
-            admin = await AdminModel.findOne({ personalEmail: info });
+            admin = await AdminModel.findOne({ personalEmail: info.toLowerCase() });
         }
         return admin
     } catch (error) {

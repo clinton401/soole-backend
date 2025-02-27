@@ -7,6 +7,7 @@ import { isCreditCardValid, validateExpiryDate, userHandler } from "../lib/utils
 import { UpdateProfileSchema } from "../schemas/index";
 import { ZodError } from "zod";
 import { hashPassword, validatePassword } from "../lib/password-utils";
+import { createComplaintConversation } from "../data/complaint-conversation";
 
 export const addPaymentMethod = async (req: Request, res: Response, next: NextFunction) => {
     const { cardNumber, cvv, expiryDate } = req.body;
@@ -193,5 +194,35 @@ export const deleteAccount = async (req: Request, res: Response, next: NextFunct
     } catch (error) {
         console.error(`Unable to  delete user account: ${error}`)
         return next(createError(500, server_error))
+    }
+}
+
+
+export const createComplaint = async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.userId;
+    const { message } = req.body
+    if (!userId) return next(createError(401, unauthorized_error));
+
+
+    if (!message || message.length < 2) {
+        return next(createError(400, "Message is required and must be at least 2 characters long"));
+    }
+    try {
+        const user = await UserModel.findOne({ id: userId });
+        if (!user) {
+            return next(createError(404, "User not found."))
+        }
+        const {firstName, lastName, email}= user;
+        if(!firstName || !lastName || !email){
+            return next(createError(400, "You need to complete your profile before submitting a complaint."))
+        }
+
+        await createComplaintConversation(user, message)
+         res.status(201).json({
+            message: "Complaint submitted successfully",
+          });
+    } catch (error) {
+        console.error(`Unable to create a complaint: ${error}`);
+        return next(createError(500, server_error));
     }
 }

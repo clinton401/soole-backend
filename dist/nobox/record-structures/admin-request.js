@@ -32,8 +32,8 @@ exports.AdminRequestStructure = {
             required: true,
             type: String,
         },
-        username: {
-            description: "Admin username",
+        name: {
+            description: "Admin name",
             required: true,
             type: String
         }

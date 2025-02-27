@@ -186,11 +186,11 @@ exports.UpdateProfileSchema = zod_1.z
         .optional(),
 }).optional();
 exports.RegisterAdminSchema = zod_1.z.object({
-    username: zod_1.z
+    name: zod_1.z
         .string()
         .trim()
-        .min(3, { message: "Username must be at least 3 characters long." })
-        .max(50, { message: "Username must not exceed 50 characters." }),
+        .min(3, { message: "Name must be at least 3 characters long." })
+        .max(50, { message: "Name must not exceed 50 characters." }),
     workEmail: zod_1.z
         .string()
         .trim()
@@ -210,11 +210,11 @@ exports.RegisterAdminSchema = zod_1.z.object({
         .max(15, { message: "Phone number must not exceed 15 digits." }),
 });
 exports.AddNewAdminSchema = zod_1.z.object({
-    username: zod_1.z
+    name: zod_1.z
         .string()
         .trim()
-        .min(3, { message: "Username must be at least 3 characters long." })
-        .max(50, { message: "Username must not exceed 50 characters." }),
+        .min(3, { message: "Name must be at least 3 characters long." })
+        .max(50, { message: "Name must not exceed 50 characters." }),
     workEmail: zod_1.z
         .string()
         .trim()
@@ -231,11 +231,11 @@ exports.AddNewAdminSchema = zod_1.z.object({
 });
 exports.UpdateAdminProfileSchema = zod_1.z
     .object({
-    username: zod_1.z
+    name: zod_1.z
         .string()
         .trim()
-        .min(3, { message: "Username must be at least 3 characters long." })
-        .max(50, { message: "Username must not exceed 50 characters." })
+        .min(3, { message: "Name must be at least 3 characters long." })
+        .max(50, { message: "Name must not exceed 50 characters." })
         .optional(),
     workEmail: zod_1.z.string().trim().email({ message: "Invalid email format." }).optional(),
     personalEmail: zod_1.z.string().trim().email({ message: "Invalid email format." }).optional(),
@@ -245,6 +245,7 @@ exports.UpdateAdminProfileSchema = zod_1.z
         .min(10, { message: "Phone number must be at least 10 digits long." })
         .max(15, { message: "Phone number must not exceed 15 digits." })
         .optional(),
+    avatarUrl: zod_1.z.string().url().optional()
 })
     .partial()
     .optional();

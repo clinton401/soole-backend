@@ -5,18 +5,22 @@ import { AdminModel, Admin, AdminRole } from "../nobox/record-structures/admin";
 import { RegisterAdminSchema } from "../schemas/index";
 import { zodErrorHandler, userHandler } from "../lib/utils";
 import { ZodError } from "zod";
-import {validateUniqueAdminIdentifiers, createAdmin, findAdmin, checkAdminExists} from "../data/admin";
-import {hashPassword, validatePassword} from "../lib/password-utils";
+import { validateUniqueAdminIdentifiers, createAdmin, findAdmin, checkAdminExists } from "../data/admin";
+import { hashPassword, validatePassword } from "../lib/password-utils";
 import { generateAccessToken } from "../middlewares/access-tokens";
-import { createAdminRequest } from "../data/admin-request";
+import { createAdminRequest, hasPendingAdminRequest } from "../data/admin-request";
 export const register = async (req: Request, res: Response, next: NextFunction) => {
     const values = req.body;
 
     try {
         const validatedData = RegisterAdminSchema.parse(values);
-        
-        const { personalEmail, phone, password, username , workEmail} = validatedData;
-        const uniqueError = await validateUniqueAdminIdentifiers(personalEmail.toLowerCase(), phone, username.toLowerCase());
+
+        const { personalEmail, phone, password, name, workEmail } = validatedData;
+        const hasPending = await hasPendingAdminRequest(personalEmail.toLowerCase(), phone);
+        if (hasPending) {
+            return next(createError(400, "You already have a pending request."))
+        }
+        const uniqueError = await validateUniqueAdminIdentifiers(personalEmail.toLowerCase(), phone);
 
         if (uniqueError) {
             return next(createError(400, uniqueError));
@@ -28,11 +32,11 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
             password: hashedPassword,
             personalEmail: personalEmail.toLowerCase(),
             workEmail: workEmail.toLowerCase(),
-            username: username.toLowerCase(),
+            name: name.toLowerCase(),
             adminViewable: true
         }
-     await createAdminRequest({...data});
-         res.status(201).json({ status: "success", message: "Admin request submitted! You'll receive an email once it's reviewed." });
+        await createAdminRequest({ ...data });
+        res.status(201).json({ status: "success", message: "Admin request submitted! You'll receive an email once it's reviewed." });
     } catch (error) {
         console.error(`Unable to send admin request: ${error}`);
         if (error instanceof ZodError) {
@@ -52,7 +56,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     if (!password || !contactInfo) {
         return next(createError(400, "Incomplete credentials"));
     }
-    try{
+    try {
         const admin = await checkAdminExists(contactInfo);
         if (!admin) {
             return next(createError(404, admin_not_found))
@@ -61,9 +65,9 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
         if (!isPasswordValid) {
             return next(createError(401, "Invalid credentials. Check password and try again"))
         }
-     const access_token = generateAccessToken(admin.id);
-         res.status(200).json({ status: "success", message: "Login successful.", admin: userHandler(admin), access_token })
-    }catch(error) {
+        const access_token = generateAccessToken(admin.id);
+        res.status(200).json({ status: "success", message: "Login successful.", user: userHandler(admin), access_token })
+    } catch (error) {
         console.error(`Unable to login admin: ${error}`);
         return next(createError(500, server_error));
     }

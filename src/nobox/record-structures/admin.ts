@@ -6,11 +6,12 @@ export enum AdminRole {
 }
 export interface Admin {
   phone: string;
-  username: string;
+  name: string;
   password: string;
   workEmail: string;
   role: AdminRole;
   personalEmail: string;
+  avatarUrl?: string;
 }
 
 export const AdminStructure: Space<Admin> = {
@@ -46,9 +47,14 @@ export const AdminStructure: Space<Admin> = {
       required: true,
       type: String,
     },
-    username: {
-      description: "Admin username",
+    name: {
+      description: "Admin name",
       required: true,
+      type: String
+    },
+    avatarUrl: {
+      description: "Admin avatar url",
+      required: false,
       type: String
     }
 

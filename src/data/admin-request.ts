@@ -18,6 +18,20 @@ export const createAdminRequest = async (data: AdminRequest): Promise<FullAdmin>
     }
 }
 
+export const hasPendingAdminRequest = async(    personalEmail: string,
+    phone: string) => {
+        const isEmailRequested  = await AdminRequestModel.findOne({ personalEmail: personalEmail.toLowerCase() });
+        if (isEmailRequested ) {
+            return true;
+        }
+        const isPhoneRequested = await AdminRequestModel.findOne({ phone });
+        if (isPhoneRequested) {
+            return true;
+        }
+        return false;
+    }
+    
+
 
 export const findAdminRequestById = async(id: string): Promise<FullAdmin> => {
     try{

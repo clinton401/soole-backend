@@ -32,7 +32,7 @@ export const acceptAdminRequest = async (req: Request, res: Response, next: Next
             return next(createError(404, "Admin request not found."))
         }
         const { adminViewable, id: requestId, createdAt, updatedAt, ...cleanedAdmin } = request;
-        const uniqueError = await validateUniqueAdminIdentifiers(cleanedAdmin.personalEmail, cleanedAdmin.phone, cleanedAdmin.username);
+        const uniqueError = await validateUniqueAdminIdentifiers(cleanedAdmin.personalEmail, cleanedAdmin.phone);
         if (uniqueError) {
 
             const { template, text, subject } = rejectionEmailTemplate(cleanedAdmin.personalEmail, uniqueError);

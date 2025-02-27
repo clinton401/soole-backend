@@ -67,6 +67,11 @@ exports.PayoutStructure = {
             required: false,
             type: String,
         },
+        adminViewable: {
+            description: "Is viewable by admin",
+            required: true,
+            type: Boolean,
+        },
     }
 };
 exports.PayoutModel = (0, config_1.createRowSchema)(exports.PayoutStructure);

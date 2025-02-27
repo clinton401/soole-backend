@@ -37,9 +37,14 @@ exports.AdminStructure = {
             required: true,
             type: String,
         },
-        username: {
-            description: "Admin username",
+        name: {
+            description: "Admin name",
             required: true,
+            type: String
+        },
+        avatarUrl: {
+            description: "Admin avatar url",
+            required: false,
             type: String
         }
     },

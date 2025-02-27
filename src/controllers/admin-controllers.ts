@@ -1,16 +1,20 @@
 import { AdminModel, AdminRole } from "../nobox/record-structures/admin";
+import { PayoutModel, PayoutType, PayoutStatus } from "../nobox/record-structures/payout";
 import { Request, Response, NextFunction } from "express";
 import createError from "http-errors";
 import { unauthorized_error, unknown_error, server_error } from "../lib/variables";
 import { AddNewAdminSchema, UpdateAdminProfileSchema } from "../schemas";
 import { config } from "dotenv";
-import { userHandler, zodErrorHandler, getDates, calculateGrowth } from "../lib/utils";
+import { userHandler, zodErrorHandler, getDates, calculateGrowth, getWeekNumber, isValidNumber, isValidImage } from "../lib/utils";
 import { validateUniqueAdminIdentifiers, createAdmin, findAdminById } from "../data/admin";
 import { hashPassword, validatePassword } from "../lib/password-utils";
 import { ZodError } from "zod";
 import { superAdminPromotionEmailTemplate, superAdminDemotionEmailTemplate, newAdminEmailTemplate } from "../lib/html-templates";
 import { sendEmail } from "../data/mail";
 import { UserModel } from "../nobox/record-structures/user";
+import { getUserAnalytics, getUsersWeeklyGrowth } from "../data/user";
+import { getRideAnalytics } from "../data/ride";
+import { getPayoutYearlyOverview } from "../data/payout";
 config()
 
 
@@ -125,8 +129,8 @@ export const addNewAdmin = async (req: Request, res: Response, next: NextFunctio
         if (!password) {
             return next(createError(400, "New admin password is required in the environment variable"))
         }
-        const { personalEmail, phone, username, workEmail } = validatedData;
-        const uniqueError = await validateUniqueAdminIdentifiers(personalEmail.toLowerCase(), phone, username.toLowerCase());
+        const { personalEmail, phone, name, workEmail } = validatedData;
+        const uniqueError = await validateUniqueAdminIdentifiers(personalEmail.toLowerCase(), phone);
 
         if (uniqueError) {
             return next(createError(400, uniqueError));
@@ -139,7 +143,7 @@ export const addNewAdmin = async (req: Request, res: Response, next: NextFunctio
             password: hashedPassword,
             personalEmail: personalEmail.toLowerCase(),
             workEmail: workEmail.toLowerCase(),
-            username: username.toLowerCase(),
+            name: name.toLowerCase(),
         }
         const admin = await createAdmin({ ...data, role: AdminRole.ADMIN });
         const { text, template, subject } = newAdminEmailTemplate(admin.personalEmail, password);
@@ -171,17 +175,22 @@ export const updateAdminProfile = async (req: Request, res: Response, next: Next
     }
     try {
         const validatedData = UpdateAdminProfileSchema.parse(values);
-
+    
         if (!validatedData || Object.keys(validatedData).length < 1) return next(createError(400, "At least one field must be provided."));
         const admin = await findAdminById(userId);
         if (!admin) {
             return next(createError(404, "User not found"))
         }
+        const { personalEmail, phone, name, avatarUrl } = validatedData
+        if (personalEmail || phone || name) {
+            const uniqueError = await validateUniqueAdminIdentifiers(personalEmail, phone);
 
-        const uniqueError = await validateUniqueAdminIdentifiers(validatedData?.personalEmail, validatedData?.phone, validatedData?.username);
-
-        if (uniqueError) {
-            return next(createError(400, uniqueError));
+            if (uniqueError) {
+                return next(createError(400, uniqueError));
+            }
+        }
+        if (avatarUrl && !isValidImage(avatarUrl)) {
+            return next(createError(400, "Inavlid avatar url image"))
         }
 
         const fieldsToUpdate = Object.fromEntries(
@@ -189,8 +198,8 @@ export const updateAdminProfile = async (req: Request, res: Response, next: Next
         );
         const validFields = {
             ...fieldsToUpdate,
-            ...(validatedData.personalEmail ? { personalEmail: validatedData.personalEmail.toLowerCase() } : {}),
-            ...(validatedData.username ? { username: validatedData.username.toLowerCase() } : {}),
+            ...(personalEmail ? { personalEmail: personalEmail.toLowerCase() } : {}),
+            ...(name ? { name: name.toLowerCase() } : {}),
 
         }
         const updatedUser = await AdminModel.updateOneById(userId, validFields);
@@ -253,7 +262,35 @@ export const resetAdminPassword = async (req: Request, res: Response, next: Next
     }
 }
 
+export const deleteAdminProfilePicture = async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.userId;
 
+    if (!userId) {
+        return next(createError(401, unauthorized_error));
+    }
+    try {
+        const admin = await findAdminById(userId);
+        if (!admin) {
+            return next(createError(404, "User not found."))
+        }
+        if (!admin?.avatarUrl) {
+            return next(createError(400, "You don't have a profile picture to delete."))
+        }
+        const updatedAdmin = await UserModel.updateOneById(userId, { avatarUrl: undefined });
+        if (!updatedAdmin) {
+            return next(createError(500, unknown_error));
+        };
+        res.json({
+            status: "success",
+            message: "Admin profile picture deleted successfully",
+            user: userHandler(updatedAdmin)
+        })
+
+    } catch (error) {
+        console.error(`Unable to delete admin profile picture: ${error}`);
+        return next(createError(500, server_error))
+    }
+}
 export const getAdminDetails = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.userId;
 
@@ -278,32 +315,85 @@ export const getAdminDetails = async (req: Request, res: Response, next: NextFun
     }
 }
 
-// export const getAnalytics = async (req: Request, res: Response, next: NextFunction) => {
-//     const { yesterday, today } = getDates();
-//     console.log({yesterday, today})
-//     try {
-//         const [yesterdayUsers, todayUsers] = await Promise.all([
-//             UserModel.find({analyticsDate: yesterday }),
-//             UserModel.find({ analyticsDate: today }),
+export const getAnalytics = async (req: Request, res: Response, next: NextFunction) => {
+    const { filter, year } = req.query as {
+        filter?: string;
+        year?: string
+    }
+    let weeksAgo = 0;
+    const week = Number(filter);
+    if (week && week >= 1) {
+        weeksAgo = Math.floor(week);
+    }
+    let validYear = new Date().getFullYear();
+    if (year && isValidNumber(year)) {
+        validYear = Number(year);
+    }
+    const { yesterday, today } = getDates();
 
-//         ]);
-//         console.log({yesterdayUsers, todayUsers})
-//         if (!yesterdayUsers || !todayUsers) {
-//             return next(createError(500, unknown_error))
-//         }
-//         const yesterdayUsersCount = yesterdayUsers.length;
-//         const todayUsersCount = todayUsers.length;
-//         const usersGrowth = calculateGrowth(yesterdayUsersCount, todayUsersCount);
+    try {
+        const [usersGrowth, ridesGrowth, day_counts, month_counts] = await Promise.all([
+            getUserAnalytics(yesterday, today),
+            getRideAnalytics(yesterday, today),
+            getUsersWeeklyGrowth(weeksAgo),
+            getPayoutYearlyOverview(validYear)
 
-//         res.json({
-//             status: "success",
-//             message: "Analytics found successfully",
-//             data: {
-//                 users: usersGrowth
-//             }
-//         })
-//     } catch (error) {
-//         console.error(`Unable to get analytics for admin: ${error}`);
-//         return next(createError(500, server_error))
-//     }
-// }
+        ]);
+        const { totalRidesGrowth, activeRidesGrowth, completedRidesGrowth } = ridesGrowth;
+
+        res.json({
+            status: "success",
+            message: "Analytics found successfully",
+            data: {
+                growth:{
+                users: usersGrowth,
+                total_rides: totalRidesGrowth,
+                active_rides: activeRidesGrowth,
+                completed_rides: completedRidesGrowth},
+                day_counts,
+                month_counts
+
+            }
+        })
+    } catch (error) {
+        console.error(`Unable to get analytics for admin: ${error}`);
+        return next(createError(500, server_error))
+    }
+}
+
+export const getUsersAnalytics = async (req: Request, res: Response, next: NextFunction) => {
+    const { filter } = req.query as {
+        filter?: string;
+    }
+    let weeksAgo = 0;
+    const week = Number(filter);
+    if (week && week >= 1) {
+        weeksAgo = Math.floor(week);
+    }
+    try {
+       
+        const dayCounts = await getUsersWeeklyGrowth(weeksAgo)
+        res.json({ status: "success", message: "Users analytics found succesfully", data: dayCounts })
+    } catch (error) {
+        console.error(`Unable to get users anaylytics: ${error}`);
+        return next(createError(500, server_error))
+    }
+}
+
+export const getRevenueOverview = async (req: Request, res: Response, next: NextFunction) => {
+    const { year } = req.query as {
+        year?: string
+    };
+    let validYear = new Date().getFullYear();
+    if (year && isValidNumber(year)) {
+        validYear = Number(year);
+    }
+    try {
+    
+        const monthCounts = await getPayoutYearlyOverview(validYear)
+        res.json({ status: "success", message: "Payout overview found succesfully", data: monthCounts })
+    } catch (error) {
+        console.error(`Unable to get revenue overview: ${error}`);
+        return next(createError(500, server_error));
+    }
+}

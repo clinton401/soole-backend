@@ -20,6 +20,7 @@ const wallet_1 = require("../nobox/record-structures/wallet");
 const transaction_1 = require("../nobox/record-structures/transaction");
 const wallet_2 = require("../data/wallet");
 const crypto_1 = __importDefault(require("crypto"));
+const __1 = require("..");
 (0, dotenv_1.config)();
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 if (!PAYSTACK_SECRET_KEY) {
@@ -65,6 +66,8 @@ const paystackWebhook = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
                 return next((0, http_errors_1.default)(400, "Wallet is suspended. Please contact support."));
             }
             const updatedWallet = yield (0, wallet_2.addToUserWalletBalance)(wallet, transaction, (_a = event.data.authorization) === null || _a === void 0 ? void 0 : _a.authorization_code);
+            __1.io.emit("wallet:funded", updatedWallet);
+            __1.io.emit("transaction:success", updatedTransaction);
             res.status(200).json({
                 success: true,
                 message: "Wallet funded successfully via webhook.",

@@ -26,13 +26,17 @@ const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
     const values = req.body;
     try {
         const validatedData = index_1.RegisterAdminSchema.parse(values);
-        const { personalEmail, phone, password, username, workEmail } = validatedData;
-        const uniqueError = yield (0, admin_1.validateUniqueAdminIdentifiers)(personalEmail.toLowerCase(), phone, username.toLowerCase());
+        const { personalEmail, phone, password, name, workEmail } = validatedData;
+        const hasPending = yield (0, admin_request_1.hasPendingAdminRequest)(personalEmail.toLowerCase(), phone);
+        if (hasPending) {
+            return next((0, http_errors_1.default)(400, "You already have a pending request."));
+        }
+        const uniqueError = yield (0, admin_1.validateUniqueAdminIdentifiers)(personalEmail.toLowerCase(), phone);
         if (uniqueError) {
             return next((0, http_errors_1.default)(400, uniqueError));
         }
         const hashedPassword = yield (0, password_utils_1.hashPassword)(password);
-        const data = Object.assign(Object.assign({}, validatedData), { password: hashedPassword, personalEmail: personalEmail.toLowerCase(), workEmail: workEmail.toLowerCase(), username: username.toLowerCase(), adminViewable: true });
+        const data = Object.assign(Object.assign({}, validatedData), { password: hashedPassword, personalEmail: personalEmail.toLowerCase(), workEmail: workEmail.toLowerCase(), name: name.toLowerCase(), adminViewable: true });
         yield (0, admin_request_1.createAdminRequest)(Object.assign({}, data));
         res.status(201).json({ status: "success", message: "Admin request submitted! You'll receive an email once it's reviewed." });
     }
@@ -65,7 +69,7 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
             return next((0, http_errors_1.default)(401, "Invalid credentials. Check password and try again"));
         }
         const access_token = (0, access_tokens_1.generateAccessToken)(admin.id);
-        res.status(200).json({ status: "success", message: "Login successful.", admin: (0, utils_1.userHandler)(admin), access_token });
+        res.status(200).json({ status: "success", message: "Login successful.", user: (0, utils_1.userHandler)(admin), access_token });
     }
     catch (error) {
         console.error(`Unable to login admin: ${error}`);

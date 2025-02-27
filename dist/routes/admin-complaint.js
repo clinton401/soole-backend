@@ -1,0 +1,14 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const express_1 = require("express");
+const admin_complaint_controllers_1 = require("../controllers/admin-complaint-controllers");
+const adminComplaint = (0, express_1.Router)();
+adminComplaint.get("/summary", admin_complaint_controllers_1.getComplaintSummary);
+adminComplaint.get("/", admin_complaint_controllers_1.getComplaintConversations);
+adminComplaint.patch("/bin", admin_complaint_controllers_1.moveComplaintsToBin);
+adminComplaint.get("/reply", admin_complaint_controllers_1.getMessagesSentByAdmin);
+adminComplaint.post("/:id/reply", admin_complaint_controllers_1.replyToComplaint);
+adminComplaint.get("/:id/messages", admin_complaint_controllers_1.getComplaintMessages);
+adminComplaint.patch("/:id/star", admin_complaint_controllers_1.starComplaintConversation);
+adminComplaint.patch("/:id/resolve", admin_complaint_controllers_1.markComplaintAsResolved);
+exports.default = adminComplaint;

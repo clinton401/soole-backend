@@ -197,11 +197,11 @@ export const UpdateProfileSchema = z
   }).optional();
 
   export const RegisterAdminSchema = z.object({
-    username: z
+    name: z
       .string()
       .trim()
-      .min(3, { message: "Username must be at least 3 characters long." })
-      .max(50, { message: "Username must not exceed 50 characters." }),
+      .min(3, { message: "Name must be at least 3 characters long." })
+      .max(50, { message: "Name must not exceed 50 characters." }),
   
     workEmail: z
       .string()
@@ -227,11 +227,11 @@ export const UpdateProfileSchema = z
   });
   
   export const AddNewAdminSchema = z.object({
-    username: z
+    name: z
       .string()
       .trim()
-      .min(3, { message: "Username must be at least 3 characters long." })
-      .max(50, { message: "Username must not exceed 50 characters." }),
+      .min(3, { message: "Name must be at least 3 characters long." })
+      .max(50, { message: "Name must not exceed 50 characters." }),
   
     workEmail: z
       .string()
@@ -255,11 +255,11 @@ export const UpdateProfileSchema = z
   
   export const UpdateAdminProfileSchema = z
   .object({
-    username: z
+    name: z
       .string()
       .trim()
-      .min(3, { message: "Username must be at least 3 characters long." })
-      .max(50, { message: "Username must not exceed 50 characters." })
+      .min(3, { message: "Name must be at least 3 characters long." })
+      .max(50, { message: "Name must not exceed 50 characters." })
       .optional(),
 
     workEmail: z.string().trim().email({ message: "Invalid email format." }).optional(),
@@ -272,6 +272,7 @@ export const UpdateProfileSchema = z
       .min(10, { message: "Phone number must be at least 10 digits long." })
       .max(15, { message: "Phone number must not exceed 15 digits." })
       .optional(),
+      avatarUrl: z.string().url().optional()
   })
   .partial()
   .optional();

@@ -252,3 +252,65 @@ export const newAdminEmailTemplate = (email: string, password: string) => {
 
     return { subject, text, template };
 };
+
+
+export const adminReplyEmailTemplate = (userName: string, complaint: string, reply: string) => {
+    const subject = "Your Complaint Has Been Responded To - Soole";
+    const text = `
+        Dear ${userName},
+
+        Your complaint has been reviewed by an admin. Below is the response:
+
+        Complaint:
+        "${complaint}"
+
+        Admin's Response:
+        "${reply}"
+
+        If you need further assistance, feel free to reply to this email.
+
+        Best regards,
+        Soole Support Team
+    `;
+
+    const template = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Soole - Complaint Response</title>
+        <style>
+            body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; color: #333; }
+            .container { max-width: 600px; margin: 40px auto; background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+            .header { background: #2c3e50; color: #fff; text-align: center; padding: 20px; font-size: 24px; border-radius: 10px 10px 0 0; }
+            .content { padding: 20px; text-align: left; }
+            .footer { text-align: center; padding: 15px; font-size: 14px; color: #777; }
+            .box { background: #f8f8f8; padding: 10px; border-radius: 5px; margin: 10px 0; font-style: italic; }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="header">Soole Support - Complaint Response</div>
+            <div class="content">
+                <p>Dear ${userName},</p>
+                <p>Your complaint has been reviewed by our support team. Below is the admin's response:</p>
+                
+                <p><strong>Your Complaint:</strong></p>
+                <p class="box">${complaint}</p>
+
+                <p><strong>Admin's Response:</strong></p>
+                <p class="box">${reply}</p>
+
+                <p>If you need further assistance, feel free to reply to this email.</p>
+
+                <p>Best regards,<br>Soole Support Team</p>
+            </div>
+            <div class="footer">&copy; ${new Date().getFullYear()} Soole. All rights reserved.</div>
+        </div>
+    </body>
+    </html>
+    `;
+
+    return { subject, text, template };
+};

@@ -131,7 +131,7 @@ export const paginationOptions = (order: "desc" | "asc" = "desc") => {
   return options
 };
 
-export const adminPaginationOptions = (page: number, limit: number) => {
+export const adminPaginationOptions = (page: number, limit: number, order: "desc" | "asc" = "desc") => {
  return {
     pagination: {
         limit,
@@ -139,7 +139,7 @@ export const adminPaginationOptions = (page: number, limit: number) => {
     },
     sort: {
         by: "createdAt",
-        order: "desc",
+        order,
     } as SortOptions,
 };
 }
@@ -160,17 +160,17 @@ export const hasSufficientBalance = (balance: number, rideCost: number ) => {
   return balance >= rideCost;
 }
 
-export const dateToInt = (date: Date): number => {
+export const dateToInt = (date: Date): string => {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
 
-  return parseInt(`${year}${month}${day}`, 10);
+  return String(parseInt(`${year}${month}${day}`, 10));
 }
 
 export const  calculateGrowth = (yesterday: number, today: number)  => {
   if (yesterday === today) {
-      return { status: "draw", percentage: 0 };
+      return { status: "draw", percentage: 0, count: today };
   }
 
   const difference = today - yesterday;
@@ -180,7 +180,8 @@ export const  calculateGrowth = (yesterday: number, today: number)  => {
 
   return {
       status: today > yesterday ? "increase" : "decrease",
-      percentage: parseFloat(percentageChange.toFixed(2)) 
+      percentage: parseFloat(percentageChange.toFixed(2)) ,
+      count: today
   };
 }
 
@@ -189,7 +190,34 @@ export const getDates = () => {
   const yesterdayDate = new Date();
 yesterdayDate.setDate(yesterdayDate.getDate() - 1);
 
-  const today = dateToInt(todayDate);
-  const yesterday = dateToInt(yesterdayDate);
+  const today = String(dateToInt(todayDate));
+  const yesterday = String(dateToInt(yesterdayDate));
   return {yesterday, today}
 }
+
+export const getWeekNumber = (weeksAgo = 0) => {
+  const today = new Date();
+  today.setDate(today.getDate() - 7 * weeksAgo);
+
+  const startOfYear = new Date(today.getFullYear(), 0, 1);
+  const diff: number = today.getTime() - startOfYear.getTime();
+  const oneWeek = 7 * 24 * 60 * 60 * 1000;
+
+  return String(Math.ceil(diff / oneWeek));
+};
+
+export const getDayOfWeek = (date = new Date()) => {
+  const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  return days[date.getDay()];
+};
+
+export const getMonthName = (date: Date = new Date()): string => {
+  const months = [
+    "january", "february", "march", "april", "may", "june", 
+    "july", "august", "september", "october", "november", "december"
+  ];
+  return months[date.getMonth()];
+};
+export const isValidImage = (filename: string): boolean => {
+  return /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(filename);
+};
