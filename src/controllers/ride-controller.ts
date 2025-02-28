@@ -77,10 +77,10 @@ export const createRide = async (
       userFirstName: user.firstName,
       userLastName: user.lastName,
       userUsername: user.username,
+      userEmail: user.email,
       adminViewable: true,
       analyticsDate
     });
-
     if (!ride) {
       return next(createError(500, "Failed to create the ride."));
     }

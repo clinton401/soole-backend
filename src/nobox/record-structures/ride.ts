@@ -16,6 +16,7 @@ export interface Ride {
   userFirstName?: string;
   userLastName?: string;
   userUsername?: string;
+  userEmail?: string;
   estimatedTime?: string;
   carImages?: string[];
   vehicleModel?: string;
@@ -117,11 +118,15 @@ export const RideStructure: Space<Ride> = {
       type: String,
       required: false,
     },
+    userEmail: {
+      description: "Email of the user",
+      type: String,
+      required: false,
+    },
     adminViewable : {
       description: "Should admin be able to view this data",
-      type: String,
+      type: Boolean,
       required: true,
-      defaultValue: true
     },
     analyticsDate : {
       description: "Analytics date for the user ",

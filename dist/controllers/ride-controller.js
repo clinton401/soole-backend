@@ -71,6 +71,7 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             userFirstName: user.firstName,
             userLastName: user.lastName,
             userUsername: user.username,
+            userEmail: user.email,
             adminViewable: true,
             analyticsDate
         });

@@ -149,10 +149,13 @@ export const getPageInfo  = (data: any[], pageSize: number, currentPage: number 
   const totalLength = data.length
         const totalPages = Math.ceil(totalLength / pageSize);
         const nextPage = currentPage < totalPages ? currentPage + 1 : null;
+        const prevPage = currentPage > 1 ? currentPage - 1 : null;
+
   return {
 totalLength,
 totalPages,
-nextPage
+nextPage,
+prevPage
   }
 }
 

@@ -38,7 +38,7 @@ const getAllRidesForAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
         if (!rides) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        const { totalLength: totalRides, totalPages, nextPage } = (0, utils_1.getPageInfo)(rides, pageSize, currentPage);
+        const { totalLength: totalRides, totalPages, nextPage, prevPage } = (0, utils_1.getPageInfo)(rides, pageSize, currentPage);
         res.json({
             status: "success",
             message: "Rides found successfully",
@@ -47,7 +47,8 @@ const getAllRidesForAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
                 totalRides,
                 totalPages,
                 currentPage,
-                nextPage
+                nextPage,
+                prevPage
             }
         });
     }

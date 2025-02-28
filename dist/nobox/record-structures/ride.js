@@ -92,11 +92,15 @@ exports.RideStructure = {
             type: String,
             required: false,
         },
+        userEmail: {
+            description: "Email of the user",
+            type: String,
+            required: false,
+        },
         adminViewable: {
             description: "Should admin be able to view this data",
-            type: String,
+            type: Boolean,
             required: true,
-            defaultValue: true
         },
         analyticsDate: {
             description: "Analytics date for the user ",

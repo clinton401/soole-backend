@@ -5,7 +5,12 @@ import { unknown_error } from "../lib/variables";
 
 export const getPayoutYearlyOverview = async(validYear: number) => {
     try{
-        const payouts = await PayoutModel.find({ adminViewable: true });
+        // const payouts = await PayoutModel.find({ type: PayoutType.RIDE_PAYMENT });
+
+
+        const payouts = await PayoutModel.find({ type: PayoutType.RIDE_PAYMENT });
+        
+
         if(!payouts){
             throw new Error(unknown_error)
         }

@@ -39,7 +39,7 @@ export const getAllRidesForAdmin = async (req: Request, res: Response, next: Nex
         if (!rides) {
             return next(createError(500, unknown_error))
         }
-        const { totalLength: totalRides, totalPages, nextPage } = getPageInfo(rides, pageSize, currentPage)
+        const { totalLength: totalRides, totalPages, nextPage, prevPage } = getPageInfo(rides, pageSize, currentPage)
 
         res.json({
             status: "success",
@@ -49,7 +49,8 @@ export const getAllRidesForAdmin = async (req: Request, res: Response, next: Nex
                 totalRides,
                 totalPages,
                 currentPage,
-                nextPage
+                nextPage,
+                prevPage
             }
         })
 
