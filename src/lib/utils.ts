@@ -133,10 +133,10 @@ export const paginationOptions = (order: "desc" | "asc" = "desc") => {
 
 export const adminPaginationOptions = (page: number, limit: number, order: "desc" | "asc" = "desc") => {
  return {
-    pagination: {
-        limit,
-        page,
-    },
+    // pagination: {
+    //     limit,
+    //     page,
+    // },
     sort: {
         by: "createdAt",
         order,
@@ -144,20 +144,28 @@ export const adminPaginationOptions = (page: number, limit: number, order: "desc
 };
 }
 
-export const getPageInfo  = (data: any[], pageSize: number, currentPage: number ) => {
+export const getPageInfo = (data: any[], pageSize: number, currentPage: number) => {
+  const totalLength = data.length;
+  const totalPages = Math.ceil(totalLength / pageSize);
+
   
-  const totalLength = data.length
-        const totalPages = Math.ceil(totalLength / pageSize);
-        const nextPage = currentPage < totalPages ? currentPage + 1 : null;
-        const prevPage = currentPage > 1 ? currentPage - 1 : null;
+  
+
+  const sliceStart = pageSize * (currentPage - 1);
+  const sliceEnd = sliceStart + pageSize;
+  const filteredData = data.slice(sliceStart, sliceEnd);
+
+  const nextPage = currentPage < totalPages ? currentPage + 1 : null;
+  const prevPage = currentPage > 1 ? currentPage - 1 : null;
 
   return {
-totalLength,
-totalPages,
-nextPage,
-prevPage
-  }
-}
+      filteredData, 
+      totalLength,
+      totalPages,
+      nextPage,
+      prevPage
+  };
+};
 
 export const hasSufficientBalance = (balance: number, rideCost: number ) => {
   return balance >= rideCost;

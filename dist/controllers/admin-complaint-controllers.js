@@ -29,6 +29,10 @@ const getComplaintSummary = (req, res, next) => __awaiter(void 0, void 0, void 0
         if (!total || !sentCount) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
+        //  const in_progress = ComplaintStatus.IN_PROGRESS;
+        //     const validTotal = total.filter( complaint => {
+        //         return complaint.status === in_progress;
+        //     })
         const total_count = total.length;
         const sent_count = sentCount.length;
         const starred_count = total.filter((complaint) => complaint.starred).length;
@@ -75,12 +79,12 @@ const getComplaintConversations = (req, res, next) => __awaiter(void 0, void 0, 
         if (!conversations) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        const { totalLength: totalConversations, totalPages, nextPage } = (0, utils_1.getPageInfo)(conversations, pageSize, currentPage);
+        const { totalLength: totalConversations, totalPages, nextPage, filteredData } = (0, utils_1.getPageInfo)(conversations, pageSize, currentPage);
         res.json({
             status: "success",
             message: "Complaint conversations found successfully",
             data: {
-                totalConversations, totalPages, nextPage, conversations
+                totalConversations, totalPages, nextPage, conversations: filteredData
             }
         });
     }
@@ -100,12 +104,12 @@ const getMessagesSentByAdmin = (req, res, next) => __awaiter(void 0, void 0, voi
         if (!messages) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        const { totalLength: totalMessages, totalPages, nextPage } = (0, utils_1.getPageInfo)(messages, pageSize, currentPage);
+        const { totalLength: totalMessages, totalPages, nextPage, filteredData } = (0, utils_1.getPageInfo)(messages, pageSize, currentPage);
         res.json({
             status: "success",
             message: "Messages sent by admin found successfully",
             data: {
-                totalMessages, totalPages, nextPage, messages
+                totalMessages, totalPages, nextPage, messages: filteredData
             }
         });
     }
@@ -170,12 +174,12 @@ const getComplaintMessages = (req, res, next) => __awaiter(void 0, void 0, void 
         if (!messages) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        const { totalLength: totalMessages, totalPages, nextPage } = (0, utils_1.getPageInfo)(messages, pageSize, currentPage);
+        const { totalLength: totalMessages, totalPages, nextPage, filteredData } = (0, utils_1.getPageInfo)(messages, pageSize, currentPage);
         res.json({
             status: "success",
             message: "Messages  found successfully",
             data: {
-                totalMessages, totalPages, nextPage, messages
+                totalMessages, totalPages, nextPage, messages: filteredData
             }
         });
     }

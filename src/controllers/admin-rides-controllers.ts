@@ -39,13 +39,14 @@ export const getAllRidesForAdmin = async (req: Request, res: Response, next: Nex
         if (!rides) {
             return next(createError(500, unknown_error))
         }
-        const { totalLength: totalRides, totalPages, nextPage, prevPage } = getPageInfo(rides, pageSize, currentPage)
+        
+        const { totalLength: totalRides, totalPages, nextPage, prevPage, filteredData } = getPageInfo(rides, pageSize, currentPage)
 
         res.json({
             status: "success",
             message: "Rides found successfully",
             data: {
-                rides,
+                rides: filteredData,
                 totalRides,
                 totalPages,
                 currentPage,
@@ -58,4 +59,65 @@ export const getAllRidesForAdmin = async (req: Request, res: Response, next: Nex
         console.error(`Unable to get all rides for admin: ${error}`);
         return next(createError(500, server_error))
     }
+}
+
+
+export const searchForRides = async (req: Request, res: Response, next: NextFunction) => {
+    const { query, page, filter } = req.query as {
+        query?: string;
+        page?: string,
+        filter: string
+    };
+    if(!query || query.length < 1) {
+        return next(createError(400, "Search query is required and must be at least 1 character long."))
+    }
+    
+    const validFilters = ['active', 'completed', 'cancelled', "ongoing"];
+    const selectedFilter = validFilters.includes(filter?.toLowerCase()) ? filter.toLowerCase() : "active";
+
+    type Status = "ACTIVE" | "CANCELLED" | "COMPLETED" | "ONGOING"
+
+    const filterVariable = selectedFilter.toUpperCase() as Status;
+    const currentPage = Math.max(1, Number(page) || 1);
+    const pageSize = 15;
+    const options = adminPaginationOptions(currentPage, pageSize);
+
+    try{
+        const rides = await rideModel.find({ adminViewable: true }, options);
+        if(!rides){
+            return next(createError(500, unknown_error))
+        }
+       
+// console.log({filterVariable, rides})    
+    const validRides = rides.filter(ride => {
+            const { userFirstName, userLastName, userEmail, userUsername, status } = ride;
+        
+            
+            if (!userFirstName || !userLastName  || !userEmail || !userUsername) {
+                return false; 
+            }
+        
+            
+            const matchesStatus = status === filterVariable;
+
+           
+            const matchesQuery = [userFirstName, userLastName, userEmail, userUsername]
+                .some(field => field.toLowerCase().includes(query.toLowerCase()));
+            return matchesStatus  && matchesQuery;
+        });
+        
+
+        res.json({
+            status: "success",
+            message: "Rides found successfully",
+            data: {
+                rides: validRides.slice(0, pageSize)
+            }
+        })
+        
+
+    }catch(error){
+        console.error(`Unable to search for rides by admin: ${error}`);
+        return next(createError(500, server_error))
+        }
 }

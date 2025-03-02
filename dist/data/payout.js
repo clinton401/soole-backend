@@ -14,8 +14,7 @@ const payout_1 = require("../nobox/record-structures/payout");
 const variables_1 = require("../lib/variables");
 const getPayoutYearlyOverview = (validYear) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // const payouts = await PayoutModel.find({ type: PayoutType.RIDE_PAYMENT });
-        const payouts = yield payout_1.PayoutModel.find({ type: payout_1.PayoutType.RIDE_PAYMENT });
+        const payouts = yield payout_1.PayoutModel.find({ adminViewable: true });
         if (!payouts) {
             throw new Error(variables_1.unknown_error);
         }

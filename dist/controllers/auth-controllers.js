@@ -57,7 +57,7 @@ const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         const analyticsDate = (0, utils_1.dateToInt)(today);
         const dayOfCreation = (0, utils_1.getDayOfWeek)();
         const weekOfCreation = (0, utils_1.getWeekNumber)();
-        const user = yield user_1.UserModel.insertOne(Object.assign(Object.assign({}, validatedFields.data), { isNumberVerified: false, totalTrips: 0, totalRides: 0, status: user_1.UserStatus.ACTIVE, analyticsDate, weekOfCreation, dayOfCreation }));
+        const user = yield user_1.UserModel.insertOne(Object.assign(Object.assign({}, validatedFields.data), { isNumberVerified: false, totalTrips: 0, totalRides: 0, status: user_1.UserStatus.ACTIVE, analyticsDate, weekOfCreation, dayOfCreation, adminViewable: true }));
         if (!user)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         const walletExists = yield (0, wallet_2.findWalletByUserId)(user.id);

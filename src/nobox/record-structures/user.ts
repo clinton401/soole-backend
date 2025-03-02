@@ -24,6 +24,7 @@ export interface User {
   totalTrips: number;
   status: UserStatus;
   totalRides: number;
+  adminViewable: boolean
   analyticsDate: string;
 }
 
@@ -122,6 +123,11 @@ export const UserStructure: Space<User> = {
       description: " day of the week when the user was created (in lowercase).",
       required: true,
       type: String,
+    },
+    adminViewable : {
+      description: " Is viewable by admin",
+      required: true,
+      type: Boolean,
     },
 
 

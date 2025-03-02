@@ -116,10 +116,10 @@ const paginationOptions = (order = "desc") => {
 exports.paginationOptions = paginationOptions;
 const adminPaginationOptions = (page, limit, order = "desc") => {
     return {
-        pagination: {
-            limit,
-            page,
-        },
+        // pagination: {
+        //     limit,
+        //     page,
+        // },
         sort: {
             by: "createdAt",
             order,
@@ -130,9 +130,13 @@ exports.adminPaginationOptions = adminPaginationOptions;
 const getPageInfo = (data, pageSize, currentPage) => {
     const totalLength = data.length;
     const totalPages = Math.ceil(totalLength / pageSize);
+    const sliceStart = pageSize * (currentPage - 1);
+    const sliceEnd = sliceStart + pageSize;
+    const filteredData = data.slice(sliceStart, sliceEnd);
     const nextPage = currentPage < totalPages ? currentPage + 1 : null;
     const prevPage = currentPage > 1 ? currentPage - 1 : null;
     return {
+        filteredData,
         totalLength,
         totalPages,
         nextPage,

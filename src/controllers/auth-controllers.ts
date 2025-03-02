@@ -44,7 +44,7 @@ export const register = async (
     const analyticsDate = dateToInt(today);
     const dayOfCreation = getDayOfWeek();
     const weekOfCreation =  getWeekNumber()
-    const user = await UserModel.insertOne({ ...validatedFields.data, isNumberVerified: false, totalTrips: 0, totalRides: 0, status: UserStatus.ACTIVE, analyticsDate, weekOfCreation, dayOfCreation });
+    const user = await UserModel.insertOne({ ...validatedFields.data, isNumberVerified: false, totalTrips: 0, totalRides: 0, status: UserStatus.ACTIVE, analyticsDate, weekOfCreation, dayOfCreation, adminViewable: true});
 
     if (!user) return next(createError(500, unknown_error));
 

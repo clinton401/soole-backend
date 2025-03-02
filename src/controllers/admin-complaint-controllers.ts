@@ -18,6 +18,10 @@ export const getComplaintSummary = async (req: Request, res: Response, next: Nex
         if (!total || !sentCount) {
             return next(createError(500, unknown_error));
         }
+    //  const in_progress = ComplaintStatus.IN_PROGRESS;
+    //     const validTotal = total.filter( complaint => {
+    //         return complaint.status === in_progress;
+    //     })
         const total_count = total.length;
         const sent_count = sentCount.length;
         const starred_count = total.filter((complaint) => complaint.starred).length;
@@ -74,12 +78,12 @@ export const getComplaintConversations = async (req: Request, res: Response, nex
         if (!conversations) {
             return next(createError(500, unknown_error))
         }
-        const { totalLength: totalConversations, totalPages, nextPage } = getPageInfo(conversations, pageSize, currentPage)
+        const { totalLength: totalConversations, totalPages, nextPage, filteredData } = getPageInfo(conversations, pageSize, currentPage)
         res.json({
             status: "success",
             message: "Complaint conversations found successfully",
             data: {
-                totalConversations, totalPages, nextPage, conversations
+                totalConversations, totalPages, nextPage, conversations: filteredData
             }
         })
 
@@ -102,12 +106,12 @@ export const getMessagesSentByAdmin = async (req: Request, res: Response, next: 
         if (!messages) {
             return next(createError(500, unknown_error));
         }
-        const { totalLength: totalMessages, totalPages, nextPage } = getPageInfo(messages, pageSize, currentPage)
+        const { totalLength: totalMessages, totalPages, nextPage, filteredData } = getPageInfo(messages, pageSize, currentPage)
         res.json({
             status: "success",
             message: "Messages sent by admin found successfully",
             data: {
-                totalMessages, totalPages, nextPage, messages
+                totalMessages, totalPages, nextPage, messages: filteredData
             }
         })
     } catch (error) {
@@ -178,12 +182,12 @@ export const getComplaintMessages = async (req: Request, res: Response, next: Ne
             return next(createError(500, unknown_error));
         }
 
-        const { totalLength: totalMessages, totalPages, nextPage } = getPageInfo(messages, pageSize, currentPage)
+        const { totalLength: totalMessages, totalPages, nextPage, filteredData } = getPageInfo(messages, pageSize, currentPage)
         res.json({
             status: "success",
             message: "Messages  found successfully",
             data: {
-                totalMessages, totalPages, nextPage, messages
+                totalMessages, totalPages, nextPage, messages: filteredData
             }
         })
     }

@@ -104,6 +104,11 @@ exports.UserStructure = {
             required: true,
             type: String,
         },
+        adminViewable: {
+            description: " Is viewable by admin",
+            required: true,
+            type: Boolean,
+        },
     },
 };
 exports.UserModel = (0, config_1.createRowSchema)(exports.UserStructure);

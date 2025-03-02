@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.reactivateUser = exports.suspendUser = exports.getAllUsersForAdmin = void 0;
+exports.searchForUser = exports.reactivateUser = exports.suspendUser = exports.getAllUsersForAdmin = void 0;
 const user_1 = require("../nobox/record-structures/user");
 const variables_1 = require("../lib/variables");
 const utils_1 = require("../lib/utils");
@@ -20,26 +20,39 @@ const http_errors_1 = __importDefault(require("http-errors"));
 const getAllUsersForAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { filter, page } = req.query;
     const validFilters = ['active', 'inactive', 'deactivated', "suspended"];
-    const selectedFilter = filter && validFilters.includes(filter.toLowerCase()) ? filter.toLowerCase() : 'active';
-    const status = selectedFilter.toUpperCase();
+    const selectedFilter = filter && validFilters.includes(filter.toLowerCase()) ? filter.toLowerCase() : null;
+    const filterVariable = (selectedFilter === null || selectedFilter === void 0 ? void 0 : selectedFilter.toUpperCase()) || null;
     const currentPage = Math.max(1, Number(page) || 1);
     const pageSize = 15;
     try {
         const options = (0, utils_1.adminPaginationOptions)(currentPage, pageSize);
-        const users = yield user_1.UserModel.find({ status }, options);
+        let users = [];
+        if (filterVariable) {
+            users = yield user_1.UserModel.find({ status: filterVariable }, options);
+        }
+        else {
+            users = yield user_1.UserModel.find({ adminViewable: true }, options);
+        }
         if (!users) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        const { totalLength: totalUsers, totalPages, nextPage } = (0, utils_1.getPageInfo)(users, pageSize, currentPage);
+        const validUsers = users.filter(user => {
+            const { password, isNumberVerified, email } = user;
+            if (!password || !isNumberVerified || !email)
+                return false;
+            return true;
+        });
+        const { totalLength: totalUsers, totalPages, nextPage, filteredData, prevPage } = (0, utils_1.getPageInfo)(validUsers, pageSize, currentPage);
         res.json({
             status: "success",
             message: "Users found successfully",
             data: {
-                users,
+                users: filteredData,
                 totalUsers,
                 totalPages,
                 currentPage,
-                nextPage
+                nextPage,
+                prevPage
             }
         });
     }
@@ -108,3 +121,44 @@ const reactivateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
     }
 });
 exports.reactivateUser = reactivateUser;
+const searchForUser = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { query, page, filter } = req.query;
+    if (!query || query.length < 1) {
+        return next((0, http_errors_1.default)(400, "Search query is required and must be at least 1 character long."));
+    }
+    const validFilters = ['active', 'inactive', 'deactivated', "suspended"];
+    const selectedFilter = filter && validFilters.includes(filter.toLowerCase()) ? filter.toLowerCase() : null;
+    const filterVariable = (selectedFilter === null || selectedFilter === void 0 ? void 0 : selectedFilter.toUpperCase()) || null;
+    const currentPage = Math.max(1, Number(page) || 1);
+    const pageSize = 15;
+    const options = (0, utils_1.adminPaginationOptions)(currentPage, pageSize);
+    try {
+        const users = yield user_1.UserModel.find({ adminViewable: true }, options);
+        if (!users) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        // console.log({filterVariable, users})    
+        const validUsers = users.filter(user => {
+            const { firstName, lastName, email, username, status, isNumberVerified } = user;
+            if (!firstName || !lastName || !email || !username || !isNumberVerified) {
+                return false;
+            }
+            const matchesStatus = status === filterVariable;
+            const matchesQuery = [firstName, lastName, email, username]
+                .some(field => field.toLowerCase().includes(query.toLowerCase()));
+            return matchesStatus && matchesQuery;
+        });
+        res.json({
+            status: "success",
+            message: "Users found successfully",
+            data: {
+                users: validUsers.slice(0, pageSize)
+            }
+        });
+    }
+    catch (error) {
+        console.error(`Unable to search for user by admin: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.searchForUser = searchForUser;
