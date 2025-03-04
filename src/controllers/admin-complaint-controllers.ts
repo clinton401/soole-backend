@@ -18,13 +18,13 @@ export const getComplaintSummary = async (req: Request, res: Response, next: Nex
         if (!total || !sentCount) {
             return next(createError(500, unknown_error));
         }
-    //  const in_progress = ComplaintStatus.IN_PROGRESS;
-    //     const validTotal = total.filter( complaint => {
-    //         return complaint.status === in_progress;
-    //     })
-        const total_count = total.length;
+        //  const in_progress = ComplaintStatus.IN_PROGRESS;
+        const validTotal = total.filter(complaint => {
+            return !complaint.isDeleted;
+        })
+        const total_count = validTotal.length;
         const sent_count = sentCount.length;
-        const starred_count = total.filter((complaint) => complaint.starred).length;
+        const starred_count = validTotal.filter((complaint) => complaint.starred).length;
         const bin_count = total.filter((complaint) => complaint.isDeleted).length;
         const data = {
             total_count,
@@ -78,12 +78,12 @@ export const getComplaintConversations = async (req: Request, res: Response, nex
         if (!conversations) {
             return next(createError(500, unknown_error))
         }
-        const { totalLength: totalConversations, totalPages, nextPage, filteredData } = getPageInfo(conversations, pageSize, currentPage)
+        const { totalLength: totalConversations, totalPages, nextPage, filteredData, prevPage } = getPageInfo(conversations, pageSize, currentPage)
         res.json({
             status: "success",
             message: "Complaint conversations found successfully",
             data: {
-                totalConversations, totalPages, nextPage, conversations: filteredData
+                totalConversations, totalPages, nextPage, conversations: filteredData, prevPage
             }
         })
 
@@ -137,6 +137,9 @@ export const replyToComplaint = async (req: Request, res: Response, next: NextFu
         if (!conversation) {
             return next(createError(404, "Conversation not found."))
         }
+        if(conversation.isDeleted){
+            return next(createError(400, "You cannot reply to a complaint that is in the bin."));
+        }
         const data = {
             conversationId: id,
             message,
@@ -175,19 +178,19 @@ export const getComplaintMessages = async (req: Request, res: Response, next: Ne
             return next(createError(404, "Conversation not found."))
         };
         const currentPage = Math.max(1, Number(page) || 1);
-        const pageSize = 15;
+        const pageSize = 100;
         const options = adminPaginationOptions(currentPage, pageSize, "asc");
         const messages = await ComplaintMessageModel.find({ conversationId: id }, options);
         if (!messages) {
             return next(createError(500, unknown_error));
         }
 
-        const { totalLength: totalMessages, totalPages, nextPage, filteredData } = getPageInfo(messages, pageSize, currentPage)
+        const { totalLength: totalMessages, totalPages, filteredData } = getPageInfo(messages, pageSize, currentPage)
         res.json({
             status: "success",
             message: "Messages  found successfully",
             data: {
-                totalMessages, totalPages, nextPage, messages: filteredData
+                totalMessages, totalPages, nextPage: null, messages: filteredData, conversation
             }
         })
     }
@@ -209,7 +212,9 @@ export const starComplaintConversation = async (req: Request, res: Response, nex
         if (!conversation) {
             return next(createError(404, "Conversation not found."))
         };
-
+ if(conversation.isDeleted){
+            return next(createError(400, "You cannot star conversation that is in the bin."));
+        }
         if (conversation.starred === starred) {
             return next(createError(400, `Conversation has already been ${starred ? "starred" : "unstarred"}`))
         }
@@ -238,7 +243,9 @@ export const markComplaintAsResolved = async (req: Request, res: Response, next:
         if (!conversation) {
             return next(createError(404, "Conversation not found."))
         };
-
+ if(conversation.isDeleted){
+            return next(createError(400, "You cannot mark a complaint as resolved that is in the bin."));
+        }
         if (conversation.status === ComplaintStatus.RESOLVED) {
             return next(createError(400, "Complaint has already been marked as completed."))
         };
@@ -266,36 +273,168 @@ export const moveComplaintsToBin = async (req: Request, res: Response, next: Nex
         return next(createError(400, "Invalid complaint IDs. Must be an non empty array of complaint IDs"));
     };
     try {
-        const complaints: ComplaintConversation[] =  []
+        const complaints: ComplaintConversation[] = []
         for (const id of complaintIds) {
             try {
                 const complaint = await ComplaintConversationModel.findOne({ id });
                 if (!complaint || complaint.isDeleted === true) continue
-               const updatedComplaint = await ComplaintConversationModel.updateOneById(id, { isDeleted: true });
-               if(!updatedComplaint){
-                continue;
-               }
-               complaints.push(updatedComplaint)
+                const updatedComplaint = await ComplaintConversationModel.updateOneById(id, { isDeleted: true });
+                if (!updatedComplaint) {
+                    continue;
+                }
+                complaints.push(updatedComplaint)
             } catch (error) {
                 console.error(`Unable to move complaint of ${id} to bin: ${error}`)
             }
         }
-        if(complaints.length < 1){
-            return next(createError(500,  "Failed to move complaints to the bin. Please try again."))
+        if (complaints.length < 1) {
+            return next(createError(500, "Failed to move complaints to the bin. Please try again."))
         }
-        if(complaints.length < complaintIds.length){
+        if (complaints.length < complaintIds.length) {
             res.json({
                 status: "success",
-                message:  "Some complaints were successfully moved to the bin, but some could not be processed."
+                message: "Some complaints were successfully moved to the bin, but some could not be processed."
             });
             return;
         }
         res.json({
             status: "success",
             message: "Complaints moved to bin successfully."
-            })
+        })
     } catch (error) {
         console.error(`Unable to move complaints to bin: ${error}`);
         return next(createError(500, server_error));
+    }
+}
+export const deleteComplaints = async (req: Request, res: Response, next: NextFunction) => {
+    const { ids } = req.query as {
+        ids?: string
+    }
+    const complaintIds = ids ? ids.split(",") : [];
+    if (!Array.isArray(complaintIds) || complaintIds.length < 1 || !complaintIds.every(id => typeof id === "string")) {
+        return next(createError(400, "Invalid complaint IDs. Must be an non empty array of complaint IDs"));
+    };
+    try {
+        const complaints: ComplaintConversation[] = []
+        for (const id of complaintIds) {
+            try {
+                const complaint = await ComplaintConversationModel.findOne({ id });
+                if (!complaint || !complaint.isDeleted === true) continue
+                const updatedComplaint = await ComplaintConversationModel.deleteOneById(id);
+                if (!updatedComplaint) {
+                    continue;
+                }
+                complaints.push(updatedComplaint)
+            } catch (error) {
+                console.error(`Unable to delete complaint of ${id} : ${error}`)
+            }
+        }
+        if (complaints.length < 1) {
+            return next(createError(500, "Failed to delete complaints . Please try again."))
+        }
+        if (complaints.length < complaintIds.length) {
+            res.json({
+                status: "success",
+                message: "Some complaints were successfully deleted, but some could not be processed."
+            });
+            return;
+        }
+        res.json({
+            status: "success",
+            message: "Complaints deleted successfully."
+        })
+    } catch (error) {
+        console.error(`Unable to delete complaints : ${error}`);
+        return next(createError(500, server_error));
+    }
+}
+
+
+export const searchForComplaints = async (req: Request, res: Response, next: NextFunction) => {
+    const { query, page } = req.query as {
+        query?: string;
+        page?: string,
+    };
+    if (!query || query.length < 1) {
+        return next(createError(400, "Search query is required and must be at least 1 character long."))
+    }
+
+
+    const currentPage = Math.max(1, Number(page) || 1);
+    const pageSize = 15;
+    const options = adminPaginationOptions(currentPage, pageSize);
+
+    try {
+        const complaints = await ComplaintConversationModel.find({ adminViewable: true }, options);
+        if (!complaints) {
+            return next(createError(500, unknown_error))
+        }
+
+        // console.log({filterVariable, complaints})    
+        const validComplaints = complaints.filter(convo => {
+
+            const { complaint } = convo
+
+            const matchesQuery = [complaint]
+                .some(field => field.toLowerCase().includes(query.toLowerCase()));
+            return matchesQuery;
+        });
+
+        res.json({
+            status: "success",
+            message: "Complaints found successfully",
+            data: {
+                conversations: validComplaints.slice(0, pageSize)
+            }
+        })
+
+
+    } catch (error) {
+        console.error(`Unable to search for complaints by admin: ${error}`);
+        return next(createError(500, server_error))
+    }
+}
+export const searchForSentMessages = async (req: Request, res: Response, next: NextFunction) => {
+    const { query, page } = req.query as {
+        query?: string;
+        page?: string,
+    };
+    if (!query || query.length < 1) {
+        return next(createError(400, "Search query is required and must be at least 1 character long."))
+    }
+
+
+    const currentPage = Math.max(1, Number(page) || 1);
+    const pageSize = 15;
+    const options = adminPaginationOptions(currentPage, pageSize);
+
+    try {
+        const messages = await ComplaintMessageModel.find({ senderType: ComplaintSenderType.ADMIN }, options);
+        if (!messages) {
+            return next(createError(500, unknown_error))
+        }
+
+        // console.log({filterVariable, complaints})    
+        const validMessages = messages.filter(convo => {
+
+            const { message } = convo
+
+            const matchesQuery = [message]
+                .some(field => field.toLowerCase().includes(query.toLowerCase()));
+            return matchesQuery;
+        });
+
+        res.json({
+            status: "success",
+            message: "Complaints found successfully",
+            data: {
+                messages: validMessages.slice(0, pageSize)
+            }
+        })
+
+
+    } catch (error) {
+        console.error(`Unable to search for complaints by admin: ${error}`);
+        return next(createError(500, server_error))
     }
 }

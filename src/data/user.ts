@@ -29,7 +29,7 @@ export const getUserAnalytics = async (yesterday: string, today: string): Promis
 }
 export const getUsersWeeklyGrowth = async(weeksAgo: number): Promise<{day: string, count: number}[]> => {
     try{
-        const weekOfCreation = getWeekNumber(weeksAgo)
+        const weekOfCreation = getWeekNumber(weeksAgo);
         const users = await UserModel.find({ weekOfCreation });
         if(!users){
             throw new Error(unknown_error)

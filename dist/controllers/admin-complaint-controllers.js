@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.moveComplaintsToBin = exports.markComplaintAsResolved = exports.starComplaintConversation = exports.getComplaintMessages = exports.replyToComplaint = exports.getMessagesSentByAdmin = exports.getComplaintConversations = exports.getComplaintSummary = void 0;
+exports.searchForSentMessages = exports.searchForComplaints = exports.deleteComplaints = exports.moveComplaintsToBin = exports.markComplaintAsResolved = exports.starComplaintConversation = exports.getComplaintMessages = exports.replyToComplaint = exports.getMessagesSentByAdmin = exports.getComplaintConversations = exports.getComplaintSummary = void 0;
 const complaint_conversation_1 = require("../nobox/record-structures/complaint-conversation");
 const complaint_message_1 = require("../nobox/record-structures/complaint-message");
 const variables_1 = require("../lib/variables");
@@ -30,12 +30,12 @@ const getComplaintSummary = (req, res, next) => __awaiter(void 0, void 0, void 0
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
         //  const in_progress = ComplaintStatus.IN_PROGRESS;
-        //     const validTotal = total.filter( complaint => {
-        //         return complaint.status === in_progress;
-        //     })
-        const total_count = total.length;
+        const validTotal = total.filter(complaint => {
+            return !complaint.isDeleted;
+        });
+        const total_count = validTotal.length;
         const sent_count = sentCount.length;
-        const starred_count = total.filter((complaint) => complaint.starred).length;
+        const starred_count = validTotal.filter((complaint) => complaint.starred).length;
         const bin_count = total.filter((complaint) => complaint.isDeleted).length;
         const data = {
             total_count,
@@ -79,12 +79,12 @@ const getComplaintConversations = (req, res, next) => __awaiter(void 0, void 0, 
         if (!conversations) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        const { totalLength: totalConversations, totalPages, nextPage, filteredData } = (0, utils_1.getPageInfo)(conversations, pageSize, currentPage);
+        const { totalLength: totalConversations, totalPages, nextPage, filteredData, prevPage } = (0, utils_1.getPageInfo)(conversations, pageSize, currentPage);
         res.json({
             status: "success",
             message: "Complaint conversations found successfully",
             data: {
-                totalConversations, totalPages, nextPage, conversations: filteredData
+                totalConversations, totalPages, nextPage, conversations: filteredData, prevPage
             }
         });
     }
@@ -134,6 +134,9 @@ const replyToComplaint = (req, res, next) => __awaiter(void 0, void 0, void 0, f
         if (!conversation) {
             return next((0, http_errors_1.default)(404, "Conversation not found."));
         }
+        if (conversation.isDeleted) {
+            return next((0, http_errors_1.default)(400, "You cannot reply to a complaint that is in the bin."));
+        }
         const data = {
             conversationId: id,
             message,
@@ -168,18 +171,18 @@ const getComplaintMessages = (req, res, next) => __awaiter(void 0, void 0, void 
         }
         ;
         const currentPage = Math.max(1, Number(page) || 1);
-        const pageSize = 15;
+        const pageSize = 100;
         const options = (0, utils_1.adminPaginationOptions)(currentPage, pageSize, "asc");
         const messages = yield complaint_message_1.ComplaintMessageModel.find({ conversationId: id }, options);
         if (!messages) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        const { totalLength: totalMessages, totalPages, nextPage, filteredData } = (0, utils_1.getPageInfo)(messages, pageSize, currentPage);
+        const { totalLength: totalMessages, totalPages, filteredData } = (0, utils_1.getPageInfo)(messages, pageSize, currentPage);
         res.json({
             status: "success",
             message: "Messages  found successfully",
             data: {
-                totalMessages, totalPages, nextPage, messages: filteredData
+                totalMessages, totalPages, nextPage: null, messages: filteredData, conversation
             }
         });
     }
@@ -201,6 +204,9 @@ const starComplaintConversation = (req, res, next) => __awaiter(void 0, void 0, 
             return next((0, http_errors_1.default)(404, "Conversation not found."));
         }
         ;
+        if (conversation.isDeleted) {
+            return next((0, http_errors_1.default)(400, "You cannot star conversation that is in the bin."));
+        }
         if (conversation.starred === starred) {
             return next((0, http_errors_1.default)(400, `Conversation has already been ${starred ? "starred" : "unstarred"}`));
         }
@@ -228,6 +234,9 @@ const markComplaintAsResolved = (req, res, next) => __awaiter(void 0, void 0, vo
             return next((0, http_errors_1.default)(404, "Conversation not found."));
         }
         ;
+        if (conversation.isDeleted) {
+            return next((0, http_errors_1.default)(400, "You cannot mark a complaint as resolved that is in the bin."));
+        }
         if (conversation.status === complaint_conversation_1.ComplaintStatus.RESOLVED) {
             return next((0, http_errors_1.default)(400, "Complaint has already been marked as completed."));
         }
@@ -292,3 +301,116 @@ const moveComplaintsToBin = (req, res, next) => __awaiter(void 0, void 0, void 0
     }
 });
 exports.moveComplaintsToBin = moveComplaintsToBin;
+const deleteComplaints = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { ids } = req.query;
+    const complaintIds = ids ? ids.split(",") : [];
+    if (!Array.isArray(complaintIds) || complaintIds.length < 1 || !complaintIds.every(id => typeof id === "string")) {
+        return next((0, http_errors_1.default)(400, "Invalid complaint IDs. Must be an non empty array of complaint IDs"));
+    }
+    ;
+    try {
+        const complaints = [];
+        for (const id of complaintIds) {
+            try {
+                const complaint = yield complaint_conversation_1.ComplaintConversationModel.findOne({ id });
+                if (!complaint || !complaint.isDeleted === true)
+                    continue;
+                const updatedComplaint = yield complaint_conversation_1.ComplaintConversationModel.deleteOneById(id);
+                if (!updatedComplaint) {
+                    continue;
+                }
+                complaints.push(updatedComplaint);
+            }
+            catch (error) {
+                console.error(`Unable to delete complaint of ${id} : ${error}`);
+            }
+        }
+        if (complaints.length < 1) {
+            return next((0, http_errors_1.default)(500, "Failed to delete complaints . Please try again."));
+        }
+        if (complaints.length < complaintIds.length) {
+            res.json({
+                status: "success",
+                message: "Some complaints were successfully deleted, but some could not be processed."
+            });
+            return;
+        }
+        res.json({
+            status: "success",
+            message: "Complaints deleted successfully."
+        });
+    }
+    catch (error) {
+        console.error(`Unable to delete complaints : ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.deleteComplaints = deleteComplaints;
+const searchForComplaints = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { query, page } = req.query;
+    if (!query || query.length < 1) {
+        return next((0, http_errors_1.default)(400, "Search query is required and must be at least 1 character long."));
+    }
+    const currentPage = Math.max(1, Number(page) || 1);
+    const pageSize = 15;
+    const options = (0, utils_1.adminPaginationOptions)(currentPage, pageSize);
+    try {
+        const complaints = yield complaint_conversation_1.ComplaintConversationModel.find({ adminViewable: true }, options);
+        if (!complaints) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        // console.log({filterVariable, complaints})    
+        const validComplaints = complaints.filter(convo => {
+            const { complaint } = convo;
+            const matchesQuery = [complaint]
+                .some(field => field.toLowerCase().includes(query.toLowerCase()));
+            return matchesQuery;
+        });
+        res.json({
+            status: "success",
+            message: "Complaints found successfully",
+            data: {
+                conversations: validComplaints.slice(0, pageSize)
+            }
+        });
+    }
+    catch (error) {
+        console.error(`Unable to search for complaints by admin: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.searchForComplaints = searchForComplaints;
+const searchForSentMessages = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { query, page } = req.query;
+    if (!query || query.length < 1) {
+        return next((0, http_errors_1.default)(400, "Search query is required and must be at least 1 character long."));
+    }
+    const currentPage = Math.max(1, Number(page) || 1);
+    const pageSize = 15;
+    const options = (0, utils_1.adminPaginationOptions)(currentPage, pageSize);
+    try {
+        const messages = yield complaint_message_1.ComplaintMessageModel.find({ senderType: complaint_message_1.ComplaintSenderType.ADMIN }, options);
+        if (!messages) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        // console.log({filterVariable, complaints})    
+        const validMessages = messages.filter(convo => {
+            const { message } = convo;
+            const matchesQuery = [message]
+                .some(field => field.toLowerCase().includes(query.toLowerCase()));
+            return matchesQuery;
+        });
+        res.json({
+            status: "success",
+            message: "Complaints found successfully",
+            data: {
+                messages: validMessages.slice(0, pageSize)
+            }
+        });
+    }
+    catch (error) {
+        console.error(`Unable to search for complaints by admin: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.searchForSentMessages = searchForSentMessages;

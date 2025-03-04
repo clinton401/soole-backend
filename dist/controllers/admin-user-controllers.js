@@ -37,8 +37,8 @@ const getAllUsersForAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
         const validUsers = users.filter(user => {
-            const { password, isNumberVerified, email } = user;
-            if (!password || !isNumberVerified || !email)
+            const { password, isNumberVerified, email, status } = user;
+            if (!password || !isNumberVerified || !email || !status)
                 return false;
             return true;
         });

@@ -29,8 +29,8 @@ export const getAllUsersForAdmin = async (req: Request, res: Response, next: Nex
             return next(createError(500, unknown_error));
         }
         const validUsers = users.filter(user => {
-            const { password, isNumberVerified, email } = user
-            if (!password || !isNumberVerified || !email) return false;
+            const { password, isNumberVerified, email, status } = user
+            if (!password || !isNumberVerified || !email || !status) return false;
             return true;
         })
         const { totalLength: totalUsers, totalPages, nextPage, filteredData, prevPage } = getPageInfo(validUsers, pageSize, currentPage)

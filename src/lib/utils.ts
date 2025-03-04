@@ -210,12 +210,18 @@ export const getWeekNumber = (weeksAgo = 0) => {
   const today = new Date();
   today.setDate(today.getDate() - 7 * weeksAgo);
 
-  const startOfYear = new Date(today.getFullYear(), 0, 1);
-  const diff: number = today.getTime() - startOfYear.getTime();
-  const oneWeek = 7 * 24 * 60 * 60 * 1000;
+  
+  const tempDate = new Date(today);
+  tempDate.setDate(tempDate.getDate() + 3 - ((tempDate.getDay() + 6) % 7));
 
-  return String(Math.ceil(diff / oneWeek));
+  const firstThursday = new Date(tempDate.getFullYear(), 0, 4);
+  firstThursday.setDate(firstThursday.getDate() + 3 - ((firstThursday.getDay() + 6) % 7));
+
+  const diff = Math.round((tempDate.getTime() - firstThursday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+
+  return String(diff + 1);
 };
+
 
 export const getDayOfWeek = (date = new Date()) => {
   const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
