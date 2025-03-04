@@ -69,10 +69,10 @@ exports.CompleteProfileSchema = zod_1.z
     avatarUrl: zod_1.z
         .string()
         .url({ message: "Invalid avatar URL format." }),
-    avatarPublicId: zod_1.z
-        .string()
-        .trim()
-        .min(1, { message: "Avatar public ID must not be empty if provided." }),
+    // avatarPublicId: z
+    //   .string()
+    //   .trim()
+    //   .min(1, { message: "Avatar public ID must not be empty if provided." }),
 })
     .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match.",
