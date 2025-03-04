@@ -42,6 +42,11 @@ exports.AdminStructure = {
             required: true,
             type: String
         },
+        adminViewable: {
+            description: "Is viewable by admin",
+            required: true,
+            type: Boolean
+        },
         avatarUrl: {
             description: "Admin avatar url",
             required: false,

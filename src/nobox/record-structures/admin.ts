@@ -12,6 +12,7 @@ export interface Admin {
   role: AdminRole;
   personalEmail: string;
   avatarUrl?: string;
+  adminViewable: boolean;
 }
 
 export const AdminStructure: Space<Admin> = {
@@ -51,6 +52,11 @@ export const AdminStructure: Space<Admin> = {
       description: "Admin name",
       required: true,
       type: String
+    },
+    adminViewable: {
+      description: "Is viewable by admin",
+      required: true,
+      type: Boolean
     },
     avatarUrl: {
       description: "Admin avatar url",

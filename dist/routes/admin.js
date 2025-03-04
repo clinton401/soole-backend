@@ -7,6 +7,7 @@ admin.patch("/:id/super-admin/promote", admin_controllers_1.makeSuperAdmin);
 admin.patch("/:id/super-admin/demote", admin_controllers_1.removeFromSuperAdmin);
 admin.post("/create", admin_controllers_1.addNewAdmin);
 admin.put("/me/update", admin_controllers_1.updateAdminProfile);
+admin.get("/", admin_controllers_1.getAllAdmins);
 // admin.delete("/me/profile-picture", deleteAdminProfilePicture);
 admin.patch("/me/update/password", admin_controllers_1.resetAdminPassword);
 admin.get("/me", admin_controllers_1.getAdminDetails);

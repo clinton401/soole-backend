@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getRevenueOverview = exports.getUsersAnalytics = exports.getAnalytics = exports.getAdminDetails = exports.deleteAdminProfilePicture = exports.resetAdminPassword = exports.updateAdminProfile = exports.addNewAdmin = exports.removeFromSuperAdmin = exports.makeSuperAdmin = void 0;
+exports.getRevenueOverview = exports.getUsersAnalytics = exports.getAnalytics = exports.getAdminDetails = exports.deleteAdminProfilePicture = exports.resetAdminPassword = exports.updateAdminProfile = exports.addNewAdmin = exports.removeFromSuperAdmin = exports.makeSuperAdmin = exports.getAllAdmins = void 0;
 const admin_1 = require("../nobox/record-structures/admin");
 const http_errors_1 = __importDefault(require("http-errors"));
 const variables_1 = require("../lib/variables");
@@ -29,11 +29,35 @@ const user_2 = require("../data/user");
 const ride_1 = require("../data/ride");
 const payout_1 = require("../data/payout");
 (0, dotenv_1.config)();
+const getAllAdmins = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.userId;
+    if (!userId) {
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    }
+    ;
+    try {
+        const admins = yield admin_1.AdminModel.find({ adminViewable: true });
+        if (!admins) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        const filteredAdmins = admins.filter(admin => admin.id !== userId);
+        res.json({
+            status: "success",
+            message: "Admins found successfully",
+            admins: filteredAdmins
+        });
+    }
+    catch (error) {
+        console.error(`Unable to find all admins: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.getAllAdmins = getAllAdmins;
 const makeSuperAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.userId;
     const id = req.params.id;
     if (!userId) {
-        return next((0, http_errors_1.default)(4011, variables_1.unauthorized_error));
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     }
     ;
     if (userId === id) {
@@ -138,7 +162,7 @@ const addNewAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         }
         const hashedPassword = yield (0, password_utils_1.hashPassword)(password);
         const data = Object.assign(Object.assign({}, validatedData), { password: hashedPassword, personalEmail: personalEmail.toLowerCase(), workEmail: workEmail.toLowerCase(), name: name.toLowerCase() });
-        const admin = yield (0, admin_2.createAdmin)(Object.assign(Object.assign({}, data), { role: admin_1.AdminRole.ADMIN }));
+        const admin = yield (0, admin_2.createAdmin)(Object.assign(Object.assign({}, data), { role: admin_1.AdminRole.ADMIN, adminViewable: true }));
         const { text, template, subject } = (0, html_templates_1.newAdminEmailTemplate)(admin.personalEmail, password);
         yield (0, mail_1.sendEmail)(admin.personalEmail, subject, text, template);
         res.status(201).json({ status: "success", message: "New admin added successfully", admin: (0, utils_1.userHandler)(admin) });

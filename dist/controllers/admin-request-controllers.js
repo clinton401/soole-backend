@@ -60,7 +60,7 @@ const acceptAdminRequest = (req, res, next) => __awaiter(void 0, void 0, void 0,
             yield (0, admin_request_1.deleteAdminRequestById)(id);
             return next((0, http_errors_1.default)(400, uniqueError));
         }
-        const admin = yield (0, admin_2.createAdmin)(Object.assign(Object.assign({}, cleanedAdmin), { role: admin_1.AdminRole.ADMIN }));
+        const admin = yield (0, admin_2.createAdmin)(Object.assign(Object.assign({}, cleanedAdmin), { role: admin_1.AdminRole.ADMIN, adminViewable: true }));
         const { template, text, subject } = (0, html_templates_1.approvalEmailTemplate)(cleanedAdmin.personalEmail);
         yield (0, mail_1.sendEmail)(cleanedAdmin.personalEmail, subject, text, template);
         yield (0, admin_request_1.deleteAdminRequestById)(id);

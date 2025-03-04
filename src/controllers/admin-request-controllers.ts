@@ -41,7 +41,7 @@ export const acceptAdminRequest = async (req: Request, res: Response, next: Next
             return next(createError(400, uniqueError))
         }
 
-        const admin = await createAdmin({ ...cleanedAdmin, role: AdminRole.ADMIN });
+        const admin = await createAdmin({ ...cleanedAdmin, role: AdminRole.ADMIN, adminViewable: true });
         const { template, text, subject } = approvalEmailTemplate(cleanedAdmin.personalEmail);
         await sendEmail(cleanedAdmin.personalEmail, subject, text, template);
         await deleteAdminRequestById(id)

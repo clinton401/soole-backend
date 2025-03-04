@@ -17,12 +17,32 @@ import { getRideAnalytics } from "../data/ride";
 import { getPayoutYearlyOverview } from "../data/payout";
 config()
 
-
+export const getAllAdmins = async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.userId;
+    if (!userId) {
+        return next(createError(401, unauthorized_error))
+    };
+    try {
+        const admins = await AdminModel.find({ adminViewable: true });
+        if (!admins) {
+            return next(createError(500, unknown_error))
+        }
+        const filteredAdmins = admins.filter(admin => admin.id !== userId);
+        res.json({
+            status: "success",
+            message: "Admins found successfully",
+            admins: filteredAdmins
+        })
+    } catch (error) {
+        console.error(`Unable to find all admins: ${error}`);
+        return next(createError(500, server_error))
+    }
+}
 export const makeSuperAdmin = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.userId;
     const id = req.params.id
     if (!userId) {
-        return next(createError(4011, unauthorized_error))
+        return next(createError(401, unauthorized_error))
     };
 
     if (userId === id) {
@@ -145,7 +165,7 @@ export const addNewAdmin = async (req: Request, res: Response, next: NextFunctio
             workEmail: workEmail.toLowerCase(),
             name: name.toLowerCase(),
         }
-        const admin = await createAdmin({ ...data, role: AdminRole.ADMIN });
+        const admin = await createAdmin({ ...data, role: AdminRole.ADMIN, adminViewable: true });
         const { text, template, subject } = newAdminEmailTemplate(admin.personalEmail, password);
 
         await sendEmail(admin.personalEmail, subject, text, template)
@@ -175,7 +195,7 @@ export const updateAdminProfile = async (req: Request, res: Response, next: Next
     }
     try {
         const validatedData = UpdateAdminProfileSchema.parse(values);
-    
+
         if (!validatedData || Object.keys(validatedData).length < 1) return next(createError(400, "At least one field must be provided."));
         const admin = await findAdminById(userId);
         if (!admin) {
@@ -345,11 +365,12 @@ export const getAnalytics = async (req: Request, res: Response, next: NextFuncti
             status: "success",
             message: "Analytics found successfully",
             data: {
-                growth:{
-                users: usersGrowth,
-                total_rides: totalRidesGrowth,
-                active_rides: activeRidesGrowth,
-                completed_rides: completedRidesGrowth},
+                growth: {
+                    users: usersGrowth,
+                    total_rides: totalRidesGrowth,
+                    active_rides: activeRidesGrowth,
+                    completed_rides: completedRidesGrowth
+                },
                 day_counts,
                 month_counts
 
@@ -371,7 +392,7 @@ export const getUsersAnalytics = async (req: Request, res: Response, next: NextF
         weeksAgo = Math.floor(week);
     }
     try {
-       
+
         const dayCounts = await getUsersWeeklyGrowth(weeksAgo)
         res.json({ status: "success", message: "Users analytics found succesfully", data: dayCounts })
     } catch (error) {
@@ -389,7 +410,7 @@ export const getRevenueOverview = async (req: Request, res: Response, next: Next
         validYear = Number(year);
     }
     try {
-    
+
         const monthCounts = await getPayoutYearlyOverview(validYear)
         res.json({ status: "success", message: "Payout overview found succesfully", data: monthCounts })
     } catch (error) {
@@ -397,3 +418,5 @@ export const getRevenueOverview = async (req: Request, res: Response, next: Next
         return next(createError(500, server_error));
     }
 }
+
+
