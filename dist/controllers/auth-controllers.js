@@ -38,6 +38,7 @@ const access_tokens_1 = require("../middlewares/access-tokens");
 const reset_code_1 = require("../nobox/record-structures/reset-code");
 const wallet_1 = require("../nobox/record-structures/wallet");
 const wallet_2 = require("../data/wallet");
+const send_sms_1 = require("../config/send-sms");
 const nobox_upload_1 = require("../config/nobox-upload");
 (0, dotenv_1.config)();
 const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -86,6 +87,8 @@ const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
                 expiresAt: expiresAt.toISOString(),
             });
         }
+        const body = `Your Soole verification number is ${code}. This number will expire in 10 minutes. If you didn’t request this, please disregard this message.`;
+        (0, send_sms_1.sendSMS)(body, user.phone);
         res.status(201).json({ status: "success", message: "User created successfully!. Verification code sent to your messages", user: (0, utils_1.userHandler)(user) });
     }
     catch (error) {
@@ -161,6 +164,9 @@ const regenerateVerificationCode = (req, res, next) => __awaiter(void 0, void 0,
                 expiresAt: expiresAt.toISOString(),
             });
         }
+        const body = `Your Soole verification number is ${code}. This number will expire in 10 minutes. If you didn’t request this, please disregard this message.`;
+        //  twillio(body, validPhone);
+        (0, send_sms_1.sendSMS)(body, user.phone);
         res.status(200).json({ status: "success", message: "New verification code sent to your messages" });
     }
     catch (error) {
@@ -264,6 +270,27 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
             return next((0, http_errors_1.default)(400, "User not found. Check phone number or email and try again."));
         }
         if (!user.isNumberVerified) {
+            const { code, expiresAt } = (0, utils_1.otpGenerator)();
+            const params = {
+                userId: user.id,
+            };
+            const isCodeAvailable = yield number_verification_1.NumberVerificationModel.findOne(params);
+            if (!isCodeAvailable) {
+                const body = {
+                    code,
+                    expiresAt: expiresAt.toISOString(),
+                    userId: user.id,
+                };
+                yield number_verification_1.NumberVerificationModel.insertOne(body);
+            }
+            else {
+                yield number_verification_1.NumberVerificationModel.updateOneById(isCodeAvailable.id, {
+                    code,
+                    expiresAt: expiresAt.toISOString(),
+                });
+            }
+            const body = `Your Soole verification number is ${code}. This number will expire in 10 minutes. If you didn’t request this, please disregard this message.`;
+            (0, send_sms_1.sendSMS)(body, user.phone);
             res.status(400).json({ error: "Phone number not verified. Please verify to continue.", code: 400, user_id: user.id });
             return;
         }
@@ -313,6 +340,9 @@ const sendResetCode = (req, res, next) => __awaiter(void 0, void 0, void 0, func
                 expiresAt: expiresAt.toISOString(),
             });
         }
+        const body = `Your Soole password reset number is ${code}. This number will expire in 10 minutes. If you didn’t request this, please disregard this message.`;
+        //  twillio(body, validPhone);
+        (0, send_sms_1.sendSMS)(body, user.phone);
         const message = `Reset code sent to ${contactInfo}.`;
         res.status(200).json({
             status: "success",

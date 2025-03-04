@@ -36,7 +36,7 @@ const generateRandomNumbers = (numLength = 5) => {
 
 
 export const otpGenerator = (is1Hr = false) => {
-  const code = "00000";
+  const code = generateRandomNumbers();
 
   const additionNumber = !is1Hr ? 600000 : 3_600_000;
   const expiresAt = new Date(Date.now() + additionNumber);
@@ -210,7 +210,7 @@ export const getWeekNumber = (weeksAgo = 0) => {
   const today = new Date();
   today.setDate(today.getDate() - 7 * weeksAgo);
 
-  
+
   const tempDate = new Date(today);
   tempDate.setDate(tempDate.getDate() + 3 - ((tempDate.getDay() + 6) % 7));
 

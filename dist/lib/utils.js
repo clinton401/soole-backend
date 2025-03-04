@@ -33,7 +33,7 @@ const generateRandomNumbers = (numLength = 5) => {
     return randomNumbers;
 };
 const otpGenerator = (is1Hr = false) => {
-    const code = "00000";
+    const code = generateRandomNumbers();
     const additionNumber = !is1Hr ? 600000 : 3600000;
     const expiresAt = new Date(Date.now() + additionNumber);
     return { code, expiresAt };
