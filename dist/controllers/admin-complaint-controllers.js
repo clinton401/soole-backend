@@ -29,11 +29,11 @@ const getComplaintSummary = (req, res, next) => __awaiter(void 0, void 0, void 0
         if (!total || !sentCount) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        //  const in_progress = ComplaintStatus.IN_PROGRESS;
+        const in_progress = complaint_conversation_1.ComplaintStatus.IN_PROGRESS;
         const validTotal = total.filter(complaint => {
             return !complaint.isDeleted;
         });
-        const total_count = validTotal.length;
+        const total_count = validTotal.filter((complaint) => complaint.status === in_progress).length;
         const sent_count = sentCount.length;
         const starred_count = validTotal.filter((complaint) => complaint.starred).length;
         const bin_count = total.filter((complaint) => complaint.isDeleted).length;

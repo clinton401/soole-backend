@@ -18,11 +18,11 @@ export const getComplaintSummary = async (req: Request, res: Response, next: Nex
         if (!total || !sentCount) {
             return next(createError(500, unknown_error));
         }
-        //  const in_progress = ComplaintStatus.IN_PROGRESS;
+         const in_progress = ComplaintStatus.IN_PROGRESS;
         const validTotal = total.filter(complaint => {
             return !complaint.isDeleted;
         })
-        const total_count = validTotal.length;
+        const total_count = validTotal.filter((complaint) => complaint.status === in_progress).length;
         const sent_count = sentCount.length;
         const starred_count = validTotal.filter((complaint) => complaint.starred).length;
         const bin_count = total.filter((complaint) => complaint.isDeleted).length;
