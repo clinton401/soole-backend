@@ -20,15 +20,16 @@ const __1 = require("..");
 const conversation_2 = require("../data/conversation");
 const message_1 = require("../data/message");
 const getUserConversations = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page } = req.query;
     const userId = req.userId;
     if (!userId)
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     try {
-        const conversations = yield (0, conversation_2.getUserTotalConversations)(userId);
+        const data = yield (0, conversation_2.getUserTotalConversations)(userId, page);
         res.status(200).json({
             status: "success",
             message: "Conversations found successfully",
-            conversations
+            data
         });
     }
     catch (error) {
@@ -45,9 +46,17 @@ const createConversation = (req, res, next) => __awaiter(void 0, void 0, void 0,
     if (!participant2Id)
         return next((0, http_errors_1.default)(400, "Participant 2 ID is required."));
     try {
+        // const conversation = await findUniqueConvo({ participant1Id, participant2Id });
+        const convoExists = yield (0, conversation_2.conversationExists)(participant1Id, participant2Id);
+        if (convoExists) {
+            return next((0, http_errors_1.default)(400, "A conversation between these users already exists."));
+        }
         const conversation = yield (0, conversation_2.insertNewConversation)(participant1Id, participant2Id);
         if (!conversation)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        if (typeof conversation === "string") {
+            return next((0, http_errors_1.default)(400, conversation));
+        }
         res.status(201).json({
             status: "success",
             message: "Conversation created successfully",
@@ -69,7 +78,7 @@ const createMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, func
     if (!receiverId || !content || content.length < 1)
         return next((0, http_errors_1.default)(400, "All fields are required. The 'content' field must contain at least one character."));
     try {
-        const conversationExists = yield (0, conversation_2.findUnique)(conversationId);
+        const conversationExists = yield (0, conversation_2.findUnique)(conversationId, userId);
         if (!conversationExists)
             return next((0, http_errors_1.default)(404, "Conversation not found or has been deleted."));
         if (conversationExists.participant1Id !== userId && conversationExists.participant2Id !== userId)
@@ -78,7 +87,8 @@ const createMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         if (!message)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         const now = new Date().toISOString();
-        const updatedConversation = yield conversation_1.ConversationModel.updateOneById(conversationId, { lastMessage: content, lastMessageDate: now });
+        const viewedBy = [userId];
+        const updatedConversation = yield conversation_1.ConversationModel.updateOneById(conversationId, { lastMessage: content, lastMessageDate: now, viewedBy });
         if (!updatedConversation)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         __1.io.emit("message", message);
@@ -95,13 +105,14 @@ const createMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, func
 });
 exports.createMessage = createMessage;
 const getConversationMessages = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page } = req.query;
     const conversationId = req.params.id;
     try {
-        const messages = yield (0, message_1.findMany)(conversationId);
+        const data = yield (0, message_1.findMany)(conversationId, page);
         res.status(200).json({
             status: "success",
             message: "Messages found successfully",
-            messages
+            data
         });
     }
     catch (error) {
@@ -150,7 +161,7 @@ const deleteConversation = (req, res, next) => __awaiter(void 0, void 0, void 0,
     if (!userId)
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     try {
-        const conversation = yield (0, conversation_2.findUnique)(conversationId);
+        const conversation = yield (0, conversation_2.findUnique)(conversationId, userId);
         if (!conversation) {
             return next((0, http_errors_1.default)(404, "Conversation not found."));
         }
@@ -161,11 +172,19 @@ const deleteConversation = (req, res, next) => __awaiter(void 0, void 0, void 0,
         if (deletedBy.includes(userId)) {
             return next((0, http_errors_1.default)(400, "This conversation has already been deleted by you."));
         }
-        const updatedConversation = yield conversation_1.ConversationModel.updateOneById(conversationId, {
-            deletedBy: [...deletedBy, userId],
-        });
-        if (!updatedConversation) {
-            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        if (deletedBy.length < 2) {
+            const updatedConversation = yield conversation_1.ConversationModel.updateOneById(conversationId, {
+                deletedBy: [...deletedBy, userId],
+            });
+            if (!updatedConversation) {
+                return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+            }
+        }
+        else {
+            const deletedConversation = yield conversation_1.ConversationModel.deleteOneById(conversationId);
+            if (!deletedConversation) {
+                return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+            }
         }
         res.status(200).json({
             status: "success",
@@ -184,7 +203,7 @@ const markConversationAsRead = (req, res, next) => __awaiter(void 0, void 0, voi
     if (!userId)
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     try {
-        const conversation = yield (0, conversation_2.findUnique)(conversationId);
+        const conversation = yield (0, conversation_2.findUnique)(conversationId, userId);
         if (!conversation) {
             return next((0, http_errors_1.default)(404, "Conversation not found."));
         }

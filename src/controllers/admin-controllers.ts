@@ -5,9 +5,9 @@ import createError from "http-errors";
 import { unauthorized_error, unknown_error, server_error } from "../lib/variables";
 import { AddNewAdminSchema, UpdateAdminProfileSchema } from "../schemas";
 import { config } from "dotenv";
-import { userHandler, zodErrorHandler, getDates, calculateGrowth, getWeekNumber, isValidNumber, isValidImage } from "../lib/utils";
+import { userHandler, zodErrorHandler, getDates, getUserPageInfo, getWeekNumber, isValidNumber, isValidImage } from "../lib/utils";
 import { validateUniqueAdminIdentifiers, createAdmin, findAdminById } from "../data/admin";
-import { hashPassword, validatePassword } from "../lib/password-utils";
+import { hashPassword, validatePassword,  } from "../lib/password-utils";
 import { ZodError } from "zod";
 import { superAdminPromotionEmailTemplate, superAdminDemotionEmailTemplate, newAdminEmailTemplate } from "../lib/html-templates";
 import { sendEmail } from "../data/mail";
@@ -19,6 +19,10 @@ config()
 
 export const getAllAdmins = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.userId;
+    const {page} = req.query as {
+        page?: string
+    }
+    const currentPage = Math.max(1, Number(page) || 1);
     if (!userId) {
         return next(createError(401, unauthorized_error))
     };
@@ -28,10 +32,12 @@ export const getAllAdmins = async (req: Request, res: Response, next: NextFuncti
             return next(createError(500, unknown_error))
         }
         const filteredAdmins = admins.filter(admin => admin.id !== userId);
+        const pageSize = 15;
+        const data = getUserPageInfo(filteredAdmins, pageSize, currentPage, "admins");
         res.json({
             status: "success",
             message: "Admins found successfully",
-            admins: filteredAdmins
+            data
         })
     } catch (error) {
         console.error(`Unable to find all admins: ${error}`);

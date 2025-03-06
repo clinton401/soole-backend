@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import createError from "http-errors";
 import { server_error, unauthorized_error, unknown_error } from "../lib/variables";
-import { isValidNumber, paginationOptions } from "../lib/utils";
+import { isValidNumber, paginationOptions, getUserPageInfo } from "../lib/utils";
 import { UserModel } from "../nobox/record-structures/user"
 import { ReviewModel } from "../nobox/record-structures/review"
 export const createReview = async (req: Request, res: Response, next: NextFunction) => {
@@ -66,16 +66,23 @@ export const createReview = async (req: Request, res: Response, next: NextFuncti
 }
 
 export const getDriverReviews = async (req: Request, res: Response, next: NextFunction) => {
+    const {page} = req.query as {
+        page?: string
+    }
     const driverId = req.params.driverId;
-
+    const currentPage = Math.max(1, Number(page) || 1);
     try {
         const options = paginationOptions();
         const reviews = await ReviewModel.find({ driverId }, options);
-
+if(!reviews){
+    return next(createError(500, unknown_error))
+}
+const pageSize = 15;
+const data = getUserPageInfo(reviews, pageSize, currentPage, "reviews");
         res.json({
             status: "success",
             message: "Reviews retrieved successfully",
-            reviews
+            data
         })
     } catch (error) {
         console.error(`Unable to get driver reviews: ${error}`);

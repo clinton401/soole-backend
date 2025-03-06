@@ -35,7 +35,7 @@ api.use("/paystack", paystack_1.default);
 api.use("/wallet", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, wallet_1.default);
 api.use("/transactions", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, transaction_1.default);
 api.use("/reviews", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, review_1.default);
-api.use("/payout", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, payout_1.default);
+api.use("/payouts", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, payout_1.default);
 api.post("/upload-images", upload_1.default.single('image'), auth_controllers_1.uploadImage);
 // Admin routes 
 api.use("/admin/auth", access_tokens_1.isAuthenticated, admin_auth_1.default);

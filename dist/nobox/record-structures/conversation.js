@@ -36,6 +36,11 @@ exports.ConversationStructure = {
             required: false,
             type: Array,
         },
+        participantsDetails: {
+            description: "Details for each patricipants",
+            required: true,
+            type: Array
+        }
     },
 };
 exports.ConversationModel = (0, config_1.createRowSchema)(exports.ConversationStructure);

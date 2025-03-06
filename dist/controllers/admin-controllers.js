@@ -31,6 +31,8 @@ const payout_1 = require("../data/payout");
 (0, dotenv_1.config)();
 const getAllAdmins = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.userId;
+    const { page } = req.query;
+    const currentPage = Math.max(1, Number(page) || 1);
     if (!userId) {
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     }
@@ -41,10 +43,12 @@ const getAllAdmins = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
         const filteredAdmins = admins.filter(admin => admin.id !== userId);
+        const pageSize = 15;
+        const data = (0, utils_1.getUserPageInfo)(filteredAdmins, pageSize, currentPage, "admins");
         res.json({
             status: "success",
             message: "Admins found successfully",
-            admins: filteredAdmins
+            data
         });
     }
     catch (error) {

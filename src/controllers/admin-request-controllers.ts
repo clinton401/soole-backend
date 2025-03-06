@@ -3,18 +3,27 @@ import { unknown_error, unauthorized_error, server_error } from "../lib/variable
 import { deleteAdminRequestById, findAdminRequestById } from "../data/admin-request";
 import createError from "http-errors";
 import { AdminRole } from "../nobox/record-structures/admin";
-import { paginationOptions, userHandler } from "../lib/utils";
+import { paginationOptions, userHandler, getUserPageInfo } from "../lib/utils";
 import { AdminRequestModel } from "../nobox/record-structures/admin-request";
 import { createAdmin, validateUniqueAdminIdentifiers } from "../data/admin";
 import { approvalEmailTemplate, rejectionEmailTemplate } from "../lib/html-templates";
 import { sendEmail } from "../data/mail";
 
 export const getAdminRequests = async (req: Request, res: Response, next: NextFunction) => {
-
+    const {page} = req.query as {
+        page?: string
+    }
+    const currentPage = Math.max(1, Number(page) || 1);
     try {
         const options = paginationOptions()
         const requests = await AdminRequestModel.find({ adminViewable: true }, options);
-        res.json({ status: "success", message: "Admin requests found successfully", requests });
+        if(!requests){
+            return next(createError(500, unknown_error))
+        }
+        const pageSize = 15;
+        
+        const data = getUserPageInfo(requests, pageSize, currentPage, "requests");
+        res.json({ status: "success", message: "Admin requests found successfully", data});
     } catch (error) {
         console.error(`Unable to get admin request: ${error}`);
         return next(createError(500, server_error))

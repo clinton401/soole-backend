@@ -34,7 +34,7 @@ api.use("/paystack", paystack);
 api.use("/wallet", verifyAccessToken, verifyUserStatus, wallet);
 api.use("/transactions", verifyAccessToken, verifyUserStatus , transaction);
 api.use("/reviews", verifyAccessToken, verifyUserStatus, review);
-api.use("/payout", verifyAccessToken, verifyUserStatus, payout);
+api.use("/payouts", verifyAccessToken, verifyUserStatus, payout);
 api.post("/upload-images",upload.single('image'),  uploadImage)
 
 

@@ -1,5 +1,6 @@
 import { MessageModel } from "../nobox/record-structures/message";
-import {paginationOptions} from "../lib/utils"
+import {paginationOptions, getUserPageInfo} from "../lib/utils"
+import {unknown_error} from "../lib/variables"
 
 
 export const insertNewMessage = async (conversationId: string, senderId: string, receiverId: string, content: string) => {
@@ -25,12 +26,18 @@ export const findUnique = async (id: string) => {
         throw error
     }
 }
-export const findMany = async (conversationId: string) => {
+export const findMany = async (conversationId: string, page?: string) => {
     try {
         const options = paginationOptions("asc")
 
         const messages = await MessageModel.find({ conversationId }, options);
-        return messages;
+        if(!messages){
+            throw new Error(unknown_error)
+        }
+        const pageSize = 25;
+        const currentPage = Math.max(1, Number(page) || 1);
+        const data = getUserPageInfo(messages, pageSize, currentPage, 'messages');
+        return data
     } catch (error) {
         throw error
     }

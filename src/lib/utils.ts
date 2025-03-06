@@ -116,13 +116,14 @@ export type SortOptions = {
   by: "createdAt" | "id" | "updatedAt";
   order: "asc" | "desc";
 };
-export const paginationOptions = (order: "desc" | "asc" = "desc") => {
+export const paginationOptions = (  order: "desc" | "asc" = "desc") => {
+ 
 
   const options = {
-    pagination: {
-      limit: 25,
-      page: 1,
-    },
+    // pagination: {
+    //   limit,
+    //   page: currentPage,
+    // },
     sort: {
       by: "createdAt",
       order,
@@ -142,6 +143,28 @@ export const adminPaginationOptions = (page: number, limit: number, order: "desc
         order,
     } as SortOptions,
 };
+}
+export const getUserPageInfo = (data: any[], pageSize: number, currentPage: number, name: string) => {
+  const totalLength = data.length;
+  const totalPages = Math.ceil(totalLength / pageSize);
+
+  
+  
+
+  const sliceStart = pageSize * (currentPage - 1);
+  const sliceEnd = sliceStart + pageSize;
+  const filteredData = data.slice(sliceStart, sliceEnd);
+
+  const nextPage = currentPage < totalPages ? currentPage + 1 : null;
+  const prevPage = currentPage > 1 ? currentPage - 1 : null;
+
+  return {
+      [name]: filteredData, 
+      totalLength,
+      totalPages,
+      nextPage,
+      prevPage
+  };
 }
 
 export const getPageInfo = (data: any[], pageSize: number, currentPage: number) => {

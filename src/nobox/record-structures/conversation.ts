@@ -6,6 +6,11 @@ export interface Conversation {
   participant2Id: string;
   lastMessage?: string;
   lastMessageDate?: string;
+  participantsDetails: {
+    avatarUrl: string;
+    id: string;
+    name: string
+  }[]
   viewedBy: string[];
   deletedBy: string[]
 }
@@ -45,6 +50,11 @@ export const ConversationStructure: Space<Conversation> = {
       required: false,
       type: Array,
     },
+    participantsDetails: {
+      description: "Details for each patricipants",
+      required: true,
+      type: Array
+    }
   },
 };
 

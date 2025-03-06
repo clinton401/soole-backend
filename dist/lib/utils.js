@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isValidImage = exports.getMonthName = exports.getDayOfWeek = exports.getWeekNumber = exports.getDates = exports.calculateGrowth = exports.dateToInt = exports.hasSufficientBalance = exports.getPageInfo = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
+exports.isValidImage = exports.getMonthName = exports.getDayOfWeek = exports.getWeekNumber = exports.getDates = exports.calculateGrowth = exports.dateToInt = exports.hasSufficientBalance = exports.getPageInfo = exports.getUserPageInfo = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
 const validator_1 = __importDefault(require("validator"));
 const errorHandler = (error, code) => {
     return {
@@ -102,10 +102,10 @@ const hasDecimal = (num) => !Number.isInteger(num);
 exports.hasDecimal = hasDecimal;
 const paginationOptions = (order = "desc") => {
     const options = {
-        pagination: {
-            limit: 25,
-            page: 1,
-        },
+        // pagination: {
+        //   limit,
+        //   page: currentPage,
+        // },
         sort: {
             by: "createdAt",
             order,
@@ -127,6 +127,23 @@ const adminPaginationOptions = (page, limit, order = "desc") => {
     };
 };
 exports.adminPaginationOptions = adminPaginationOptions;
+const getUserPageInfo = (data, pageSize, currentPage, name) => {
+    const totalLength = data.length;
+    const totalPages = Math.ceil(totalLength / pageSize);
+    const sliceStart = pageSize * (currentPage - 1);
+    const sliceEnd = sliceStart + pageSize;
+    const filteredData = data.slice(sliceStart, sliceEnd);
+    const nextPage = currentPage < totalPages ? currentPage + 1 : null;
+    const prevPage = currentPage > 1 ? currentPage - 1 : null;
+    return {
+        [name]: filteredData,
+        totalLength,
+        totalPages,
+        nextPage,
+        prevPage
+    };
+};
+exports.getUserPageInfo = getUserPageInfo;
 const getPageInfo = (data, pageSize, currentPage) => {
     const totalLength = data.length;
     const totalPages = Math.ceil(totalLength / pageSize);

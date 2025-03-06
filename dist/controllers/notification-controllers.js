@@ -18,15 +18,23 @@ const http_errors_1 = __importDefault(require("http-errors"));
 const variables_1 = require("../lib/variables");
 const utils_1 = require("../lib/utils");
 const getNotifications = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page } = req.query;
     const userId = req.userId;
     if (!userId)
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    const currentPage = Math.max(1, Number(page) || 1);
     try {
-        const notifications = yield notification_1.NotificationModel.find({ userId }, (0, utils_1.paginationOptions)());
+        const options = (0, utils_1.paginationOptions)();
+        const notifications = yield notification_1.NotificationModel.find({ userId }, options);
+        if (!notifications) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        const pageSize = 15;
+        const data = (0, utils_1.getUserPageInfo)(notifications, pageSize, currentPage, "notifications");
         res.status(200).json({
             success: true,
             message: "Notifications found successfully.",
-            notifications
+            data
         });
     }
     catch (error) {

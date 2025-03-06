@@ -9,14 +9,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.findUnique = exports.insertNewConversation = exports.getUserTotalConversations = void 0;
+exports.conversationExists = exports.findUnique = exports.insertNewConversation = exports.getUserTotalConversations = void 0;
 const utils_1 = require("../lib/utils");
 const conversation_1 = require("../nobox/record-structures/conversation");
-const getUserTotalConversations = (userId) => __awaiter(void 0, void 0, void 0, function* () {
+const user_1 = require("../nobox/record-structures/user");
+const variables_1 = require("../lib/variables");
+const getUserTotalConversations = (userId, page) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const currentPage = Math.max(1, Number(page) || 1);
         const options = (0, utils_1.paginationOptions)();
         const convo1 = yield conversation_1.ConversationModel.find({ participant1Id: userId }, options);
         const convo2 = yield conversation_1.ConversationModel.find({ participant2Id: userId }, options);
+        if (!convo1 || !convo2) {
+            throw new Error(variables_1.unknown_error);
+        }
         const totalConvo = [...convo1, ...convo2];
         const notDeletedConvo = totalConvo.filter(convo => {
             return !convo.deletedBy.includes(userId);
@@ -25,10 +31,21 @@ const getUserTotalConversations = (userId) => __awaiter(void 0, void 0, void 0, 
             const dateB = new Date(b.createdAt).getTime();
             return options.sort.order === "asc" ? dateA - dateB : dateB - dateA;
         });
-        const start = (options.pagination.page - 1) * options.pagination.limit;
-        const end = start + options.pagination.limit;
+        const pageSize = 15;
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize;
         const paginatedConvo = notDeletedConvo.slice(start, end);
-        return paginatedConvo;
+        const totalLength = notDeletedConvo.length;
+        const totalPages = Math.ceil(totalLength / pageSize);
+        const nextPage = currentPage < totalPages ? currentPage + 1 : null;
+        const prevPage = currentPage > 1 ? currentPage - 1 : null;
+        return {
+            conversations: paginatedConvo, currentPage,
+            totalLength,
+            totalPages,
+            nextPage,
+            prevPage
+        };
     }
     catch (error) {
         throw error;
@@ -37,6 +54,28 @@ const getUserTotalConversations = (userId) => __awaiter(void 0, void 0, void 0, 
 exports.getUserTotalConversations = getUserTotalConversations;
 const insertNewConversation = (participant1Id, participant2Id) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        const [participant1, participant2] = yield Promise.all([
+            user_1.UserModel.findOne({ id: participant1Id }),
+            user_1.UserModel.findOne({ id: participant2Id }),
+        ]);
+        if (!participant1 || !participant2) {
+            return "One or more participants do not exist. Please check the provided IDs.";
+        }
+        if (!participant1.avatarUrl || !participant2.avatarUrl) {
+            return "Both participants must have a profile picture.";
+        }
+        const participantsDetails = [
+            {
+                id: participant1.id,
+                name: `${participant1.firstName} ${participant1.lastName}`,
+                avatarUrl: participant1.avatarUrl
+            },
+            {
+                id: participant2.id,
+                name: `${participant2.firstName} ${participant2.lastName}`,
+                avatarUrl: participant2.avatarUrl
+            }
+        ];
         const newConversation = yield conversation_1.ConversationModel.insertOne({
             participant1Id,
             participant2Id,
@@ -44,21 +83,44 @@ const insertNewConversation = (participant1Id, participant2Id) => __awaiter(void
             lastMessageDate: undefined,
             viewedBy: [],
             deletedBy: [],
+            participantsDetails
         });
         return newConversation;
     }
     catch (error) {
-        throw error;
+        return "An unexpected error occurred while creating the conversation.";
     }
 });
 exports.insertNewConversation = insertNewConversation;
-const findUnique = (id) => __awaiter(void 0, void 0, void 0, function* () {
+const findUnique = (id, userId) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const conversation = yield conversation_1.ConversationModel.findOne({ id }, {});
-        return conversation;
+        const isConvoDeleted = conversation.deletedBy.includes(userId);
+        return isConvoDeleted ? null : conversation;
     }
     catch (error) {
         throw error;
     }
 });
 exports.findUnique = findUnique;
+const conversationExists = (id1, id2) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const [convo1, convo2] = yield Promise.all([
+            conversation_1.ConversationModel.findOne({ participant1Id: id1, participant2Id: id2 }),
+            conversation_1.ConversationModel.findOne({ participant1Id: id2, participant2Id: id1 })
+        ]);
+        if (convo1) {
+            const isConvo1Deleted = convo1.deletedBy.includes(id1) || convo1.deletedBy.includes(id2);
+            return !isConvo1Deleted;
+        }
+        if (convo2) {
+            const isConvo2Deleted = convo2.deletedBy.includes(id1) || convo2.deletedBy.includes(id2);
+            return !isConvo2Deleted;
+        }
+        return false;
+    }
+    catch (error) {
+        throw error;
+    }
+});
+exports.conversationExists = conversationExists;

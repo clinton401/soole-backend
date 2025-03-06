@@ -34,10 +34,17 @@ const admin_2 = require("../data/admin");
 const html_templates_1 = require("../lib/html-templates");
 const mail_1 = require("../data/mail");
 const getAdminRequests = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page } = req.query;
+    const currentPage = Math.max(1, Number(page) || 1);
     try {
         const options = (0, utils_1.paginationOptions)();
         const requests = yield admin_request_2.AdminRequestModel.find({ adminViewable: true }, options);
-        res.json({ status: "success", message: "Admin requests found successfully", requests });
+        if (!requests) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        const pageSize = 15;
+        const data = (0, utils_1.getUserPageInfo)(requests, pageSize, currentPage, "requests");
+        res.json({ status: "success", message: "Admin requests found successfully", data });
     }
     catch (error) {
         console.error(`Unable to get admin request: ${error}`);

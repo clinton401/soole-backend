@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.updateOneById = exports.findMany = exports.findUnique = exports.insertNewMessage = void 0;
 const message_1 = require("../nobox/record-structures/message");
 const utils_1 = require("../lib/utils");
+const variables_1 = require("../lib/variables");
 const insertNewMessage = (conversationId, senderId, receiverId, content) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const newConversation = yield message_1.MessageModel.insertOne({
@@ -38,11 +39,17 @@ const findUnique = (id) => __awaiter(void 0, void 0, void 0, function* () {
     }
 });
 exports.findUnique = findUnique;
-const findMany = (conversationId) => __awaiter(void 0, void 0, void 0, function* () {
+const findMany = (conversationId, page) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const options = (0, utils_1.paginationOptions)("asc");
         const messages = yield message_1.MessageModel.find({ conversationId }, options);
-        return messages;
+        if (!messages) {
+            throw new Error(variables_1.unknown_error);
+        }
+        const pageSize = 25;
+        const currentPage = Math.max(1, Number(page) || 1);
+        const data = (0, utils_1.getUserPageInfo)(messages, pageSize, currentPage, 'messages');
+        return data;
     }
     catch (error) {
         throw error;

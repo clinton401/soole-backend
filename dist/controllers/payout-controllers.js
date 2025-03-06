@@ -18,19 +18,26 @@ const utils_1 = require("../lib/utils");
 const http_errors_1 = __importDefault(require("http-errors"));
 const variables_1 = require("../lib/variables");
 const getDriverPayouts = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { page } = req.query;
     const userId = req.userId;
     if (!userId) {
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     }
+    const currentPage = Math.max(1, Number(page) || 1);
     try {
         const options = (0, utils_1.paginationOptions)();
         const payouts = yield payout_1.PayoutModel.find({
             userId
         }, options);
+        if (!payouts) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        const pageSize = 15;
+        const data = (0, utils_1.getUserPageInfo)(payouts, pageSize, currentPage, "payouts");
         res.json({
             status: "success",
             message: "Payouts received successfully",
-            payouts
+            data
         });
     }
     catch (error) {
