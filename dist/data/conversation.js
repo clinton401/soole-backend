@@ -14,6 +14,7 @@ const utils_1 = require("../lib/utils");
 const conversation_1 = require("../nobox/record-structures/conversation");
 const user_1 = require("../nobox/record-structures/user");
 const variables_1 = require("../lib/variables");
+const __1 = require("..");
 const getUserTotalConversations = (userId, page) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const currentPage = Math.max(1, Number(page) || 1);
@@ -83,6 +84,7 @@ const insertNewConversation = (participant1Id, participant2Id) => __awaiter(void
             deletedBy: [],
             participantsDetails
         });
+        __1.io.emit("conversation", newConversation);
         return newConversation;
     }
     catch (error) {

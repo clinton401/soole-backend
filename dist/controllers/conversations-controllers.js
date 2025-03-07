@@ -96,6 +96,7 @@ const createMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         if (!updatedConversation)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         __1.io.emit("message", message);
+        __1.io.emit("conversation:update", updatedConversation);
         res.status(201).json({
             status: "success",
             message: "message sent successfully",
@@ -224,6 +225,7 @@ const markConversationAsRead = (req, res, next) => __awaiter(void 0, void 0, voi
         if (!updatedConversation) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
+        __1.io.emit("conversation:update", updatedConversation);
         res.status(200).json({
             status: "success",
             message: "Conversation marked as read successfully.",

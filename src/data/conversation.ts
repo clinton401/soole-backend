@@ -1,7 +1,8 @@
 import { paginationOptions } from "../lib/utils"
 import { ConversationModel } from "../nobox/record-structures/conversation";
 import { UserModel } from "../nobox/record-structures/user";
-import {unknown_error} from "../lib/variables"
+import {unknown_error} from "../lib/variables";
+import { io } from "..";
 
 export const getUserTotalConversations = async (userId: string, page?: string) => {
 
@@ -79,7 +80,8 @@ export const insertNewConversation = async (participant1Id: string, participant2
             deletedBy: [],
             participantsDetails
         });
-
+       
+        io.emit("conversation", newConversation)
         return newConversation;
     } catch (error) {
         return "An unexpected error occurred while creating the conversation.";

@@ -79,6 +79,7 @@ if(userId === receiverId){
             viewedBy, lastMessageSenderId: userId });
         if (!updatedConversation) return next(createError(500, unknown_error));
         io.emit("message", message);
+        io.emit("conversation:update", updatedConversation);
         res.status(201).json({
             status: "success",
             message: "message sent successfully",
@@ -215,6 +216,8 @@ export const markConversationAsRead = async (req: Request, res: Response, next: 
             return next(createError(500, unknown_error));
         }
 
+        
+        io.emit("conversation:update", updatedConversation);
         res.status(200).json({
             status: "success",
             message: "Conversation marked as read successfully.",
