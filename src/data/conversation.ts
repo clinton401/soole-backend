@@ -75,8 +75,6 @@ export const insertNewConversation = async (participant1Id: string, participant2
         const newConversation = await ConversationModel.insertOne({
             participant1Id,
             participant2Id,
-            lastMessage: undefined,
-            lastMessageDate: undefined,
             viewedBy: [],
             deletedBy: [],
             participantsDetails

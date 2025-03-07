@@ -6,6 +6,7 @@ export interface Conversation {
   participant2Id: string;
   lastMessage?: string;
   lastMessageDate?: string;
+  lastMessageSenderId?: string;
   participantsDetails: {
     avatarUrl: string;
     id: string;
@@ -54,6 +55,11 @@ export const ConversationStructure: Space<Conversation> = {
       description: "Details for each patricipants",
       required: true,
       type: Array
+    },
+    lastMessageSenderId: {
+      description: "Sender id for the last message",
+      required: false,
+      type: String
     }
   },
 };

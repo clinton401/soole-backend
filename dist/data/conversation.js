@@ -79,8 +79,6 @@ const insertNewConversation = (participant1Id, participant2Id) => __awaiter(void
         const newConversation = yield conversation_1.ConversationModel.insertOne({
             participant1Id,
             participant2Id,
-            lastMessage: undefined,
-            lastMessageDate: undefined,
             viewedBy: [],
             deletedBy: [],
             participantsDetails

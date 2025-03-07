@@ -40,6 +40,11 @@ exports.ConversationStructure = {
             description: "Details for each patricipants",
             required: true,
             type: Array
+        },
+        lastMessageSenderId: {
+            description: "Sender id for the last message",
+            required: false,
+            type: String
         }
     },
 };

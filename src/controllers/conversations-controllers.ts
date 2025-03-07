@@ -63,6 +63,9 @@ export const createMessage = async (req: Request, res: Response, next: NextFunct
     if (!userId) return next(createError(401, unauthorized_error));
     if (!receiverId || !content || content.length < 1) return next(createError(400, "All fields are required. The 'content' field must contain at least one character."))
     try {
+if(userId === receiverId){
+    return next(createError(400, "You cannot send a message to yourself."))
+}
         const conversationExists = await findUniqueConvo(conversationId, userId);
         if (!conversationExists) return next(createError(404, "Conversation not found or has been deleted."));
 
@@ -72,7 +75,8 @@ export const createMessage = async (req: Request, res: Response, next: NextFunct
         const now = new Date().toISOString();
         const viewedBy = [userId]
 
-        const updatedConversation = await ConversationModel.updateOneById(conversationId, { lastMessage: content, lastMessageDate: now, viewedBy });
+        const updatedConversation = await ConversationModel.updateOneById(conversationId, { lastMessage: content, lastMessageDate: now, 
+            viewedBy, lastMessageSenderId: userId });
         if (!updatedConversation) return next(createError(500, unknown_error));
         io.emit("message", message);
         res.status(201).json({

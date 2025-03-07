@@ -78,6 +78,9 @@ const createMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, func
     if (!receiverId || !content || content.length < 1)
         return next((0, http_errors_1.default)(400, "All fields are required. The 'content' field must contain at least one character."));
     try {
+        if (userId === receiverId) {
+            return next((0, http_errors_1.default)(400, "You cannot send a message to yourself."));
+        }
         const conversationExists = yield (0, conversation_2.findUnique)(conversationId, userId);
         if (!conversationExists)
             return next((0, http_errors_1.default)(404, "Conversation not found or has been deleted."));
@@ -88,7 +91,8 @@ const createMessage = (req, res, next) => __awaiter(void 0, void 0, void 0, func
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         const now = new Date().toISOString();
         const viewedBy = [userId];
-        const updatedConversation = yield conversation_1.ConversationModel.updateOneById(conversationId, { lastMessage: content, lastMessageDate: now, viewedBy });
+        const updatedConversation = yield conversation_1.ConversationModel.updateOneById(conversationId, { lastMessage: content, lastMessageDate: now,
+            viewedBy, lastMessageSenderId: userId });
         if (!updatedConversation)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         __1.io.emit("message", message);
