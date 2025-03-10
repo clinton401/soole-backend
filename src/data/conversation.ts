@@ -1,5 +1,5 @@
 import { paginationOptions } from "../lib/utils"
-import { ConversationModel } from "../nobox/record-structures/conversation";
+import { ConversationModel, Conversation } from "../nobox/record-structures/conversation";
 import { UserModel } from "../nobox/record-structures/user";
 import {unknown_error} from "../lib/variables";
 import { io } from "..";
@@ -8,7 +8,7 @@ export const getUserTotalConversations = async (userId: string, page?: string) =
 
     try {
         const currentPage = Math.max(1, Number(page) || 1);
-        const options = paginationOptions()
+        const options = paginationOptions("desc")
         const convo1 = await ConversationModel.find({ participant1Id: userId }, options);
         const convo2 = await ConversationModel.find({ participant2Id: userId }, options);
         if(!convo1 || !convo2){
@@ -18,12 +18,12 @@ export const getUserTotalConversations = async (userId: string, page?: string) =
         const notDeletedConvo = totalConvo.filter(convo => {
             return !convo.deletedBy.includes(userId)
         }).sort((a, b) => {
-            const dateA = new Date(a.createdAt).getTime();
-            const dateB = new Date(b.createdAt).getTime();
+            const dateA = new Date(a.updatedAt).getTime();
+            const dateB = new Date(b.updatedAt).getTime();
             return options.sort.order === "asc" ? dateA - dateB : dateB - dateA;
         });
 
-        const pageSize = 15;
+        const pageSize = 50;
         const start = (currentPage - 1) * pageSize;
         const end = start + pageSize;
         const paginatedConvo = notDeletedConvo.slice(start, end);
@@ -47,10 +47,48 @@ export const getUserTotalConversations = async (userId: string, page?: string) =
 
 export const insertNewConversation = async (participant1Id: string, participant2Id: string) => {
     try {
-        const [participant1, participant2] = await Promise.all([
+        const [participant1, participant2, convo1, convo2] = await Promise.all([
             UserModel.findOne({ id: participant1Id }),
             UserModel.findOne({ id: participant2Id }),
+            ConversationModel.findOne({ participant1Id, participant2Id }),
+            ConversationModel.findOne({ participant1Id: participant2Id, participant2Id: participant1Id})
         ]);
+        let updatedConversation: Conversation | null;
+        if (convo1) {
+            const isConvo1Deleted = convo1.deletedBy.includes(participant1Id);
+            const newDeletedArray = convo1.deletedBy.filter(id => {
+                return id !== participant1Id
+            })
+            if(isConvo1Deleted) {
+                updatedConversation = await ConversationModel.updateOneById(convo1.id, {
+                    deletedBy: newDeletedArray
+                });
+                if(!updatedConversation){
+                    return unknown_error
+                }
+                return updatedConversation
+            }
+          return "A conversation between these users already exists."
+            
+        }
+
+        if (convo2) {
+            const isConvo2Deleted = convo2.deletedBy.includes(participant1Id);
+            const newDeletedArray = convo2.deletedBy.filter(id => {
+                return id !== participant1Id
+            })
+            if(isConvo2Deleted) {
+                updatedConversation = await ConversationModel.updateOneById(convo2.id, {
+                    deletedBy: newDeletedArray
+                });
+                if(!updatedConversation){
+                    return unknown_error
+                }
+                return updatedConversation
+            }
+            return "A conversation between these users already exists.";
+        }
+
 
         if (!participant1 || !participant2) {
             return "One or more participants do not exist. Please check the provided IDs.";

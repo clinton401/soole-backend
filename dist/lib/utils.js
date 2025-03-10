@@ -100,14 +100,14 @@ function isValidNumber(value) {
 exports.isValidNumber = isValidNumber;
 const hasDecimal = (num) => !Number.isInteger(num);
 exports.hasDecimal = hasDecimal;
-const paginationOptions = (order = "desc") => {
+const paginationOptions = (order = "desc", by = "createdAt") => {
     const options = {
         // pagination: {
         //   limit,
         //   page: currentPage,
         // },
         sort: {
-            by: "createdAt",
+            by,
             order,
         },
     };

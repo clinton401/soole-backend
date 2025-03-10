@@ -28,13 +28,13 @@ export const findUnique = async (id: string) => {
 }
 export const findMany = async (conversationId: string, page?: string) => {
     try {
-        const options = paginationOptions("asc")
+        const options = paginationOptions()
 
         const messages = await MessageModel.find({ conversationId }, options);
         if(!messages){
             throw new Error(unknown_error)
         }
-        const pageSize = 25;
+        const pageSize = 15;
         const currentPage = Math.max(1, Number(page) || 1);
         const data = getUserPageInfo(messages, pageSize, currentPage, 'messages');
         return data

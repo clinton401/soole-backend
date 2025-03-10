@@ -41,12 +41,12 @@ const findUnique = (id) => __awaiter(void 0, void 0, void 0, function* () {
 exports.findUnique = findUnique;
 const findMany = (conversationId, page) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const options = (0, utils_1.paginationOptions)("asc");
+        const options = (0, utils_1.paginationOptions)();
         const messages = yield message_1.MessageModel.find({ conversationId }, options);
         if (!messages) {
             throw new Error(variables_1.unknown_error);
         }
-        const pageSize = 25;
+        const pageSize = 15;
         const currentPage = Math.max(1, Number(page) || 1);
         const data = (0, utils_1.getUserPageInfo)(messages, pageSize, currentPage, 'messages');
         return data;

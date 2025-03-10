@@ -35,10 +35,12 @@ export const createConversation = async (req: Request, res: Response, next: Next
     if (!participant2Id) return next(createError(400, "Participant 2 ID is required."));
     try {
         // const conversation = await findUniqueConvo({ participant1Id, participant2Id });
-        const convoExists = await conversationExists(participant1Id, participant2Id);
-        if (convoExists) {
-            return next(createError(400, "A conversation between these users already exists."))
-        }
+        
+
+        // const convoExists = await conversationExists(participant1Id, participant2Id);
+        // if (convoExists) {
+        //     return next(createError(400, "A conversation between these users already exists."))
+        // }
         const conversation = await insertNewConversation(participant1Id, participant2Id);
 
         if (!conversation) return next(createError(500, unknown_error));
@@ -199,7 +201,7 @@ export const markConversationAsRead = async (req: Request, res: Response, next: 
             return next(createError(404, "Conversation not found."));
         }
 
-        const { participant1Id, participant2Id, viewedBy } = conversation;
+        const { participant1Id, participant2Id, viewedBy, lastMessageSenderId } = conversation;
 
         if (![participant1Id, participant2Id].includes(userId)) {
             return next(createError(403, "You do not have permission to mark this conversation as read."));

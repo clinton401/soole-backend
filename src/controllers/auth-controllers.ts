@@ -125,6 +125,7 @@ export const verifyNumber = async (req: Request, res: Response, next: NextFuncti
   } catch (error) {
     console.error(`Unable to verify phone number: ${error}`);
     return next(createError(500, server_error));
+
   }
 
 }
@@ -322,9 +323,9 @@ export const sendResetCode = async (req: Request, res: Response, next: NextFunct
     let user: User & {
       id: string
     } | null;
-    user = await UserModel.findOne({ phone: contactInfo }, {});
+    user = await UserModel.findOne({ phone: contactInfo.trim() }, {});
     if (!user) {
-      user = await UserModel.findOne({ email: contactInfo.toLowerCase() }, {})
+      user = await UserModel.findOne({ email: contactInfo.toLowerCase().trim() }, {})
     }
     if (!user) {
       return next(createError(400, "User not found. Check phone number or email and try again."))
