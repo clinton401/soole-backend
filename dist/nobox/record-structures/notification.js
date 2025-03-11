@@ -77,6 +77,16 @@ exports.NotificationStructure = {
             required: true,
             type: Number,
         },
+        conversationId: {
+            description: "Id of the converstion if available",
+            required: false,
+            type: String,
+        },
+        // isCompleted: {
+        //   description: "Is it completed",
+        //   required: true,
+        //   type: Boolean,
+        // },
     },
 };
 exports.NotificationModel = (0, config_1.createRowSchema)(exports.NotificationStructure);

@@ -41,7 +41,7 @@ const sendSMS = (message, phoneNumber) => __awaiter(void 0, void 0, void 0, func
     }
     catch (error) {
         console.error(`Unable to send SMS: ${error}`);
-        throw error;
+        // throw error;
     }
 });
 exports.sendSMS = sendSMS;

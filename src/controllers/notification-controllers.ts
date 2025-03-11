@@ -19,7 +19,7 @@ page?: string
         if(!notifications) {
             return next(createError(500, unknown_error))
         }
-        const pageSize = 15;
+        const pageSize = 8;
         const data = getUserPageInfo(notifications, pageSize, currentPage, "notifications");
         res.status(200).json({
             success: true,

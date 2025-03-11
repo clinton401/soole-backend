@@ -28,6 +28,7 @@ export interface Notification {
     triggeredByLastName: string;
     triggeredByUsername: string;
     isRead: boolean;
+    conversationId?: string;
   }
   
   export const NotificationStructure: Space<Notification> = {
@@ -95,6 +96,16 @@ export interface Notification {
         required: true,
         type: Number,
       },
+      conversationId: {
+        description: "Id of the converstion if available",
+        required: false,
+        type: String,
+      },
+      // isCompleted: {
+      //   description: "Is it completed",
+      //   required: true,
+      //   type: Boolean,
+      // },
     },
   };
   

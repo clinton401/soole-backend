@@ -19,7 +19,6 @@ export interface User {
   username?: string;
   dayOfCreation : string;
   weekOfCreation : string;
-  // avatarPublicId?: string;
   email?: string;
   totalTrips: number;
   status: UserStatus;

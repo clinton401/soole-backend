@@ -1,8 +1,9 @@
 import {Router} from "express";
-import {addPaymentMethod, deletePaymentMethod, getPaymentMethods, getUserDetails, updateUserDetails, resetPassword, deleteAccount, createComplaint} from "../controllers/user-controllers";
+import {addPaymentMethod, deletePaymentMethod, getPaymentMethods, getUserDetails, updateUserDetails, resetPassword, deleteAccount, createComplaint, getSpecificUserDetails} from "../controllers/user-controllers";
 
 const user = Router();
 user.get("/me", getUserDetails);
+user.get("/:id", getSpecificUserDetails);
 user.post("/me/complaint", createComplaint);
 user.put("/me/update", updateUserDetails);
 user.put("/me/update/password", resetPassword);

@@ -29,6 +29,6 @@ export const sendSMS = async (message: string, phoneNumber: string) => {
     }
   } catch (error) {
     console.error(`Unable to send SMS: ${error}`);
-    throw error;
+    // throw error;
   }
 };

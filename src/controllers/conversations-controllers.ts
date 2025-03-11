@@ -5,6 +5,7 @@ import { ConversationModel } from "../nobox/record-structures/conversation";
 import { io } from "..";
 import { getUserTotalConversations, insertNewConversation, findUnique as findUniqueConvo, conversationExists } from "../data/conversation";
 import { insertNewMessage, findMany as findManyMessages, findUnique as findUniqueMessage, updateOneById as updateMesageById } from "../data/message";
+import { NotificationModel, Notification } from "../nobox/record-structures/notification";
 
 
 
@@ -30,23 +31,30 @@ export const getUserConversations = async (req: Request, res: Response, next: Ne
 }
 export const createConversation = async (req: Request, res: Response, next: NextFunction) => {
     const participant1Id = req.userId;
-    const { participant2Id } = req.body
+    const { participant2Id, notificationId } = req.body
     if (!participant1Id) return next(createError(401, unauthorized_error));
     if (!participant2Id) return next(createError(400, "Participant 2 ID is required."));
     try {
-        // const conversation = await findUniqueConvo({ participant1Id, participant2Id });
+        const [conversation, notification] = await Promise.all([
+            insertNewConversation(participant1Id, participant2Id),
+            notificationId ? NotificationModel.findOne({id: notificationId}) : null
+        ])
         
-
-        // const convoExists = await conversationExists(participant1Id, participant2Id);
-        // if (convoExists) {
-        //     return next(createError(400, "A conversation between these users already exists."))
-        // }
-        const conversation = await insertNewConversation(participant1Id, participant2Id);
 
         if (!conversation) return next(createError(500, unknown_error));
         if (typeof conversation === "string") {
             return next(createError(400, conversation))
         }
+       if(notification && !notification?.conversationId ){
+        const updatedNotification = await NotificationModel.updateOneById(notification.id, {
+            conversationId: conversation.id 
+        });
+
+
+        if(updatedNotification){
+            io.emit("notification:update", updatedNotification)
+        }
+       }
         res.status(201).json({
             status: "success",
             message: "Conversation created successfully",

@@ -1,5 +1,6 @@
 import { paginationOptions } from "../lib/utils"
 import { ConversationModel, Conversation } from "../nobox/record-structures/conversation";
+import { NotificationModel } from "../nobox/record-structures/notification";
 import { UserModel } from "../nobox/record-structures/user";
 import {unknown_error} from "../lib/variables";
 import { io } from "..";
@@ -45,13 +46,14 @@ export const getUserTotalConversations = async (userId: string, page?: string) =
     }
 }
 
-export const insertNewConversation = async (participant1Id: string, participant2Id: string) => {
+export const insertNewConversation = async (participant1Id: string, participant2Id: string): Promise<any>  => {
     try {
         const [participant1, participant2, convo1, convo2] = await Promise.all([
             UserModel.findOne({ id: participant1Id }),
             UserModel.findOne({ id: participant2Id }),
             ConversationModel.findOne({ participant1Id, participant2Id }),
-            ConversationModel.findOne({ participant1Id: participant2Id, participant2Id: participant1Id})
+            ConversationModel.findOne({ participant1Id: participant2Id, participant2Id: participant1Id}),
+           
         ]);
         let updatedConversation: Conversation | null;
         if (convo1) {
@@ -68,7 +70,7 @@ export const insertNewConversation = async (participant1Id: string, participant2
                 }
                 return updatedConversation
             }
-          return "A conversation between these users already exists."
+          return convo1
             
         }
 
@@ -86,7 +88,7 @@ export const insertNewConversation = async (participant1Id: string, participant2
                 }
                 return updatedConversation
             }
-            return "A conversation between these users already exists.";
+            return convo2;
         }
 
 
@@ -118,7 +120,8 @@ export const insertNewConversation = async (participant1Id: string, participant2
             deletedBy: [],
             participantsDetails
         });
-       
+    
+        
         io.emit("conversation", newConversation)
         return newConversation;
     } catch (error) {

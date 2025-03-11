@@ -652,16 +652,23 @@ exports.startRide = startRide;
 const passengerConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const id = req.params.id;
     const userId = req.userId;
+    const { notificationId } = req.body;
     if (!userId) {
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     }
+    if (!notificationId) {
+        return next((0, http_errors_1.default)(400, "Notification ID is required"));
+    }
     try {
-        const [ride, user] = yield Promise.all([ride_1.rideModel.findOne({ id }), user_1.UserModel.findOne({ id: userId })]);
+        const [ride, user, notification] = yield Promise.all([ride_1.rideModel.findOne({ id }), user_1.UserModel.findOne({ id: userId }), notification_1.NotificationModel.findOne({ id: notificationId })]);
         if (!ride) {
             return next((0, http_errors_1.default)(404, "Ride not found."));
         }
         if (!user) {
             return next((0, http_errors_1.default)(404, "User not found."));
+        }
+        if (!notification) {
+            return next((0, http_errors_1.default)(404, "Notification not found."));
         }
         if (ride.status !== "COMPLETED") {
             return next((0, http_errors_1.default)(400, "You can only confirm completion for a ride that has been marked as completed by the driver."));
@@ -672,7 +679,7 @@ const passengerConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0,
         }
         const foundPassengers = ride.passengers.filter(passenger => passenger.id === userId);
         if (foundPassengers.length === 0) {
-            return next((0, http_errors_1.default)(400, "You can't cancel this ride because you're not a passenger."));
+            return next((0, http_errors_1.default)(400, "You can't confirm completion because you're not a passenger."));
         }
         const isMarkedAsCompleted = foundPassengers.every(passenger => passenger.completed === true);
         if (isMarkedAsCompleted) {
@@ -723,6 +730,7 @@ const passengerConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0,
         yield user_1.UserModel.updateOneById(user.id, {
             totalTrips
         });
+        yield notification_1.NotificationModel.deleteOneById(notification.id);
         res.json({
             status: "success",
             message: "Ride marked as completed successfully",

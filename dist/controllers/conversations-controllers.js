@@ -19,6 +19,7 @@ const conversation_1 = require("../nobox/record-structures/conversation");
 const __1 = require("..");
 const conversation_2 = require("../data/conversation");
 const message_1 = require("../data/message");
+const notification_1 = require("../nobox/record-structures/notification");
 const getUserConversations = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { page } = req.query;
     const userId = req.userId;
@@ -40,22 +41,28 @@ const getUserConversations = (req, res, next) => __awaiter(void 0, void 0, void 
 exports.getUserConversations = getUserConversations;
 const createConversation = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const participant1Id = req.userId;
-    const { participant2Id } = req.body;
+    const { participant2Id, notificationId } = req.body;
     if (!participant1Id)
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     if (!participant2Id)
         return next((0, http_errors_1.default)(400, "Participant 2 ID is required."));
     try {
-        // const conversation = await findUniqueConvo({ participant1Id, participant2Id });
-        // const convoExists = await conversationExists(participant1Id, participant2Id);
-        // if (convoExists) {
-        //     return next(createError(400, "A conversation between these users already exists."))
-        // }
-        const conversation = yield (0, conversation_2.insertNewConversation)(participant1Id, participant2Id);
+        const [conversation, notification] = yield Promise.all([
+            (0, conversation_2.insertNewConversation)(participant1Id, participant2Id),
+            notificationId ? notification_1.NotificationModel.findOne({ id: notificationId }) : null
+        ]);
         if (!conversation)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         if (typeof conversation === "string") {
             return next((0, http_errors_1.default)(400, conversation));
+        }
+        if (notification && !(notification === null || notification === void 0 ? void 0 : notification.conversationId)) {
+            const updatedNotification = yield notification_1.NotificationModel.updateOneById(notification.id, {
+                conversationId: conversation.id
+            });
+            if (updatedNotification) {
+                __1.io.emit("notification:update", updatedNotification);
+            }
         }
         res.status(201).json({
             status: "success",

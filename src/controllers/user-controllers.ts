@@ -85,6 +85,24 @@ export const getUserDetails = async (req: Request, res: Response, next: NextFunc
     }
 }
 
+export const getSpecificUserDetails = async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.params.id;
+    try {
+        const user = await UserModel.findOne({ id: userId }, {});
+        if (!user) return next(createError(404, "User not found."));
+        res.status(200).json(
+            {
+                status: "success",
+                user: userHandler(user)
+            }
+        )
+
+    } catch (error) {
+        console.error(`Unable to get ${userId} user's details: ${error}`);
+        return next(createError(500, server_error));
+    }
+}
+
 export const updateUserDetails = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.userId;
     if (!userId) return next(createError(401, unauthorized_error));

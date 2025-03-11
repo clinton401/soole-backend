@@ -19,7 +19,7 @@ const createNotification = (data) => __awaiter(void 0, void 0, void 0, function*
         if (!notification) {
             throw new Error(variables_1.unknown_error);
         }
-        __1.io.emit("notifications", notification);
+        __1.io.emit("notification", notification);
         return notification;
     }
     catch (error) {

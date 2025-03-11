@@ -59,7 +59,7 @@ const insertNewConversation = (participant1Id, participant2Id) => __awaiter(void
             user_1.UserModel.findOne({ id: participant1Id }),
             user_1.UserModel.findOne({ id: participant2Id }),
             conversation_1.ConversationModel.findOne({ participant1Id, participant2Id }),
-            conversation_1.ConversationModel.findOne({ participant1Id: participant2Id, participant2Id: participant1Id })
+            conversation_1.ConversationModel.findOne({ participant1Id: participant2Id, participant2Id: participant1Id }),
         ]);
         let updatedConversation;
         if (convo1) {
@@ -76,7 +76,7 @@ const insertNewConversation = (participant1Id, participant2Id) => __awaiter(void
                 }
                 return updatedConversation;
             }
-            return "A conversation between these users already exists.";
+            return convo1;
         }
         if (convo2) {
             const isConvo2Deleted = convo2.deletedBy.includes(participant1Id);
@@ -92,7 +92,7 @@ const insertNewConversation = (participant1Id, participant2Id) => __awaiter(void
                 }
                 return updatedConversation;
             }
-            return "A conversation between these users already exists.";
+            return convo2;
         }
         if (!participant1 || !participant2) {
             return "One or more participants do not exist. Please check the provided IDs.";

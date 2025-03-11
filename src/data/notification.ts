@@ -9,7 +9,7 @@ const notification = await NotificationModel.insertOne(data);
 if(!notification) {
     throw new Error(unknown_error)
 }
-io.emit("notifications", notification);
+io.emit("notification", notification);
 return notification
 }catch(error){
     throw error

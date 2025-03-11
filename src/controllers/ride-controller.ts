@@ -409,6 +409,7 @@ export const requestRide = async (req: Request, res: Response, next: NextFunctio
       triggeredByFirstName: user.firstName as string,
       triggeredByLastName: user.lastName as string,
       triggeredByUsername: user.username as string,
+      
     }
     const existingRequest = await NotificationModel.findOne({
       userId: ride.userId,
@@ -520,7 +521,6 @@ export const acceptRideRequest = async (req: Request, res: Response, next: NextF
       triggeredByFirstName: driver.firstName as string,
       triggeredByLastName: driver.lastName as string,
       triggeredByUsername: driver.username as string,
-
     });
     if (!newNotification) {
       return next(createError(500, unknown_error))
@@ -585,7 +585,6 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
       triggeredByFirstName: driver.firstName as string,
       triggeredByLastName: driver.lastName as string,
       triggeredByUsername: driver.username as string,
-
     })
     if (!newNotification) {
       return next(createError(500, unknown_error))
@@ -601,6 +600,7 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
         status: PayoutStatus.FAILED
       })
     }
+    
     await NotificationModel.deleteOneById(notification.id);
     res.status(200).json({
       status: "success",
@@ -683,16 +683,23 @@ export const startRide = async (req: Request, res: Response, next: NextFunction)
 export const passengerConfirmCompletion = async (req: Request, res: Response, next: NextFunction) => {
   const id = req.params.id;
   const userId = req.userId;
+  const {notificationId} = req.body
   if (!userId) {
     return next(createError(401, unauthorized_error))
   }
+  if(!notificationId) {
+    return next(createError(400, "Notification ID is required"))
+  }
   try {
-    const [ride, user] = await Promise.all([rideModel.findOne({ id }), UserModel.findOne({ id: userId })]);
+    const [ride, user, notification] = await Promise.all([rideModel.findOne({ id }), UserModel.findOne({ id: userId }), NotificationModel.findOne({id: notificationId})]);
     if (!ride) {
       return next(createError(404, "Ride not found."))
     }
     if (!user) {
       return next(createError(404, "User not found."))
+    }
+    if (!notification) {
+      return next(createError(404, "Notification not found."))
     }
     if (ride.status !== "COMPLETED") {
       return next(createError(400, "You can only confirm completion for a ride that has been marked as completed by the driver."));
@@ -704,7 +711,7 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
     }
     const foundPassengers = ride.passengers.filter(passenger => passenger.id === userId);
     if (foundPassengers.length === 0) {
-      return next(createError(400, "You can't cancel this ride because you're not a passenger."));
+      return next(createError(400, "You can't confirm completion because you're not a passenger."));
     }
     const isMarkedAsCompleted = foundPassengers.every(passenger => passenger.completed === true)
     if (isMarkedAsCompleted) {
@@ -761,6 +768,7 @@ await UserModel.updateOneById(user.id, {
   totalTrips
 })
 
+await NotificationModel.deleteOneById(notification.id);
     res.json({
       status: "success",
       message: "Ride marked as completed successfully",
