@@ -95,7 +95,7 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
 });
 exports.createRide = createRide;
 const searchRides = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { from, to, date } = req.query;
+    const { from, to, date, page } = req.query;
     const userId = req.userId;
     if (!userId) {
         res.status(401).json({
@@ -111,11 +111,9 @@ const searchRides = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         });
         return;
     }
+    const currentPage = Math.max(1, Number(page) || 1);
     try {
         const rides = yield ride_1.rideModel.find({
-            from: from.toLowerCase(),
-            to: to.toLowerCase(),
-            date: date,
             status: "ACTIVE"
         });
         const ridesNotBookedByYou = rides.filter(ride => {
@@ -129,12 +127,15 @@ const searchRides = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
             return;
         }
         const availableRides = ridesNotBookedByYou.filter(ride => {
-            return ride.numberOfSeats > 0;
+            return ride.numberOfSeats > 0 && (ride.from.toLowerCase().includes(from.toLowerCase()) ||
+                ride.to.toLowerCase().includes(to.toLowerCase()));
         });
+        const pageSize = 15;
+        const data = (0, utils_1.getUserPageInfo)(availableRides, pageSize, currentPage, "rides");
         res.status(200).json({
             success: true,
             message: "Rides found successfully.",
-            rides: availableRides,
+            data
         });
     }
     catch (error) {

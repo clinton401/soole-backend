@@ -71,11 +71,12 @@ const deletePaymentMethod = (req, res, next) => __awaiter(void 0, void 0, void 0
 exports.deletePaymentMethod = deletePaymentMethod;
 const getPaymentMethods = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.userId;
+    console.log("get payment");
     if (!userId)
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     try {
         const cards = yield payment_method_1.PaymentMethodModel.find({ userId }, {});
-        if (cards.length < 1)
+        if ((cards === null || cards === void 0 ? void 0 : cards.length) < 1)
             return next((0, http_errors_1.default)(404, "No payment methods found. Please add a card to your account."));
         res.status(200).json({
             status: "success",

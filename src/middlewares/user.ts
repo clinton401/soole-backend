@@ -11,6 +11,7 @@ export const verifyUserStatus = async (req: Request, res: Response, next: NextFu
     try {
         const user = await UserModel.findOne({ id: userId });
         if (!user) {
+
             return next(createError(404, "User not found"))
         }
         if (user.status === UserStatus.SUSPENDED || user.status === UserStatus.DEACTIVATED) {

@@ -51,10 +51,11 @@ export const deletePaymentMethod = async (req: Request, res: Response, next: Nex
 
 export const getPaymentMethods = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.userId;
+    console.log("get payment")
     if (!userId) return next(createError(401, unauthorized_error));
     try {
         const cards = await PaymentMethodModel.find({ userId }, {});
-        if (cards.length < 1) return next(createError(404, "No payment methods found. Please add a card to your account."));
+        if (cards?.length < 1) return next(createError(404, "No payment methods found. Please add a card to your account."));
         res.status(200).json({
             status: "success",
             message: "Payment methods retrieved successfully.",

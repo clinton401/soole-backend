@@ -3,12 +3,15 @@ import {addPaymentMethod, deletePaymentMethod, getPaymentMethods, getUserDetails
 
 const user = Router();
 user.get("/me", getUserDetails);
-user.get("/:id", getSpecificUserDetails);
 user.post("/me/complaint", createComplaint);
 user.put("/me/update", updateUserDetails);
 user.put("/me/update/password", resetPassword);
 user.delete("/me/delete-account", deleteAccount);
-user.get("/payment-methods", getPaymentMethods);
-user.post("/payment-methods", addPaymentMethod);
-user.delete("/payment-methods/:id", deletePaymentMethod);
+user.get("/me/payment-methods", getPaymentMethods);
+user.post("/me/payment-methods", addPaymentMethod);
+user.delete("/me/payment-methods/:id", deletePaymentMethod);
+user.get("/:id", getSpecificUserDetails);
+
+
+
 export default user;

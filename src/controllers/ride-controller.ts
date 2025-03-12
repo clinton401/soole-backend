@@ -8,7 +8,9 @@ import { server_error, unknown_error, unauthorized_error } from "../lib/variable
 import { PayoutModel, PayoutType, PayoutStatus } from "../nobox/record-structures/payout";
 import { findWalletByUserId, deductFromWallet, addToWallet } from "../data/wallet"
 import { createNotification } from "../data/notification"
-import { hasSufficientBalance, hasDecimal, dateToInt } from "../lib/utils";
+import { hasSufficientBalance, hasDecimal, dateToInt, getUserPageInfo } from "../lib/utils";
+import {RidePassengerModel} from "../nobox/record-structures/ride-passenger";
+
 
 export const createRide = async (
   req: Request,
@@ -108,10 +110,11 @@ export const searchRides = async (
 ): Promise<void> => {
 
 
-  const { from, to, date } = req.query as {
+  const { from, to, date, page } = req.query as {
     from: string | null;
     to: string | null;
-    date: string | null
+    date: string | null;
+    page: string | null;
   };
   const userId = req.userId;
   if (!userId) {
@@ -130,11 +133,9 @@ export const searchRides = async (
     return;
   }
 
+  const currentPage = Math.max(1, Number(page) || 1);
   try {
     const rides = await rideModel.find({
-      from: from.toLowerCase(),
-      to: to.toLowerCase(),
-      date: date as string,
       status: "ACTIVE"
     });
     const ridesNotBookedByYou = rides.filter(ride => {
@@ -151,13 +152,17 @@ export const searchRides = async (
       return;
     }
     const availableRides = ridesNotBookedByYou.filter(ride => {
-      return ride.numberOfSeats > 0
+      return ride.numberOfSeats > 0 &&  (ride.from.toLowerCase().includes(from.toLowerCase()) || 
+      ride.to.toLowerCase().includes(to.toLowerCase()))
+    
     })
+    const pageSize = 15
+const data = getUserPageInfo(availableRides, pageSize, currentPage, "rides")
 
     res.status(200).json({
       success: true,
       message: "Rides found successfully.",
-      rides: availableRides,
+      data
     });
   } catch (error) {
     console.error(`Error while searching for rides: ${error}`);
