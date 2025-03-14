@@ -23,6 +23,8 @@ export interface Wallet {
   authorizationCode?: string;  
   recipientCode?: string;
   prevBankName?: string;
+  prevAccountNo?: string;
+  prevAccountHolderName?: string
 }
 
 export const WalletStructure: Space<Wallet> = {
@@ -86,6 +88,16 @@ export const WalletStructure: Space<Wallet> = {
     },
     prevBankName: {
       description: "last bank name user for transfers",
+      required: false,
+      type: String,
+    },
+    prevAccountHolderName: {
+      description: "last account holder name  for transfers",
+      required: false,
+      type: String,
+    },
+    prevAccountNo: {
+      description: "last account number  for transfers",
       required: false,
       type: String,
     },

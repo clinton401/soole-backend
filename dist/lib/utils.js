@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isValidImage = exports.getMonthName = exports.getDayOfWeek = exports.getWeekNumber = exports.getDates = exports.calculateGrowth = exports.dateToInt = exports.hasSufficientBalance = exports.getPageInfo = exports.getUserPageInfo = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
+exports.isWithinTwoDays = exports.isValidImage = exports.getMonthName = exports.getDayOfWeek = exports.getWeekNumber = exports.getDates = exports.calculateGrowth = exports.dateToInt = exports.hasSufficientBalance = exports.getPageInfo = exports.getUserPageInfo = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
 const validator_1 = __importDefault(require("validator"));
 const errorHandler = (error, code) => {
     return {
@@ -224,3 +224,11 @@ const isValidImage = (filename) => {
     return /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(filename);
 };
 exports.isValidImage = isValidImage;
+const isWithinTwoDays = (rideDate, requestDate) => {
+    const rideDateObj = new Date(rideDate);
+    if (isNaN(rideDateObj.getTime()))
+        return false;
+    const diffInDays = Math.abs((rideDateObj.getTime() - requestDate.getTime()) / (1000 * 60 * 60 * 24));
+    return diffInDays <= 2;
+};
+exports.isWithinTwoDays = isWithinTwoDays;

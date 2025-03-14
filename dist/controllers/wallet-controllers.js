@@ -343,7 +343,7 @@ const transferFunds = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     }
     try {
-        const { bank_name, account_number, amount, password } = req.body;
+        const { bank_name, account_number, amount, password, account_name } = req.body;
         if (!password) {
             return next((0, http_errors_1.default)(401, "Password is required"));
         }
@@ -358,8 +358,8 @@ const transferFunds = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         if (!isPasswordCorrect) {
             return next((0, http_errors_1.default)(400, "Password is incorrect"));
         }
-        if (!bank_name || !account_number || !amount) {
-            return next(new Error("Bank name, account number, and amount are required"));
+        if (!bank_name || !account_number || !amount || !account_name) {
+            return next(new Error("Bank name, account number, account name, and amount are required"));
         }
         const validAmount = Number(amount);
         if (!(0, utils_1.isValidNumber)(amount)) {
@@ -381,15 +381,17 @@ const transferFunds = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         }
         else {
             recipient_code = yield createTransferRecipient(bank_name, account_number);
+            yield wallet_1.WalletModel.updateOneById(wallet.id, {
+                recipientCode: recipient_code,
+                prevBankName: bank_name.toLowerCase(),
+                prevAccountNo: String(account_number),
+                prevAccountHolderName: account_name
+            });
+            // if (!updatedWallet) {
+            //     throw new Error("Unable to update wallet")
+            // }
         }
         const transferData = yield initiateTransfer(recipient_code, validAmount);
-        const updatedWallet = yield wallet_1.WalletModel.updateOneById(wallet.id, {
-            recipientCode: recipient_code,
-            prevBankName: bank_name.toLowerCase()
-        });
-        if (!updatedWallet) {
-            throw new Error("Unable to update wallet");
-        }
         // console.log({transferData})
         if (transferData) {
             const reference = transferData === null || transferData === void 0 ? void 0 : transferData.reference;
@@ -407,6 +409,9 @@ const transferFunds = (req, res, next) => __awaiter(void 0, void 0, void 0, func
             if (!payout) {
                 throw new Error(variables_1.unknown_error);
             }
+        }
+        else {
+            return next((0, http_errors_1.default)(500, "Unable to transfer funds"));
         }
         res.status(200).json({
             success: true,

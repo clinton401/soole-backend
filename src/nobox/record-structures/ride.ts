@@ -6,7 +6,7 @@ export interface Ride {
   from: string;
   to: string;
   status: "ACTIVE"| "ONGOING" | "CANCELLED" | "COMPLETED";
-  date?: string;
+  date: string;
   passengers: {
     seats: number;
     id: string;
@@ -55,7 +55,7 @@ export const RideStructure: Space<Ride> = {
     date: {
       description: "Date",
       type: String,
-      required: false,
+      required: true,
     },
     estimatedTime: {
       description: "Estimated Time",

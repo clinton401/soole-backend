@@ -4,7 +4,7 @@ import { createRowSchema } from "../config";
 export enum TransactionType {
   RIDE_PAYMENT = "RIDE_PAYMENT",
   WALLET_FUNDING = "WALLET_FUNDING",
-  WITHDRAWAL = "WITHDRAWAL",
+  // WITHDRAWAL = "WITHDRAWAL",
   REFUND = "REFUND",
 }
 

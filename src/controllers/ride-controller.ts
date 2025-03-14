@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import createError from "http-errors";
-import { rideModel } from "../nobox/record-structures/ride";
+import { rideModel, Ride } from "../nobox/record-structures/ride";
 import { UserModel } from "../nobox/record-structures/user";
 import { WalletModel, WalletType } from "../nobox/record-structures/wallet";
 import { NotificationModel, NotificationType } from "../nobox/record-structures/notification";
@@ -8,8 +8,9 @@ import { server_error, unknown_error, unauthorized_error } from "../lib/variable
 import { PayoutModel, PayoutType, PayoutStatus } from "../nobox/record-structures/payout";
 import { findWalletByUserId, deductFromWallet, addToWallet } from "../data/wallet"
 import { createNotification } from "../data/notification"
-import { hasSufficientBalance, hasDecimal, dateToInt, getUserPageInfo } from "../lib/utils";
-import {RidePassengerModel} from "../nobox/record-structures/ride-passenger";
+import { hasSufficientBalance, hasDecimal, dateToInt, getUserPageInfo, isWithinTwoDays } from "../lib/utils";
+import {RidePassengerModel, RidePassenger} from "../nobox/record-structures/ride-passenger";
+import { TransactionModel, TransactionType, TransactionStatus } from "../nobox/record-structures/transaction";
 
 
 export const createRide = async (
@@ -35,6 +36,15 @@ export const createRide = async (
       return next(
         createError(400, "Both 'from' and 'to' locations are required.")
       );
+    }
+    const inputDate = new Date(date);
+  
+  
+    if (isNaN(inputDate.getTime())) {
+      return next(createError(400, "Invalid date format provided."));
+    }
+    if(!carImages || carImages.length !== 3) {
+      return next(createError(400, "Car images are required and must be of length 3"))
     }
 
     const userId = req.userId;
@@ -65,7 +75,7 @@ export const createRide = async (
       userId,
       from: from.toLowerCase(),
       to: to.toLowerCase(),
-      date,
+      date: inputDate.toISOString(),
       estimatedTime,
       carImages,
       vehicleModel,
@@ -118,7 +128,6 @@ export const searchRides = async (
   };
   const userId = req.userId;
   if (!userId) {
-
     res.status(401).json({
       success: false,
       message: "Unauthorized. Please log in to create a ride."
@@ -131,6 +140,12 @@ export const searchRides = async (
       message: "Please provide 'from', 'to', and 'date' parameters.",
     });
     return;
+  }
+  const requestDate = new Date(date);
+  
+  
+  if (isNaN(requestDate.getTime())) {
+    return next(createError(400, "Invalid date format provided."));
   }
 
   const currentPage = Math.max(1, Number(page) || 1);
@@ -152,8 +167,8 @@ export const searchRides = async (
       return;
     }
     const availableRides = ridesNotBookedByYou.filter(ride => {
-      return ride.numberOfSeats > 0 &&  (ride.from.toLowerCase().includes(from.toLowerCase()) || 
-      ride.to.toLowerCase().includes(to.toLowerCase()))
+      return ride.numberOfSeats > 0 &&  (ride.from.toLowerCase().includes(from.trim().toLowerCase()) || 
+      ride.to.toLowerCase().includes(to.trim().toLowerCase())) && isWithinTwoDays(ride.date, requestDate)
     
     })
     const pageSize = 15
@@ -171,8 +186,10 @@ const data = getUserPageInfo(availableRides, pageSize, currentPage, "rides")
 };
 
 export const getRides = async (req: Request, res: Response, next: NextFunction) => {
-  const { filter } = req.query as {
-    filter: string
+  const { filter, role, page } = req.query as {
+    filter: string;
+    role?: string;
+    page?: string;
   };
 
   const validFilters = ['active', 'completed', 'cancelled', "ongoing"];
@@ -182,28 +199,71 @@ export const getRides = async (req: Request, res: Response, next: NextFunction) 
 
   const filterVariable = selectedFilter.toUpperCase() as Status;
   const userId = req.userId;
-  if (!userId) return next(createError(401, unauthorized_error));;
-  try {
-    const rides = await rideModel.find({
+  if (!userId) return next(createError(401, unauthorized_error));
 
-      status: filterVariable
-    }, {
-      pagination: {
-        limit: 25,
-        page: 1,
-      }
-    });
+  const validRole: "driver" | "passenger" =  role && role.toLowerCase() === "driver" ? "driver" : "passenger";
+  // console.log({role, validRole}) 
+  const currentPage = Math.max(1, Number(page) || 1);
+  try {
+
+    let rides: Ride[] | RidePassenger[] | null;
+    if(validRole === "driver"){
+      const [requestedRides, ongoingRides] = await Promise.all([
+        rideModel.find({
+
+          status: filterVariable,
+          userId
+        }),
+        rideModel.find({
+
+          status: "ONGOING",
+          userId
+        }),
+
+      ])
+    //  rides = await rideModel.find({
+
+    //   status: filterVariable,
+    //   userId
+    // });
+    const mergedArray = filterVariable === "ACTIVE" 
+    ? [...requestedRides, ...ongoingRides] 
+    : [...requestedRides];
+    rides =  mergedArray.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+  } else {
+
+    rides = await RidePassengerModel.find({status: filterVariable, userId})
+  }
+  if(!rides) {
+    return next(createError(500, unknown_error));
+  }
+
+  
+  const pageSize = 15
+
+  const data = getUserPageInfo(rides, pageSize, currentPage, "rides")
     res.status(200).json({
       success: true,
       message: "Rides found successfully.",
-      rides
+      data
     });
   } catch (error) {
     console.error(`Unable to get rides: ${error}`);
     return next(createError(500, server_error))
   }
 }
-
+type FullPassenger = RidePassenger & {id: string}
+const updatePassengersStatus = async (passengersArray: FullPassenger[], status: "ACTIVE" | "CANCELLED" | "ONGOING" | "COMPLETED") => {
+  try {
+    await Promise.all(
+      passengersArray.map((passenger) =>
+        RidePassengerModel.updateOneById(passenger.id, { status })
+      )
+    );
+  } catch (error) {
+    console.error("Error updating passenger statuses:", error);
+  }
+};
 export const cancelRidePassenger = async (req: Request, res: Response, next: NextFunction) => {
   const userId = req.userId;
   const id = req.params.id;
@@ -211,7 +271,11 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
   if (!userId) return next(createError(401, unauthorized_error));
 
   try {
-    const [ride, user] = await Promise.all([rideModel.findOne({ id }), UserModel.findOne({ id: userId })]);
+    const [ride, user, passengers] = await Promise.all([rideModel.findOne({ id }), UserModel.findOne({ id: userId }), RidePassengerModel.find({
+      userId,
+      rideId: id,
+      status: "ACTIVE"
+    })]);
     if (!ride) return next(createError(404, "Ride not found."));
     if (!user) return next(createError(404, "User not found."));
     if (ride.status !== "ACTIVE") {
@@ -227,12 +291,19 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
     }
     const refundAmount = foundPassengers.reduce((total, passenger) => total + passenger.seats * ride.pricePerSeat, 0);
 
-    // Refund passenger
+   
     const refundSuccess = await addToWallet(wallet.id, refundAmount, wallet.balance);
     if (!refundSuccess) {
       return next(createError(500, unknown_error))
     }
-
+    await TransactionModel.insertOne({
+      userId,
+      amount: refundAmount,
+      currency: "₦",
+      type: TransactionType.REFUND,
+      status: TransactionStatus.SUCCESS,
+      reference: `txn_${Date.now()}_${userId}`,
+  });
 
     const newPassengers = ride.passengers.filter(passenger => passenger.id !== userId);
     const totalSeatsToAdd = foundPassengers.reduce((total, passenger) => total + passenger.seats, 0);
@@ -247,6 +318,10 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
     if (!updatedRide) {
       return next(createError(500, unknown_error));
     }
+    if(passengers && passengers.length > 0){
+    await updatePassengersStatus(passengers, "CANCELLED")
+    }
+    // for(const passenger of passengers)
 
     await createNotification({
       userId: ride.userId,
@@ -293,7 +368,10 @@ export const cancelRideDriver = async (req: Request, res: Response, next: NextFu
   const id = req.params.id;
   if (!driverId) return next(createError(401, unauthorized_error));
   try {
-    const [ride, driver] = await Promise.all([rideModel.findOne({ id }), UserModel.findOne({ id: driverId })]);
+    const [ride, driver, passengers] = await Promise.all([rideModel.findOne({ id }), UserModel.findOne({ id: driverId }), RidePassengerModel.find({
+      rideId: id,
+      status: "ACTIVE"
+    })]);
     if (!ride) return next(createError(404, "Ride not found."));
     if (!driver) return next(createError(404, "User not found."));
     if (ride.status !== "ACTIVE") {
@@ -303,6 +381,9 @@ export const cancelRideDriver = async (req: Request, res: Response, next: NextFu
 
     const updatedRide = await rideModel.updateOneById(ride.id, { status: "CANCELLED" });
     if (!updatedRide) return next(createError(500, unknown_error));
+    if(passengers && passengers.length > 0){
+      await updatePassengersStatus(passengers, "CANCELLED")
+      }
     for (const passenger of ride.passengers) {
       try {
         const wallet = await findWalletByUserId(passenger.id)
@@ -315,22 +396,35 @@ export const cancelRideDriver = async (req: Request, res: Response, next: NextFu
             console.error(`Failed to refund user ${passenger.id}`);
             continue;
           }
+          const [transaction, notification] = await Promise.all([
+            TransactionModel.insertOne({
+              userId: passenger.id,
+              amount: refundAmount,
+              currency: "₦",
+              type: TransactionType.REFUND,
+              status: TransactionStatus.SUCCESS,
+              reference: `txn_${Date.now()}_${passenger.id}`,
+          }),
+          createNotification({
+            userId: passenger.id,
+            type: NotificationType.RIDE_CANCELLED_BY_DRIVER,
+            from: ride.from,
+            to: ride.to,
+            triggeredById: driverId,
+            seats: passenger.seats,
+            isRead: false,
+            rideId: id,
+            triggeredByAvatarUrl: driver.avatarUrl as string,
+            triggeredByFirstName: driver.firstName as string,
+            triggeredByLastName: driver.lastName as string,
+            triggeredByUsername: driver.username as string,
+          })
+        
+          ])
+           
         }
-        await createNotification({
-          userId: passenger.id,
-          type: NotificationType.RIDE_CANCELLED_BY_DRIVER,
-          from: ride.from,
-          to: ride.to,
-          triggeredById: driverId,
-          seats: passenger.seats,
-          isRead: false,
-          rideId: id,
-          triggeredByAvatarUrl: driver.avatarUrl as string,
-          triggeredByFirstName: driver.firstName as string,
-          triggeredByLastName: driver.lastName as string,
-          triggeredByUsername: driver.username as string,
-        })
-        const payouts = await PayoutModel.find({
+        
+        const payouts = await   PayoutModel.find({
           userId: driverId,
           requesterId: passenger.id,
           rideId: ride.id
@@ -431,18 +525,40 @@ export const requestRide = async (req: Request, res: Response, next: NextFunctio
     }
     await deductFromWallet(wallet.id, rideCost, wallet.balance);
     const userName = `${user.firstName} ${user.lastName}`
-    const payout = await PayoutModel.insertOne({
-      userId: ride.userId,
-      requesterId: userId,
-      pickupLocation: ride.from,
-      dropoffLocation: ride.to,
-      amount: rideCost,
-      userName,
-      rideId: ride.id,
-      status: PayoutStatus.PENDING,
-      type: PayoutType.RIDE_PAYMENT,
-      adminViewable: true
+    const [payout, transaction] = await Promise.all([
+      PayoutModel.insertOne({
+        userId: ride.userId,
+        requesterId: userId,
+        pickupLocation: ride.from,
+        dropoffLocation: ride.to,
+        amount: rideCost,
+        userName,
+        rideId: ride.id,
+        status: PayoutStatus.PENDING,
+        type: PayoutType.RIDE_PAYMENT,
+        adminViewable: true
+      }),
+      TransactionModel.insertOne({
+        userId,
+        amount: rideCost,
+        currency: "₦",
+        type: TransactionType.RIDE_PAYMENT,
+        status: TransactionStatus.SUCCESS,
+        reference: `txn_${Date.now()}_${userId}`,
     })
+    ])
+    // const payout = await PayoutModel.insertOne({
+    //   userId: ride.userId,
+    //   requesterId: userId,
+    //   pickupLocation: ride.from,
+    //   dropoffLocation: ride.to,
+    //   amount: rideCost,
+    //   userName,
+    //   rideId: ride.id,
+    //   status: PayoutStatus.PENDING,
+    //   type: PayoutType.RIDE_PAYMENT,
+    //   adminViewable: true
+    // })
     if (!payout) {
       return next(createError(500, unknown_error));
     }
@@ -510,8 +626,33 @@ export const acceptRideRequest = async (req: Request, res: Response, next: NextF
       numberOfSeats: newNoOfSeats,
     });
     if (!updatedRide) return next(createError(500, unknown_error));
+const {avatarUrl, username, id: userId, email, firstName, lastName } = passenger;
+const {from, to, date, pricePerSeat, estimatedTime, carImages, vehicleModel, color, plateNumber} = ride;
+const inputDate = new Date(date);
+  const userName = `${firstName} ${lastName}`
+  
+const validDate = isNaN(inputDate.getTime()) ? new Date(): inputDate;
+  
+
+await RidePassengerModel.insertOne({userId,
+userUsername: username as string,
+userAvatarUrl: avatarUrl as string,
+status: "ACTIVE",
+userName,
+from,
+to,
+date: validDate.toISOString(),
+seats: validSeats,
+rideId,
+pricePerSeat,
+adminViewable: true,
+userEmail: email as string,
+estimatedTime,
+carImages, vehicleModel, color, plateNumber,
+driverId
 
 
+})
 
     const newNotification = await createNotification({
       userId: passengerId,
@@ -577,29 +718,55 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
     if (!refundSuccess) {
       return next(createError(500, unknown_error))
     }
-    const newNotification = await createNotification({
-      userId: passengerId,
-      type: NotificationType.RIDE_REJECTED,
-      from: notification.from,
-      to: notification.to,
-      triggeredById: driverId,
-      seats: notification.seats,
-      isRead: false,
-      rideId,
-      triggeredByAvatarUrl: driver.avatarUrl as string,
-      triggeredByFirstName: driver.firstName as string,
-      triggeredByLastName: driver.lastName as string,
-      triggeredByUsername: driver.username as string,
-    })
+  const [transaction, newNotification, payouts] = await Promise.all([  TransactionModel.insertOne({
+      userId: notification.triggeredById,
+      amount: refundAmount,
+      currency: "₦",
+      type: TransactionType.REFUND,
+      status: TransactionStatus.SUCCESS,
+      reference: `txn_${Date.now()}_${notification.triggeredById}`,
+  }), createNotification({
+    userId: passengerId,
+    type: NotificationType.RIDE_REJECTED,
+    from: notification.from,
+    to: notification.to,
+    triggeredById: driverId,
+    seats: notification.seats,
+    isRead: false,
+    rideId,
+    triggeredByAvatarUrl: driver.avatarUrl as string,
+    triggeredByFirstName: driver.firstName as string,
+    triggeredByLastName: driver.lastName as string,
+    triggeredByUsername: driver.username as string,
+  }), PayoutModel.find({
+    userId: ride.userId,
+    requesterId: notification.triggeredById,
+    rideId: ride.id
+
+  })])
+    // const newNotification = await createNotification({
+    //   userId: passengerId,
+    //   type: NotificationType.RIDE_REJECTED,
+    //   from: notification.from,
+    //   to: notification.to,
+    //   triggeredById: driverId,
+    //   seats: notification.seats,
+    //   isRead: false,
+    //   rideId,
+    //   triggeredByAvatarUrl: driver.avatarUrl as string,
+    //   triggeredByFirstName: driver.firstName as string,
+    //   triggeredByLastName: driver.lastName as string,
+    //   triggeredByUsername: driver.username as string,
+    // })
     if (!newNotification) {
       return next(createError(500, unknown_error))
     }
-    const payouts = await PayoutModel.find({
-      userId: ride.userId,
-      requesterId: notification.triggeredById,
-      rideId: ride.id
+    // const payouts = await PayoutModel.find({
+    //   userId: ride.userId,
+    //   requesterId: notification.triggeredById,
+    //   rideId: ride.id
 
-    })
+    // })
     for (const payout of payouts) {
       await PayoutModel.updateOneById(payout.id, {
         status: PayoutStatus.FAILED
@@ -626,7 +793,7 @@ export const startRide = async (req: Request, res: Response, next: NextFunction)
   }
 
   try {
-    const [ride, driver] = await Promise.all([rideModel.findOne({ id }), UserModel.findOne({ id: driverId })]);
+    const [ride, driver, passengers] = await Promise.all([rideModel.findOne({ id }), UserModel.findOne({ id: driverId }), RidePassengerModel.find({rideId: id, status: "ACTIVE"})]);
     if (!ride) {
       return next(createError(404, "Ride not found."))
     }
@@ -648,6 +815,9 @@ export const startRide = async (req: Request, res: Response, next: NextFunction)
     if (!updatedRide) {
       return next(createError(500, unknown_error))
     }
+    if(passengers && passengers.length > 0){
+      await updatePassengersStatus(passengers, "ONGOING")
+      } 
     for (const passenger of ride.passengers) {
       try {
 
@@ -696,7 +866,7 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
     return next(createError(400, "Notification ID is required"))
   }
   try {
-    const [ride, user, notification] = await Promise.all([rideModel.findOne({ id }), UserModel.findOne({ id: userId }), NotificationModel.findOne({id: notificationId})]);
+    const [ride, user, notification, passengers] = await Promise.all([rideModel.findOne({ id }), UserModel.findOne({ id: userId }), NotificationModel.findOne({id: notificationId}), RidePassengerModel.find({rideId: id, status: "ONGOING"})]);
     if (!ride) {
       return next(createError(404, "Ride not found."))
     }
@@ -733,6 +903,9 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
     if (!updatedRide) {
       return next(createError(500, unknown_error))
     }
+    if(passengers && passengers.length > 0){
+      await updatePassengersStatus(passengers, "COMPLETED")
+      }
     const allCompleted = updatedRide.passengers.every(passenger => passenger.completed === true);
     if (allCompleted) {
       let totalPrice = 0;

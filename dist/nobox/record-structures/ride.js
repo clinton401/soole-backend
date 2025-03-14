@@ -29,7 +29,7 @@ exports.RideStructure = {
         date: {
             description: "Date",
             type: String,
-            required: false,
+            required: true,
         },
         estimatedTime: {
             description: "Estimated Time",

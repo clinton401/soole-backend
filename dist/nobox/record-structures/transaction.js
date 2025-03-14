@@ -6,7 +6,7 @@ var TransactionType;
 (function (TransactionType) {
     TransactionType["RIDE_PAYMENT"] = "RIDE_PAYMENT";
     TransactionType["WALLET_FUNDING"] = "WALLET_FUNDING";
-    TransactionType["WITHDRAWAL"] = "WITHDRAWAL";
+    // WITHDRAWAL = "WITHDRAWAL",
     TransactionType["REFUND"] = "REFUND";
 })(TransactionType || (exports.TransactionType = TransactionType = {}));
 var TransactionStatus;

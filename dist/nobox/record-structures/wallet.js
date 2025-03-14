@@ -76,6 +76,16 @@ exports.WalletStructure = {
             required: false,
             type: String,
         },
+        prevAccountHolderName: {
+            description: "last account holder name  for transfers",
+            required: false,
+            type: String,
+        },
+        prevAccountNo: {
+            description: "last account number  for transfers",
+            required: false,
+            type: String,
+        },
     },
 };
 exports.WalletModel = (0, config_1.createRowSchema)(exports.WalletStructure);

@@ -3,13 +3,22 @@ import { createRowSchema } from "../config";
 
 export interface RidePassenger {
   userId: string;
+  driverId: string;
   from: string;
+  userAvatarUrl: string;
+  userUsername: string;
+  userName: string;
   to: string;
   status: "ACTIVE" | "ONGOING" | "CANCELLED" | "COMPLETED";
-  date?: string;
+  date: string;
   seats: number;
-  completed: boolean;
   rideId: string;
+  userEmail: string;
+  estimatedTime?: string;
+  carImages?: string[];
+  vehicleModel?: string;
+  color?: string;
+  plateNumber?: string;
   pricePerSeat: number;
   adminViewable: boolean;
 }
@@ -23,8 +32,28 @@ export const RidePassengerStructure: Space<RidePassenger> = {
       type: String,
       required: true,
     },
+    driverId: {
+      description: "Driver ID",
+      type: String,
+      required: true,
+    },
     from: {
       description: "From Location",
+      type: String,
+      required: true,
+    },
+    userAvatarUrl: {
+      description: "Avatar URL of the user",
+      type: String,
+      required: true,
+    },
+    userUsername: {
+      description: "Username of the user",
+      type: String,
+      required: true,
+    },
+    userName: {
+      description: "Name of the user",
       type: String,
       required: true,
     },
@@ -39,18 +68,13 @@ export const RidePassengerStructure: Space<RidePassenger> = {
       required: true,
     },
     date: {
-      description: "Date",
+      description: "Date of the ride",
       type: String,
-      required: false,
+      required: true,
     },
     seats: {
       description: "Number of seats booked",
       type: Number,
-      required: true,
-    },
-    completed: {
-      description: "Is the ride completed?",
-      type: Boolean,
       required: true,
     },
     rideId: {
@@ -68,9 +92,39 @@ export const RidePassengerStructure: Space<RidePassenger> = {
       type: Boolean,
       required: true,
     },
-   
+    userEmail: {
+      description: "Email of the user",
+      type: String,
+      required: false,
+    },
+    estimatedTime: {
+      description: "Estimated arrival time",
+      type: String,
+      required: false,
+    },
+    carImages: {
+      description: "Images of the car",
+      type: Array,
+      required: false,
+    },
+    vehicleModel: {
+      description: "Model of the vehicle",
+      type: String,
+      required: false,
+    },
+    color: {
+      description: "Color of the vehicle",
+      type: String,
+      required: false,
+    },
+    plateNumber: {
+      description: "License plate number of the vehicle",
+      type: String,
+      required: false,
+    },
   },
 };
+
 
 export const RidePassengerModel = createRowSchema<RidePassenger>(RidePassengerStructure);
 export type RidePassengerObject = ReturnObject<RidePassenger>;

@@ -375,7 +375,7 @@ export const transferFunds = async (req: Request, res: Response, next: NextFunct
         return next(createError(401, unauthorized_error));
     }
     try {
-        const { bank_name, account_number, amount, password } = req.body;
+        const { bank_name, account_number, amount, password, account_name } = req.body;
         if (!password) {
             return next(createError(401, "Password is required"))
         }
@@ -393,8 +393,8 @@ export const transferFunds = async (req: Request, res: Response, next: NextFunct
             return next(createError(400, "Password is incorrect"))
         }
 
-        if (!bank_name || !account_number || !amount) {
-            return next(new Error("Bank name, account number, and amount are required"));
+        if (!bank_name || !account_number || !amount || !account_name) {
+            return next(new Error("Bank name, account number, account name, and amount are required"));
         }
         const validAmount = Number(amount)
         if (!isValidNumber(amount)) {
@@ -418,18 +418,23 @@ export const transferFunds = async (req: Request, res: Response, next: NextFunct
             recipient_code = wallet.recipientCode
         } else {
             recipient_code = await createTransferRecipient(bank_name, account_number);
+           await WalletModel.updateOneById(wallet.id, {
+                recipientCode: recipient_code,
+                prevBankName: bank_name.toLowerCase(),
+                prevAccountNo: String(account_number),
+                prevAccountHolderName: account_name
+    
+    
+            });
+            // if (!updatedWallet) {
+            //     throw new Error("Unable to update wallet")
+            // }
         }
 
 
         const transferData = await initiateTransfer(recipient_code, validAmount);
         
-        const updatedWallet = await WalletModel.updateOneById(wallet.id, {
-            recipientCode: recipient_code,
-            prevBankName: bank_name.toLowerCase()
-        });
-        if (!updatedWallet) {
-            throw new Error("Unable to update wallet")
-        }
+      
         // console.log({transferData})
 
         if(transferData) {
@@ -448,6 +453,8 @@ export const transferFunds = async (req: Request, res: Response, next: NextFunct
         if (!payout) {
             throw new Error(unknown_error)
         }
+    }else {
+        return next(createError(500, "Unable to transfer funds"))
     }
         
 

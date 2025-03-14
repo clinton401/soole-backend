@@ -260,3 +260,14 @@ export const getMonthName = (date: Date = new Date()): string => {
 export const isValidImage = (filename: string): boolean => {
   return /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i.test(filename);
 };
+
+export const isWithinTwoDays = (rideDate: string, requestDate: Date) => {
+  const rideDateObj = new Date(rideDate);
+  if (isNaN(rideDateObj.getTime())) return false; 
+
+  const diffInDays = Math.abs(
+    (rideDateObj.getTime() - requestDate.getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  return diffInDays <= 2;
+};
