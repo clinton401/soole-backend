@@ -63,7 +63,7 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
                 return next(createError(500, "Failed to update transaction status."));
             }
 
-            // Find user's wallet
+            io.emit('transaction:update', updatedTransaction)
             const wallet = await findWalletByUserId(transaction.userId);
             if (!wallet) {
                 return next(createError(404, "No wallet found for this user."));
@@ -76,13 +76,45 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
 
 
             const updatedWallet = await addToUserWalletBalance(wallet, transaction, event.data.authorization?.authorization_code);
-            io.emit("wallet:funded", updatedWallet);
-            io.emit("transaction:success", updatedTransaction);
+            // io.emit("wallet:funded", updatedWallet);
+            // io.emit("transaction:success", updatedTransaction);
 
             res.status(200).json({
                 success: true,
                 message: "Wallet funded successfully via webhook.",
                 wallet: updatedWallet,
+            });
+            return;
+        }
+        if (event.event === "charge.failed") {
+            const reference = event.data.reference;
+        
+            const transaction = await TransactionModel.findOne({ reference });
+            if (!transaction) {
+                return next(createError(404, "Transaction not found."));
+            }
+        
+            if (transaction.status === TransactionStatus.FAILED) {
+                res.status(200).json({ success: true, message: "Transaction already marked as failed." });
+                return;
+            }
+        
+            // Update transaction status to FAILED
+            const updatedTransaction = await TransactionModel.updateOneById(transaction.id, {
+                status: TransactionStatus.FAILED,
+            });
+        
+            if (!updatedTransaction) {
+                return next(createError(500, "Failed to update transaction status."));
+            }
+        
+            // Emit WebSocket event for UI updates
+            io.emit("transaction:update", updatedTransaction);
+        
+            res.status(200).json({
+                success: true,
+                message: "Transaction marked as failed.",
+                transaction: updatedTransaction,
             });
             return;
         }
@@ -100,8 +132,10 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
                  return;
             }
 
-          await PayoutModel.updateOneById(payout.id, { status: PayoutStatus.SUCCESSFUL });
-           
+          const updatedPayout = await PayoutModel.updateOneById(payout.id, { status: PayoutStatus.SUCCESSFUL });
+           if(updatedPayout){
+            io.emit("payout:update", updatedPayout)
+           }
 
             const wallet = await findWalletByUserId(payout.userId);
             if (!wallet) {
@@ -130,7 +164,10 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
                 return next(createError(404, "Transfer record not found."));
             }
 
-         await PayoutModel.updateOneById(payout.id, { status: PayoutStatus.FAILED });
+       const updatedPayout =  await PayoutModel.updateOneById(payout.id, { status: PayoutStatus.FAILED });
+       if(updatedPayout){
+        io.emit("payout:update", updatedPayout)
+       }
 
            
 

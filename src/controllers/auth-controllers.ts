@@ -255,7 +255,6 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     return next(createError(400, "Incomplete credentials"));
   }
 
-
   try {
     let user: User & {
       id: string
@@ -264,9 +263,9 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     const options: { paramRelationship?: 'Or' | 'And' } = {
       paramRelationship: 'Or',
     };
-    user = await UserModel.findOne({ phone: contactInfo }, {});
+    user = await UserModel.findOne({ phone: contactInfo.trim() }, {});
     if (!user) {
-      user = await UserModel.findOne({ email: contactInfo.toLowerCase() }, {})
+      user = await UserModel.findOne({ email: contactInfo.toLowerCase().trim() }, {})
     }
 
     if (!user) {
@@ -301,7 +300,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     if (!user?.password) {
       return next(createError(404, "No password found for this user."))
     }
-    const isPasswordValid = await validatePassword(password, user.password);
+    const isPasswordValid = await validatePassword(password.trim(), user.password);
     if (!isPasswordValid) {
       return next(createError(401, "Invalid credentials. Check password and try again"))
     }

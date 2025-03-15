@@ -262,9 +262,9 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
         const options = {
             paramRelationship: 'Or',
         };
-        user = yield user_1.UserModel.findOne({ phone: contactInfo }, {});
+        user = yield user_1.UserModel.findOne({ phone: contactInfo.trim() }, {});
         if (!user) {
-            user = yield user_1.UserModel.findOne({ email: contactInfo.toLowerCase() }, {});
+            user = yield user_1.UserModel.findOne({ email: contactInfo.toLowerCase().trim() }, {});
         }
         if (!user) {
             return next((0, http_errors_1.default)(400, "User not found. Check phone number or email and try again."));
@@ -297,7 +297,7 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
         if (!(user === null || user === void 0 ? void 0 : user.password)) {
             return next((0, http_errors_1.default)(404, "No password found for this user."));
         }
-        const isPasswordValid = yield (0, password_utils_1.validatePassword)(password, user.password);
+        const isPasswordValid = yield (0, password_utils_1.validatePassword)(password.trim(), user.password);
         if (!isPasswordValid) {
             return next((0, http_errors_1.default)(401, "Invalid credentials. Check password and try again"));
         }

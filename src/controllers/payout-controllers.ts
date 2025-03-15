@@ -1,23 +1,26 @@
 import { Request, Response, NextFunction } from "express"
-import { PayoutModel } from "../nobox/record-structures/payout";
+import { PayoutModel, PayoutStatus } from "../nobox/record-structures/payout";
 import { paginationOptions, getUserPageInfo } from "../lib/utils";
 import createError from "http-errors";
 import { server_error, unauthorized_error, unknown_error } from "../lib/variables";
 
 
 export const getDriverPayouts = async (req: Request, res: Response, next: NextFunction) => {
-    const {page} = req.query as {
-        page?: string
+    const {page, filter} = req.query as {
+        page?: string;
+        filter?: string
     }
     const userId = req.userId;
     if (!userId) {
         return next(createError(401, unauthorized_error))
     }
     const currentPage = Math.max(1, Number(page) || 1);
+    const status = filter?.toLowerCase() === "paid" ? PayoutStatus.SUCCESSFUL: PayoutStatus.PENDING;
     try {
         const options = paginationOptions();
         const payouts = await PayoutModel.find({
-            userId
+            userId,
+            status
         }, options);
         if(!payouts) {
             return next(createError(500, unknown_error))

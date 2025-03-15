@@ -11,6 +11,7 @@ import { createNotification } from "../data/notification"
 import { hasSufficientBalance, hasDecimal, dateToInt, getUserPageInfo, isWithinTwoDays } from "../lib/utils";
 import {RidePassengerModel, RidePassenger} from "../nobox/record-structures/ride-passenger";
 import { TransactionModel, TransactionType, TransactionStatus } from "../nobox/record-structures/transaction";
+import {io} from ".."
 
 
 export const createRide = async (
@@ -158,26 +159,26 @@ export const searchRides = async (
     });
 
 
-    if (ridesNotBookedByYou.length === 0) {
+    // if (ridesNotBookedByYou.length === 0) {
 
-      res.status(404).json({
-        success: false,
-        message: "No rides found for the given search criteria."
-      })
-      return;
-    }
+    //   res.status(404).json({
+    //     success: false,
+    //     message: "No rides found for the given search criteria."
+    //   })
+    //   return;
+    // }
     const availableRides = ridesNotBookedByYou.filter(ride => {
       return ride.numberOfSeats > 0 &&  (ride.from.toLowerCase().includes(from.trim().toLowerCase()) || 
       ride.to.toLowerCase().includes(to.trim().toLowerCase())) && isWithinTwoDays(ride.date, requestDate)
     
     })
-    const pageSize = 15
-const data = getUserPageInfo(availableRides, pageSize, currentPage, "rides")
+    const pageSize = 50;
+// const data = getUserPageInfo(availableRides, pageSize, currentPage, "rides")
 
     res.status(200).json({
       success: true,
       message: "Rides found successfully.",
-      data
+      rides: availableRides.slice(0, pageSize)
     });
   } catch (error) {
     console.error(`Error while searching for rides: ${error}`);
@@ -296,7 +297,7 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
     if (!refundSuccess) {
       return next(createError(500, unknown_error))
     }
-    await TransactionModel.insertOne({
+  const newTransaction =  await TransactionModel.insertOne({
       userId,
       amount: refundAmount,
       currency: "₦",
@@ -304,6 +305,9 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
       status: TransactionStatus.SUCCESS,
       reference: `txn_${Date.now()}_${userId}`,
   });
+  if(newTransaction){
+    io.emit("transaction", newTransaction)
+  }
 
     const newPassengers = ride.passengers.filter(passenger => passenger.id !== userId);
     const totalSeatsToAdd = foundPassengers.reduce((total, passenger) => total + passenger.seats, 0);
@@ -344,9 +348,12 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
 
     })
     for (const payout of payouts) {
-      await PayoutModel.updateOneById(payout.id, {
+      const updatedPayout = await PayoutModel.updateOneById(payout.id, {
         status: PayoutStatus.FAILED
       })
+      if(updatedPayout){
+        io.emit("payout:update", updatedPayout)
+       }
     }
 
 
@@ -421,6 +428,10 @@ export const cancelRideDriver = async (req: Request, res: Response, next: NextFu
           })
         
           ])
+          if(transaction) {
+            
+            io.emit('transaction', {...transaction, createdAt: new Date().toISOString()})
+          }
            
         }
         
@@ -431,9 +442,12 @@ export const cancelRideDriver = async (req: Request, res: Response, next: NextFu
 
         })
         for (const payout of payouts) {
-          await PayoutModel.updateOneById(payout.id, {
+        const updatedPayout =   await PayoutModel.updateOneById(payout.id, {
             status: PayoutStatus.FAILED
           })
+          if(updatedPayout){
+            io.emit("payout:update", updatedPayout)
+           }
         }
 
 
@@ -547,6 +561,13 @@ export const requestRide = async (req: Request, res: Response, next: NextFunctio
         reference: `txn_${Date.now()}_${userId}`,
     })
     ])
+    if(payout){
+      io.emit("payout", payout)
+    }
+    if(transaction) {
+            
+      io.emit('transaction', {...transaction, createdAt: new Date().toISOString()})
+    }
     // const payout = await PayoutModel.insertOne({
     //   userId: ride.userId,
     //   requesterId: userId,
@@ -744,6 +765,10 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
     rideId: ride.id
 
   })])
+  if(transaction) {
+            
+    io.emit('transaction', transaction)
+  }
     // const newNotification = await createNotification({
     //   userId: passengerId,
     //   type: NotificationType.RIDE_REJECTED,
@@ -768,9 +793,12 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
 
     // })
     for (const payout of payouts) {
-      await PayoutModel.updateOneById(payout.id, {
+     const updatedPayout = await PayoutModel.updateOneById(payout.id, {
         status: PayoutStatus.FAILED
       })
+      if(updatedPayout){
+        io.emit("payout:update", updatedPayout)
+       }
     }
     
     await NotificationModel.deleteOneById(notification.id);
@@ -934,9 +962,12 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
 
       })
       for (const payout of payouts) {
-        await PayoutModel.updateOneById(payout.id, {
+        const updatedPayout = await PayoutModel.updateOneById(payout.id, {
           status: PayoutStatus.SUCCESSFUL
         })
+        if(updatedPayout){
+          io.emit("payout:update", updatedPayout)
+         }
       }
 
     }

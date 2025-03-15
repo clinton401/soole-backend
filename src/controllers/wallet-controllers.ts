@@ -10,6 +10,7 @@ import { isValidNumber, hasDecimal } from "../lib/utils"
 import { TransactionModel, TransactionType, TransactionStatus } from "../nobox/record-structures/transaction";
 import { addToUserWalletBalance, findWalletByUserId, createWallet } from "../data/wallet";
 import { validatePassword } from "../lib/password-utils";
+import { io } from "..";
 config();
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
@@ -93,6 +94,11 @@ export const userWalletFundingInitialization = async (req: Request, res: Respons
             return next(createError(500, unknown_error));
         }
 
+        console.log({transaction})
+
+        io.emit('transaction', {...transaction, createdAt: new Date().toISOString()})
+
+
         const response = await axios.post(
             `${PAYSTACK_BASE_URL}/transaction/initialize`,
             {
@@ -166,6 +172,10 @@ export const chargeUserSavedCard = async (req: Request, res: Response, next: Nex
             return next(createError(500, unknown_error));
         }
 
+
+        io.emit('transaction', {...transaction, createdAt: new Date().toISOString()})
+
+
         // Charge user using saved card
         const paystackResponse = await axios.post(
             `${PAYSTACK_BASE_URL}/transaction/charge_authorization`,
@@ -188,7 +198,7 @@ export const chargeUserSavedCard = async (req: Request, res: Response, next: Nex
                 return next(createError(500, unknown_error));
 
             }
-
+            io.emit('transaction:update', updatedTransaction)
 
             const updatedWallet = await addToUserWalletBalance(wallet, transaction);
 
@@ -203,6 +213,7 @@ export const chargeUserSavedCard = async (req: Request, res: Response, next: Nex
                 return next(createError(500, unknown_error));
 
             }
+            io.emit('transaction:update', updatedTransaction)
             return next(createError(400, "Transaction failed"));
         }
     } catch (error) {
@@ -246,11 +257,10 @@ export const verifyUserReference = async (req: Request, res: Response, next: Nex
                 return next(createError(500, unknown_error));
 
             }
-
-
-            // const updatedWallet = await addToUserWalletBalance(wallet, transaction, authorization?.authorization_code);
+            io.emit('transaction:update', updatedTransaction)
+            await addToUserWalletBalance(wallet, transaction, wallet?.authorizationCode);
             res.status(200).json({
-                success: true, message: "Transaction verified successfully. Wallet will be updated via webhook."
+                success: true, message: "Transaction verified successfully. Wallet has been"
             });
             return
         } else {
@@ -261,6 +271,7 @@ export const verifyUserReference = async (req: Request, res: Response, next: Nex
                 return next(createError(500, unknown_error));
 
             }
+            io.emit('transaction:update', updatedTransaction)
             return next(createError(400, "Transaction verification failed"))
         }
 
@@ -309,7 +320,7 @@ const createTransferRecipient = async (bank_name: string, account_number: string
         }
         const banks = response.data.data;
 
-// console.log({banks})
+        // console.log({banks})
 
         const bank = banks.find((b: any) => b.name.toLowerCase() === bank_name.toLowerCase());
         if (!bank) throw new Error("Invalid bank name provided");
@@ -418,14 +429,17 @@ export const transferFunds = async (req: Request, res: Response, next: NextFunct
             recipient_code = wallet.recipientCode
         } else {
             recipient_code = await createTransferRecipient(bank_name, account_number);
-           await WalletModel.updateOneById(wallet.id, {
+            const updatedWallet = await WalletModel.updateOneById(wallet.id, {
                 recipientCode: recipient_code,
                 prevBankName: bank_name.toLowerCase(),
                 prevAccountNo: String(account_number),
                 prevAccountHolderName: account_name
-    
-    
+
+
             });
+            if (updatedWallet) {
+                io.emit("wallet:update", updatedWallet)
+            }
             // if (!updatedWallet) {
             //     throw new Error("Unable to update wallet")
             // }
@@ -433,30 +447,31 @@ export const transferFunds = async (req: Request, res: Response, next: NextFunct
 
 
         const transferData = await initiateTransfer(recipient_code, validAmount);
-        
-      
+
+
         // console.log({transferData})
 
-        if(transferData) {
+        if (transferData) {
             const reference = transferData?.reference;
-        const userName = `${user.firstName} ${user.lastName}`
-        const payout = await PayoutModel.insertOne({
-            userId: wallet.userId,
-            requesterId: wallet.userId,
-            amount: validAmount,
-            userName,
-            type: PayoutType.WITHDRAWAL,
-            status: PayoutStatus.PENDING,
-            reference,
-            adminViewable: true
-        })
-        if (!payout) {
-            throw new Error(unknown_error)
+            const userName = `${user.firstName} ${user.lastName}`
+            const payout = await PayoutModel.insertOne({
+                userId: wallet.userId,
+                requesterId: wallet.userId,
+                amount: validAmount,
+                userName,
+                type: PayoutType.WITHDRAWAL,
+                status: PayoutStatus.PENDING,
+                reference,
+                adminViewable: true
+            })
+            if (!payout) {
+                throw new Error(unknown_error)
+            }
+            io.emit("payout", payout)
+        } else {
+            return next(createError(500, "Unable to transfer funds"))
         }
-    }else {
-        return next(createError(500, "Unable to transfer funds"))
-    }
-        
+
 
         res.status(200).json({
             success: true,

@@ -57,7 +57,7 @@ const paystackWebhook = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
             if (!updatedTransaction) {
                 return next((0, http_errors_1.default)(500, "Failed to update transaction status."));
             }
-            // Find user's wallet
+            __1.io.emit('transaction:update', updatedTransaction);
             const wallet = yield (0, wallet_2.findWalletByUserId)(transaction.userId);
             if (!wallet) {
                 return next((0, http_errors_1.default)(404, "No wallet found for this user."));
@@ -66,12 +66,38 @@ const paystackWebhook = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
                 return next((0, http_errors_1.default)(400, "Wallet is suspended. Please contact support."));
             }
             const updatedWallet = yield (0, wallet_2.addToUserWalletBalance)(wallet, transaction, (_a = event.data.authorization) === null || _a === void 0 ? void 0 : _a.authorization_code);
-            __1.io.emit("wallet:funded", updatedWallet);
-            __1.io.emit("transaction:success", updatedTransaction);
+            // io.emit("wallet:funded", updatedWallet);
+            // io.emit("transaction:success", updatedTransaction);
             res.status(200).json({
                 success: true,
                 message: "Wallet funded successfully via webhook.",
                 wallet: updatedWallet,
+            });
+            return;
+        }
+        if (event.event === "charge.failed") {
+            const reference = event.data.reference;
+            const transaction = yield transaction_1.TransactionModel.findOne({ reference });
+            if (!transaction) {
+                return next((0, http_errors_1.default)(404, "Transaction not found."));
+            }
+            if (transaction.status === transaction_1.TransactionStatus.FAILED) {
+                res.status(200).json({ success: true, message: "Transaction already marked as failed." });
+                return;
+            }
+            // Update transaction status to FAILED
+            const updatedTransaction = yield transaction_1.TransactionModel.updateOneById(transaction.id, {
+                status: transaction_1.TransactionStatus.FAILED,
+            });
+            if (!updatedTransaction) {
+                return next((0, http_errors_1.default)(500, "Failed to update transaction status."));
+            }
+            // Emit WebSocket event for UI updates
+            __1.io.emit("transaction:update", updatedTransaction);
+            res.status(200).json({
+                success: true,
+                message: "Transaction marked as failed.",
+                transaction: updatedTransaction,
             });
             return;
         }
@@ -85,7 +111,10 @@ const paystackWebhook = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
                 res.status(200).json({ success: true, message: "Transfer already processed." });
                 return;
             }
-            yield payout_1.PayoutModel.updateOneById(payout.id, { status: payout_1.PayoutStatus.SUCCESSFUL });
+            const updatedPayout = yield payout_1.PayoutModel.updateOneById(payout.id, { status: payout_1.PayoutStatus.SUCCESSFUL });
+            if (updatedPayout) {
+                __1.io.emit("payout:update", updatedPayout);
+            }
             const wallet = yield (0, wallet_2.findWalletByUserId)(payout.userId);
             if (!wallet) {
                 return next((0, http_errors_1.default)(404, "No wallet found for this user."));
@@ -107,7 +136,10 @@ const paystackWebhook = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
             if (!payout) {
                 return next((0, http_errors_1.default)(404, "Transfer record not found."));
             }
-            yield payout_1.PayoutModel.updateOneById(payout.id, { status: payout_1.PayoutStatus.FAILED });
+            const updatedPayout = yield payout_1.PayoutModel.updateOneById(payout.id, { status: payout_1.PayoutStatus.FAILED });
+            if (updatedPayout) {
+                __1.io.emit("payout:update", updatedPayout);
+            }
             res.status(200).json({ success: true, message: "Transfer marked as failed, and user refunded." });
             return;
         }

@@ -25,6 +25,7 @@ const notification_2 = require("../data/notification");
 const utils_1 = require("../lib/utils");
 const ride_passenger_1 = require("../nobox/record-structures/ride-passenger");
 const transaction_1 = require("../nobox/record-structures/transaction");
+const __1 = require("..");
 const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { from, to, date, estimatedTime, carImages, vehicleModel, color, plateNumber, numberOfSeats, pricePerSeat, } = req.body;
@@ -132,23 +133,23 @@ const searchRides = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         const ridesNotBookedByYou = rides.filter(ride => {
             return !ride.passengers.some(passenger => passenger.id === userId);
         });
-        if (ridesNotBookedByYou.length === 0) {
-            res.status(404).json({
-                success: false,
-                message: "No rides found for the given search criteria."
-            });
-            return;
-        }
+        // if (ridesNotBookedByYou.length === 0) {
+        //   res.status(404).json({
+        //     success: false,
+        //     message: "No rides found for the given search criteria."
+        //   })
+        //   return;
+        // }
         const availableRides = ridesNotBookedByYou.filter(ride => {
             return ride.numberOfSeats > 0 && (ride.from.toLowerCase().includes(from.trim().toLowerCase()) ||
                 ride.to.toLowerCase().includes(to.trim().toLowerCase())) && (0, utils_1.isWithinTwoDays)(ride.date, requestDate);
         });
-        const pageSize = 15;
-        const data = (0, utils_1.getUserPageInfo)(availableRides, pageSize, currentPage, "rides");
+        const pageSize = 50;
+        // const data = getUserPageInfo(availableRides, pageSize, currentPage, "rides")
         res.status(200).json({
             success: true,
             message: "Rides found successfully.",
-            data
+            rides: availableRides.slice(0, pageSize)
         });
     }
     catch (error) {
@@ -249,7 +250,7 @@ const cancelRidePassenger = (req, res, next) => __awaiter(void 0, void 0, void 0
         if (!refundSuccess) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        yield transaction_1.TransactionModel.insertOne({
+        const newTransaction = yield transaction_1.TransactionModel.insertOne({
             userId,
             amount: refundAmount,
             currency: "₦",
@@ -257,6 +258,9 @@ const cancelRidePassenger = (req, res, next) => __awaiter(void 0, void 0, void 0
             status: transaction_1.TransactionStatus.SUCCESS,
             reference: `txn_${Date.now()}_${userId}`,
         });
+        if (newTransaction) {
+            __1.io.emit("transaction", newTransaction);
+        }
         const newPassengers = ride.passengers.filter(passenger => passenger.id !== userId);
         const totalSeatsToAdd = foundPassengers.reduce((total, passenger) => total + passenger.seats, 0);
         const newNoOfSeats = Math.max(ride.numberOfSeats + totalSeatsToAdd, 0);
@@ -291,9 +295,12 @@ const cancelRidePassenger = (req, res, next) => __awaiter(void 0, void 0, void 0
             rideId: ride.id
         });
         for (const payout of payouts) {
-            yield payout_1.PayoutModel.updateOneById(payout.id, {
+            const updatedPayout = yield payout_1.PayoutModel.updateOneById(payout.id, {
                 status: payout_1.PayoutStatus.FAILED
             });
+            if (updatedPayout) {
+                __1.io.emit("payout:update", updatedPayout);
+            }
         }
         res.status(200).json({
             status: "success",
@@ -368,6 +375,9 @@ const cancelRideDriver = (req, res, next) => __awaiter(void 0, void 0, void 0, f
                             triggeredByUsername: driver.username,
                         })
                     ]);
+                    if (transaction) {
+                        __1.io.emit('transaction', Object.assign(Object.assign({}, transaction), { createdAt: new Date().toISOString() }));
+                    }
                 }
                 const payouts = yield payout_1.PayoutModel.find({
                     userId: driverId,
@@ -375,9 +385,12 @@ const cancelRideDriver = (req, res, next) => __awaiter(void 0, void 0, void 0, f
                     rideId: ride.id
                 });
                 for (const payout of payouts) {
-                    yield payout_1.PayoutModel.updateOneById(payout.id, {
+                    const updatedPayout = yield payout_1.PayoutModel.updateOneById(payout.id, {
                         status: payout_1.PayoutStatus.FAILED
                     });
+                    if (updatedPayout) {
+                        __1.io.emit("payout:update", updatedPayout);
+                    }
                 }
             }
             catch (error) {
@@ -491,6 +504,12 @@ const requestRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
                 reference: `txn_${Date.now()}_${userId}`,
             })
         ]);
+        if (payout) {
+            __1.io.emit("payout", payout);
+        }
+        if (transaction) {
+            __1.io.emit('transaction', Object.assign(Object.assign({}, transaction), { createdAt: new Date().toISOString() }));
+        }
         // const payout = await PayoutModel.insertOne({
         //   userId: ride.userId,
         //   requesterId: userId,
@@ -695,6 +714,9 @@ const rejectRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
                 requesterId: notification.triggeredById,
                 rideId: ride.id
             })]);
+        if (transaction) {
+            __1.io.emit('transaction', transaction);
+        }
         // const newNotification = await createNotification({
         //   userId: passengerId,
         //   type: NotificationType.RIDE_REJECTED,
@@ -718,9 +740,12 @@ const rejectRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
         //   rideId: ride.id
         // })
         for (const payout of payouts) {
-            yield payout_1.PayoutModel.updateOneById(payout.id, {
+            const updatedPayout = yield payout_1.PayoutModel.updateOneById(payout.id, {
                 status: payout_1.PayoutStatus.FAILED
             });
+            if (updatedPayout) {
+                __1.io.emit("payout:update", updatedPayout);
+            }
         }
         yield notification_1.NotificationModel.deleteOneById(notification.id);
         res.status(200).json({
@@ -871,9 +896,12 @@ const passengerConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0,
                 rideId: ride.id
             });
             for (const payout of payouts) {
-                yield payout_1.PayoutModel.updateOneById(payout.id, {
+                const updatedPayout = yield payout_1.PayoutModel.updateOneById(payout.id, {
                     status: payout_1.PayoutStatus.SUCCESSFUL
                 });
+                if (updatedPayout) {
+                    __1.io.emit("payout:update", updatedPayout);
+                }
             }
         }
         const totalTrips = user.totalTrips ? user.totalTrips + 1 : 1;

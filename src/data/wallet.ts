@@ -1,7 +1,8 @@
 
 import { WalletModel, WalletType, Wallet, WalletStatus } from "../nobox/record-structures/wallet";
 import { Transaction } from "../nobox/record-structures/transaction";
-import { unknown_error } from "../lib/variables"
+import { unknown_error } from "../lib/variables";
+import {io} from ".."
 
 type FullWallet = Wallet & {
     id: string
@@ -23,6 +24,8 @@ export const addToUserWalletBalance = async (wallet: FullWallet, transaction: Tr
             throw new Error(unknown_error);
 
         }
+        
+        io.emit("wallet:update", updatedWallet)
         return updatedWallet
     } catch (error) {
         throw error
@@ -48,6 +51,9 @@ export const addToWallet = async (walletId: string, rideCost: number, prevBalanc
         if (!updatedWallet) {
             throw new Error(unknown_error)
         }
+
+        
+        io.emit("wallet:update", updatedWallet)
         return updatedWallet
     } catch (error) {
         throw error
@@ -65,6 +71,8 @@ export const deductFromWallet = async (walletId: string, amount: number, prevBal
         if (!updatedWallet) {
             throw new Error(unknown_error)
         }
+        
+        io.emit("wallet:update", updatedWallet)
         return updatedWallet
     } catch (error) {
         throw error

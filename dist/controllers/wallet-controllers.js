@@ -24,6 +24,7 @@ const utils_1 = require("../lib/utils");
 const transaction_1 = require("../nobox/record-structures/transaction");
 const wallet_2 = require("../data/wallet");
 const password_utils_1 = require("../lib/password-utils");
+const __1 = require("..");
 (0, dotenv_1.config)();
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 if (!PAYSTACK_SECRET_KEY) {
@@ -101,6 +102,8 @@ const userWalletFundingInitialization = (req, res, next) => __awaiter(void 0, vo
         if (!transaction) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
+        console.log({ transaction });
+        __1.io.emit('transaction', Object.assign(Object.assign({}, transaction), { createdAt: new Date().toISOString() }));
         const response = yield axios_1.default.post(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
             email,
             amount: amount * 100,
@@ -166,6 +169,7 @@ const chargeUserSavedCard = (req, res, next) => __awaiter(void 0, void 0, void 0
         if (!transaction) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
+        __1.io.emit('transaction', Object.assign(Object.assign({}, transaction), { createdAt: new Date().toISOString() }));
         // Charge user using saved card
         const paystackResponse = yield axios_1.default.post(`${PAYSTACK_BASE_URL}/transaction/charge_authorization`, {
             email,
@@ -181,6 +185,7 @@ const chargeUserSavedCard = (req, res, next) => __awaiter(void 0, void 0, void 0
             if (!updatedTransaction) {
                 return next((0, http_errors_1.default)(500, variables_1.unknown_error));
             }
+            __1.io.emit('transaction:update', updatedTransaction);
             const updatedWallet = yield (0, wallet_2.addToUserWalletBalance)(wallet, transaction);
             res.status(200).json({ success: true, message: "Wallet funded successfully using saved card", wallet: updatedWallet });
             return;
@@ -192,6 +197,7 @@ const chargeUserSavedCard = (req, res, next) => __awaiter(void 0, void 0, void 0
             if (!updatedTransaction) {
                 return next((0, http_errors_1.default)(500, variables_1.unknown_error));
             }
+            __1.io.emit('transaction:update', updatedTransaction);
             return next((0, http_errors_1.default)(400, "Transaction failed"));
         }
     }
@@ -231,9 +237,10 @@ const verifyUserReference = (req, res, next) => __awaiter(void 0, void 0, void 0
             if (!updatedTransaction) {
                 return next((0, http_errors_1.default)(500, variables_1.unknown_error));
             }
-            // const updatedWallet = await addToUserWalletBalance(wallet, transaction, authorization?.authorization_code);
+            __1.io.emit('transaction:update', updatedTransaction);
+            yield (0, wallet_2.addToUserWalletBalance)(wallet, transaction, wallet === null || wallet === void 0 ? void 0 : wallet.authorizationCode);
             res.status(200).json({
-                success: true, message: "Transaction verified successfully. Wallet will be updated via webhook."
+                success: true, message: "Transaction verified successfully. Wallet has been"
             });
             return;
         }
@@ -244,6 +251,7 @@ const verifyUserReference = (req, res, next) => __awaiter(void 0, void 0, void 0
             if (!updatedTransaction) {
                 return next((0, http_errors_1.default)(500, variables_1.unknown_error));
             }
+            __1.io.emit('transaction:update', updatedTransaction);
             return next((0, http_errors_1.default)(400, "Transaction verification failed"));
         }
     }
@@ -381,12 +389,15 @@ const transferFunds = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         }
         else {
             recipient_code = yield createTransferRecipient(bank_name, account_number);
-            yield wallet_1.WalletModel.updateOneById(wallet.id, {
+            const updatedWallet = yield wallet_1.WalletModel.updateOneById(wallet.id, {
                 recipientCode: recipient_code,
                 prevBankName: bank_name.toLowerCase(),
                 prevAccountNo: String(account_number),
                 prevAccountHolderName: account_name
             });
+            if (updatedWallet) {
+                __1.io.emit("wallet:update", updatedWallet);
+            }
             // if (!updatedWallet) {
             //     throw new Error("Unable to update wallet")
             // }
@@ -409,6 +420,7 @@ const transferFunds = (req, res, next) => __awaiter(void 0, void 0, void 0, func
             if (!payout) {
                 throw new Error(variables_1.unknown_error);
             }
+            __1.io.emit("payout", payout);
         }
         else {
             return next((0, http_errors_1.default)(500, "Unable to transfer funds"));

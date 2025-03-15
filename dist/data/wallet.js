@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createWallet = exports.deductFromWallet = exports.addToWallet = exports.findWalletByUserId = exports.addToUserWalletBalance = void 0;
 const wallet_1 = require("../nobox/record-structures/wallet");
 const variables_1 = require("../lib/variables");
+const __1 = require("..");
 const addToUserWalletBalance = (wallet, transaction, authorizationCode) => __awaiter(void 0, void 0, void 0, function* () {
     const balance = wallet.balance + transaction.amount;
     const totalDeposits = wallet.totalDeposits + transaction.amount;
@@ -22,6 +23,7 @@ const addToUserWalletBalance = (wallet, transaction, authorizationCode) => __awa
         if (!updatedWallet) {
             throw new Error(variables_1.unknown_error);
         }
+        __1.io.emit("wallet:update", updatedWallet);
         return updatedWallet;
     }
     catch (error) {
@@ -50,6 +52,7 @@ const addToWallet = (walletId, rideCost, prevBalance) => __awaiter(void 0, void 
         if (!updatedWallet) {
             throw new Error(variables_1.unknown_error);
         }
+        __1.io.emit("wallet:update", updatedWallet);
         return updatedWallet;
     }
     catch (error) {
@@ -68,6 +71,7 @@ const deductFromWallet = (walletId, amount, prevBalance) => __awaiter(void 0, vo
         if (!updatedWallet) {
             throw new Error(variables_1.unknown_error);
         }
+        __1.io.emit("wallet:update", updatedWallet);
         return updatedWallet;
     }
     catch (error) {
