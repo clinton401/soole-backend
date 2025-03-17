@@ -21,20 +21,30 @@ const transporter = nodemailer_1.default.createTransport({
         pass: process.env.EMAIL_PASS
     }
 });
-const sendEmail = (to, subject, text, html) => __awaiter(void 0, void 0, void 0, function* () {
+const sendEmail = (to, subject, text, content) => __awaiter(void 0, void 0, void 0, function* () {
     const mailOptions = {
         from: process.env.EMAIL_USER,
         to,
         subject,
         text,
-        html
+        html: content
     };
     try {
         yield transporter.sendMail(mailOptions);
+        // const response = await axios.post(`${NOBOX_UPLOAD_URL}/${NOBOX_PROJECT}/send-email?to=${to}&raw=1`, {
+        //   content,
+        //   subject,
+        // }, {
+        //   headers: {
+        //     'Content-Type': 'application/json',
+        //     Authorization: `Bearer ${NOBOX_TOKEN}`
+        //   }
+        // });
+        // return response;
     }
     catch (err) {
         console.error(`Failed to send email: ${err.message}`);
-        throw new Error(err.message);
+        // throw new Error((err as Error).message); 
     }
 });
 exports.sendEmail = sendEmail;

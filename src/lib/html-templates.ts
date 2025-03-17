@@ -314,3 +314,93 @@ export const adminReplyEmailTemplate = (userName: string, complaint: string, rep
 
     return { subject, text, template };
 };
+
+export const welcomeEmailTemplate = (email: string) => {
+    const subject = "Welcome to Soole - You're on the List! 🎉";
+    const text = `
+        Dear ${email},
+
+        Thank you for joining the Soole waitlist! We're thrilled to have you onboard and can't wait to share what we're building.
+        Stay tuned — we'll keep you updated with the latest news and early access opportunities.
+
+        If you didn't sign up for this waitlist, please ignore this email.
+
+        Best regards,
+        Soole Team
+    `;
+
+    const template = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Welcome to Soole</title>
+      <style>
+        body {
+          background-color: #131314;
+          color: #ffffff;
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 0;
+        }
+        .container {
+          max-width: 600px;
+          margin: 50px auto;
+          padding: 40px;
+          text-align: center;
+        }
+        .logo {
+          font-size: 32px;
+          font-weight: bold;
+          color: #D2AC47;
+          margin-bottom: 20px;
+        }
+        .headline {
+          font-size: 24px;
+          margin-bottom: 10px;
+        }
+        .message {
+          font-size: 16px;
+          line-height: 1.6;
+          margin-bottom: 30px;
+        }
+        .cta-button {
+          background-color: #D2AC47;
+          color: #131314;
+          text-decoration: none;
+          padding: 12px 24px;
+          border-radius: 25px;
+          font-weight: bold;
+          display: inline-block;
+          margin-top: 10px;
+        }
+        .cta-button:hover {
+          background-color: #b8963b;
+        }
+        .footer {
+          margin-top: 50px;
+          font-size: 12px;
+          color: #aaaaaa;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="logo">Soole</div>
+        <div class="headline">You're on the List! 🎉</div>
+        <div class="message">
+          Thank you for joining the Soole waitlist, ${email}! We're thrilled to have you onboard and can't wait to share what we're building. 
+          Stay tuned — we'll keep you updated with the latest news and early access opportunities.
+        </div>
+        <div class="footer">
+          If you didn't sign up for this waitlist, please ignore this email.
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
+
+    return { subject, text, template };
+};
+

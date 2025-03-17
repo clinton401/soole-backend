@@ -14,6 +14,7 @@ import paystack from "./routes/paystack";
 import wallet from "./routes/wallet";
 import transaction from "./routes/transaction";
 import review from "./routes/review";
+import waitlist from "./routes/waitlist";
 import payout from "./routes/payout";
 import admin from "./routes/admin";
 import adminAuth from "./routes/admin-auth";
@@ -48,4 +49,13 @@ api.use("/admin/users", verifyAccessToken, adminUser);
 api.use("/admin/complaints", verifyAccessToken, adminComplaint);
 api.use("/admin/requests", verifyAccessToken, checkSuperAdmin, adminRequest);
 api.use("/admin", verifyAccessToken, admin);
+
+
+
+// waitlist route
+
+api.use("/waitlist", waitlist)
+
+
+
 export default api

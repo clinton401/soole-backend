@@ -279,3 +279,10 @@ export const UpdateProfileSchema = z
 
 
 
+
+ export const JoinWailtlistSchema = z.object({
+    email: z
+    .string()
+    .trim()
+    .email({ message: "Invalid  email format." })
+  })

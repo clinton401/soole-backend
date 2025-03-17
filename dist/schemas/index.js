@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.UpdateAdminProfileSchema = exports.AddNewAdminSchema = exports.RegisterAdminSchema = exports.UpdateProfileSchema = exports.ScheduleTripSchema = exports.CompleteProfileSchema = exports.OtpSchema = exports.RegisterSchema = void 0;
+exports.JoinWailtlistSchema = exports.UpdateAdminProfileSchema = exports.AddNewAdminSchema = exports.RegisterAdminSchema = exports.UpdateProfileSchema = exports.ScheduleTripSchema = exports.CompleteProfileSchema = exports.OtpSchema = exports.RegisterSchema = void 0;
 const zod_1 = require("zod");
 exports.RegisterSchema = zod_1.z.object({
     phone: zod_1.z
@@ -249,3 +249,9 @@ exports.UpdateAdminProfileSchema = zod_1.z
 })
     .partial()
     .optional();
+exports.JoinWailtlistSchema = zod_1.z.object({
+    email: zod_1.z
+        .string()
+        .trim()
+        .email({ message: "Invalid  email format." })
+});

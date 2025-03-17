@@ -16,6 +16,7 @@ const paystack_1 = __importDefault(require("./routes/paystack"));
 const wallet_1 = __importDefault(require("./routes/wallet"));
 const transaction_1 = __importDefault(require("./routes/transaction"));
 const review_1 = __importDefault(require("./routes/review"));
+const waitlist_1 = __importDefault(require("./routes/waitlist"));
 const payout_1 = __importDefault(require("./routes/payout"));
 const admin_1 = __importDefault(require("./routes/admin"));
 const admin_auth_1 = __importDefault(require("./routes/admin-auth"));
@@ -44,4 +45,6 @@ api.use("/admin/users", access_tokens_1.verifyAccessToken, admin_user_1.default)
 api.use("/admin/complaints", access_tokens_1.verifyAccessToken, admin_complaint_1.default);
 api.use("/admin/requests", access_tokens_1.verifyAccessToken, admins_1.checkSuperAdmin, admin_request_1.default);
 api.use("/admin", access_tokens_1.verifyAccessToken, admin_1.default);
+// waitlist route
+api.use("/waitlist", waitlist_1.default);
 exports.default = api;
