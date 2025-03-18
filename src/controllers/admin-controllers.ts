@@ -208,7 +208,7 @@ export const updateAdminProfile = async (req: Request, res: Response, next: Next
             return next(createError(404, "User not found"))
         }
         const { personalEmail, phone, name, avatarUrl } = validatedData
-        if (personalEmail || phone || name) {
+        if (personalEmail || phone ) {
             const uniqueError = await validateUniqueAdminIdentifiers(personalEmail, phone);
 
             if (uniqueError) {

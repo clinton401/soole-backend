@@ -200,7 +200,7 @@ const updateAdminProfile = (req, res, next) => __awaiter(void 0, void 0, void 0,
             return next((0, http_errors_1.default)(404, "User not found"));
         }
         const { personalEmail, phone, name, avatarUrl } = validatedData;
-        if (personalEmail || phone || name) {
+        if (personalEmail || phone) {
             const uniqueError = yield (0, admin_2.validateUniqueAdminIdentifiers)(personalEmail, phone);
             if (uniqueError) {
                 return next((0, http_errors_1.default)(400, uniqueError));
