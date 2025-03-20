@@ -457,23 +457,23 @@ export const transferFunds = async (req: Request, res: Response, next: NextFunct
             recipient_code = wallet.recipientCode
         } else {
             recipient_code = await createTransferRecipient(bank_name, account_number);
-            const updatedWallet = await WalletModel.updateOneById(wallet.id, {
-                recipientCode: recipient_code,
-                prevBankName: bank_name.toLowerCase(),
-                prevAccountNo: String(account_number),
-                prevAccountHolderName: account_name
-
-
-            });
-            if (updatedWallet) {
-                io.emit("wallet:update", updatedWallet)
-            }
+           
             // if (!updatedWallet) {
             //     throw new Error("Unable to update wallet")
             // }
         }
 
+        const updatedWallet = await WalletModel.updateOneById(wallet.id, {
+            recipientCode: recipient_code,
+            prevBankName: bank_name.toLowerCase(),
+            prevAccountNo: String(account_number),
+            prevAccountHolderName: account_name
 
+
+        });
+        if (updatedWallet) {
+            io.emit("wallet:update", updatedWallet)
+        }
         const transferData = await initiateTransfer(recipient_code, validAmount);
 
 

@@ -88,29 +88,29 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
         }
         if (event.event === "charge.failed") {
             const reference = event.data.reference;
-        
+
             const transaction = await TransactionModel.findOne({ reference });
             if (!transaction) {
                 return next(createError(404, "Transaction not found."));
             }
-        
+
             if (transaction.status === TransactionStatus.FAILED) {
                 res.status(200).json({ success: true, message: "Transaction already marked as failed." });
                 return;
             }
-        
+
             // Update transaction status to FAILED
             const updatedTransaction = await TransactionModel.updateOneById(transaction.id, {
                 status: TransactionStatus.FAILED,
             });
-        
+
             if (!updatedTransaction) {
                 return next(createError(500, "Failed to update transaction status."));
             }
-        
+
             // Emit WebSocket event for UI updates
             io.emit("transaction:update", updatedTransaction);
-        
+
             res.status(200).json({
                 success: true,
                 message: "Transaction marked as failed.",
@@ -128,14 +128,14 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
             }
 
             if (payout.status === PayoutStatus.SUCCESSFUL) {
-                 res.status(200).json({ success: true, message: "Transfer already processed." });
-                 return;
+                res.status(200).json({ success: true, message: "Transfer already processed." });
+                return;
             }
 
-          const updatedPayout = await PayoutModel.updateOneById(payout.id, { status: PayoutStatus.SUCCESSFUL });
-           if(updatedPayout){
-            io.emit("payout:update", updatedPayout)
-           }
+            const updatedPayout = await PayoutModel.updateOneById(payout.id, { status: PayoutStatus.SUCCESSFUL });
+            if (updatedPayout) {
+                io.emit("payout:update", updatedPayout)
+            }
 
             const wallet = await findWalletByUserId(payout.userId);
             if (!wallet) {
@@ -147,7 +147,7 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
             }
             if (wallet.balance < payout.amount) {
                 return next(createError(400, "Insufficient funds in your wallet to complete this transfer"));
-    
+
             }
             await deductFromWallet(wallet.id, payout.amount, wallet.balance);
 
@@ -164,18 +164,18 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
                 return next(createError(404, "Transfer record not found."));
             }
 
-       const updatedPayout =  await PayoutModel.updateOneById(payout.id, { status: PayoutStatus.FAILED });
-       if(updatedPayout){
-        io.emit("payout:update", updatedPayout)
-       }
+            const updatedPayout = await PayoutModel.updateOneById(payout.id, { status: PayoutStatus.FAILED });
+            if (updatedPayout) {
+                io.emit("payout:update", updatedPayout)
+            }
 
-           
+
 
             res.status(200).json({ success: true, message: "Transfer marked as failed, and user refunded." });
             return;
         }
 
-        
+
 
 
         res.status(200).json({ success: true, message: "Event received, but not processed." });
@@ -186,6 +186,33 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
     }
 };
 
-
+export const getBanks = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const response = await axios.get(`${PAYSTACK_BASE_URL}/bank`, {
+            headers: paystackHeaders,
+        })
+        const banks = response?.data?.data;
+        if (!banks) {
+            return next(createError(500, unknown_error))
+        };
+        const filteredBanks = banks.filter((bank: any) => bank?.supports_transfer === true && bank?.is_deleted == false && bank?.active == true);
+        const reducedArray = filteredBanks.map((bank: any) => {
+            return {
+                name: bank?.name,
+                id: bank?.id,
+                code: bank?.code
+            }
+        })
+        res.json(
+            {
+                status: "success",
+                banks: reducedArray
+            }
+        );
+    } catch (error) {
+        console.error(`Unable to get paystack banks: ${error}`);
+        return next(createError(500, server_error))
+    }
+}
 
 

@@ -12,9 +12,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.paystackWebhook = void 0;
+exports.getBanks = exports.paystackWebhook = void 0;
 const dotenv_1 = require("dotenv");
+const axios_1 = __importDefault(require("axios"));
 const http_errors_1 = __importDefault(require("http-errors"));
+const variables_1 = require("../lib/variables");
 const payout_1 = require("../nobox/record-structures/payout");
 const wallet_1 = require("../nobox/record-structures/wallet");
 const transaction_1 = require("../nobox/record-structures/transaction");
@@ -151,3 +153,33 @@ const paystackWebhook = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.paystackWebhook = paystackWebhook;
+const getBanks = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _b;
+    try {
+        const response = yield axios_1.default.get(`${PAYSTACK_BASE_URL}/bank`, {
+            headers: paystackHeaders,
+        });
+        const banks = (_b = response === null || response === void 0 ? void 0 : response.data) === null || _b === void 0 ? void 0 : _b.data;
+        if (!banks) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        ;
+        const filteredBanks = banks.filter((bank) => (bank === null || bank === void 0 ? void 0 : bank.supports_transfer) === true && (bank === null || bank === void 0 ? void 0 : bank.is_deleted) == false && (bank === null || bank === void 0 ? void 0 : bank.active) == true);
+        const reducedArray = filteredBanks.map((bank) => {
+            return {
+                name: bank === null || bank === void 0 ? void 0 : bank.name,
+                id: bank === null || bank === void 0 ? void 0 : bank.id,
+                code: bank === null || bank === void 0 ? void 0 : bank.code
+            };
+        });
+        res.json({
+            status: "success",
+            banks: reducedArray
+        });
+    }
+    catch (error) {
+        console.error(`Unable to get paystack banks: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.getBanks = getBanks;

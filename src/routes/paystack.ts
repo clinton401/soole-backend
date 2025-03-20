@@ -1,7 +1,8 @@
 import {Router} from "express";
-import { paystackWebhook } from "../controllers/paystack-controllers";
+import { paystackWebhook, getBanks } from "../controllers/paystack-controllers";
 const paystack = Router();
 
-paystack.post("/webhook", paystackWebhook)
+paystack.post("/webhook", paystackWebhook);
+paystack.get("/banks", getBanks);
 
 export default paystack

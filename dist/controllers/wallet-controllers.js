@@ -420,18 +420,18 @@ const transferFunds = (req, res, next) => __awaiter(void 0, void 0, void 0, func
         }
         else {
             recipient_code = yield createTransferRecipient(bank_name, account_number);
-            const updatedWallet = yield wallet_1.WalletModel.updateOneById(wallet.id, {
-                recipientCode: recipient_code,
-                prevBankName: bank_name.toLowerCase(),
-                prevAccountNo: String(account_number),
-                prevAccountHolderName: account_name
-            });
-            if (updatedWallet) {
-                __1.io.emit("wallet:update", updatedWallet);
-            }
             // if (!updatedWallet) {
             //     throw new Error("Unable to update wallet")
             // }
+        }
+        const updatedWallet = yield wallet_1.WalletModel.updateOneById(wallet.id, {
+            recipientCode: recipient_code,
+            prevBankName: bank_name.toLowerCase(),
+            prevAccountNo: String(account_number),
+            prevAccountHolderName: account_name
+        });
+        if (updatedWallet) {
+            __1.io.emit("wallet:update", updatedWallet);
         }
         const transferData = yield initiateTransfer(recipient_code, validAmount);
         // console.log({transferData})
