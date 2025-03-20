@@ -29,8 +29,8 @@ export const joinWaitlist = async (req: Request, res: Response, next: NextFuncti
             return next(createError(500, unknown_error))
         }
 
-        const { template, text, subject } = welcomeEmailTemplate(email);
-        await sendEmail(email, subject, text, template);
+        const { template, text, subject } = welcomeEmailTemplate(email.toLowerCase());
+        await sendEmail(email.toLowerCase(), subject, text, template);
 
         res.status(201).json({
             status: "success",

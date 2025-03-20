@@ -1,7 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ConversationModel = exports.ConversationStructure = void 0;
+exports.ConversationModel = exports.ConversationStructure = exports.ParticipantRole = void 0;
 const config_1 = require("../config");
+var ParticipantRole;
+(function (ParticipantRole) {
+    ParticipantRole["DRIVER"] = "DRIVER";
+    ParticipantRole["PASSENGER"] = "PASSENGER";
+})(ParticipantRole || (exports.ParticipantRole = ParticipantRole = {}));
 exports.ConversationStructure = {
     space: "Conversation",
     description: "A Record Space for Conversations",

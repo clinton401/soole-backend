@@ -4,6 +4,7 @@ const express_1 = require("express");
 const wallet_controllers_1 = require("../controllers/wallet-controllers");
 const wallet = (0, express_1.Router)();
 wallet.post("/user/fund", wallet_controllers_1.userWalletFundingInitialization);
+wallet.post("/user/fund/cancel", wallet_controllers_1.cancelWalletFunding);
 wallet.post("/create", wallet_controllers_1.createUserWallet);
 wallet.post("/user/charge", wallet_controllers_1.chargeUserSavedCard);
 wallet.get("/user/verify/:reference", wallet_controllers_1.verifyUserReference);

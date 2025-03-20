@@ -37,8 +37,8 @@ const joinWaitlist = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         if (!newWaitlist) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        const { template, text, subject } = (0, html_templates_1.welcomeEmailTemplate)(email);
-        yield (0, mail_1.sendEmail)(email, subject, text, template);
+        const { template, text, subject } = (0, html_templates_1.welcomeEmailTemplate)(email.toLowerCase());
+        yield (0, mail_1.sendEmail)(email.toLowerCase(), subject, text, template);
         res.status(201).json({
             status: "success",
             message: "You've successfully joined the waitlist! 🎉 Stay tuned for updates and early access opportunities."

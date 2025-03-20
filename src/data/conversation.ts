@@ -1,5 +1,5 @@
 import { paginationOptions } from "../lib/utils"
-import { ConversationModel, Conversation } from "../nobox/record-structures/conversation";
+import { ConversationModel, Conversation, ParticipantRole } from "../nobox/record-structures/conversation";
 import { NotificationModel } from "../nobox/record-structures/notification";
 import { UserModel } from "../nobox/record-structures/user";
 import {unknown_error} from "../lib/variables";
@@ -104,12 +104,17 @@ export const insertNewConversation = async (participant1Id: string, participant2
             {
                 id: participant1.id,
                 name: `${participant1.firstName} ${participant1.lastName}`,
-                avatarUrl: participant1.avatarUrl
+                avatarUrl: participant1.avatarUrl,
+                role: ParticipantRole.PASSENGER,
+                phone: participant1.phone
             },
+
             {
                 id: participant2.id,
                 name: `${participant2.firstName} ${participant2.lastName}`,
-                avatarUrl: participant2.avatarUrl
+                avatarUrl: participant2.avatarUrl,
+                role: ParticipantRole.DRIVER,
+                phone: participant2.phone
             }
         ];
 

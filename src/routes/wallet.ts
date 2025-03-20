@@ -1,8 +1,9 @@
 import {Router} from "express";
-import {userWalletFundingInitialization, createUserWallet, chargeUserSavedCard, verifyUserReference, getWallet, transferFunds} from "../controllers/wallet-controllers"
+import {userWalletFundingInitialization, createUserWallet, chargeUserSavedCard, verifyUserReference, getWallet, transferFunds, cancelWalletFunding} from "../controllers/wallet-controllers"
 const wallet = Router();
 
 wallet.post("/user/fund", userWalletFundingInitialization)
+wallet.post("/user/fund/cancel", cancelWalletFunding)
 wallet.post("/create", createUserWallet)
 wallet.post("/user/charge", chargeUserSavedCard)
 wallet.get("/user/verify/:reference", verifyUserReference)

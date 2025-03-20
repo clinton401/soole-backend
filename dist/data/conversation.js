@@ -104,12 +104,16 @@ const insertNewConversation = (participant1Id, participant2Id) => __awaiter(void
             {
                 id: participant1.id,
                 name: `${participant1.firstName} ${participant1.lastName}`,
-                avatarUrl: participant1.avatarUrl
+                avatarUrl: participant1.avatarUrl,
+                role: conversation_1.ParticipantRole.PASSENGER,
+                phone: participant1.phone
             },
             {
                 id: participant2.id,
                 name: `${participant2.firstName} ${participant2.lastName}`,
-                avatarUrl: participant2.avatarUrl
+                avatarUrl: participant2.avatarUrl,
+                role: conversation_1.ParticipantRole.DRIVER,
+                phone: participant2.phone
             }
         ];
         const newConversation = yield conversation_1.ConversationModel.insertOne({

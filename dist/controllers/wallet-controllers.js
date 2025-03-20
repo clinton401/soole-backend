@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.transferFunds = exports.getWallet = exports.verifyUserReference = exports.chargeUserSavedCard = exports.userWalletFundingInitialization = exports.createUserWallet = void 0;
+exports.transferFunds = exports.getWallet = exports.cancelWalletFunding = exports.verifyUserReference = exports.chargeUserSavedCard = exports.userWalletFundingInitialization = exports.createUserWallet = void 0;
 const dotenv_1 = require("dotenv");
 const axios_1 = __importDefault(require("axios"));
 const http_errors_1 = __importDefault(require("http-errors"));
@@ -102,7 +102,7 @@ const userWalletFundingInitialization = (req, res, next) => __awaiter(void 0, vo
         if (!transaction) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        console.log({ transaction });
+        // console.log({transaction})
         __1.io.emit('transaction', Object.assign(Object.assign({}, transaction), { createdAt: new Date().toISOString() }));
         const response = yield axios_1.default.post(`${PAYSTACK_BASE_URL}/transaction/initialize`, {
             email,
@@ -240,7 +240,7 @@ const verifyUserReference = (req, res, next) => __awaiter(void 0, void 0, void 0
             __1.io.emit('transaction:update', updatedTransaction);
             yield (0, wallet_2.addToUserWalletBalance)(wallet, transaction, wallet === null || wallet === void 0 ? void 0 : wallet.authorizationCode);
             res.status(200).json({
-                success: true, message: "Transaction verified successfully. Wallet has been"
+                success: true, message: "Transaction verified successfully. Wallet has been updated"
             });
             return;
         }
@@ -261,6 +261,37 @@ const verifyUserReference = (req, res, next) => __awaiter(void 0, void 0, void 0
     }
 });
 exports.verifyUserReference = verifyUserReference;
+const cancelWalletFunding = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { reference } = req.body;
+    if (!reference) {
+        return next((0, http_errors_1.default)(400, "Reference is required"));
+    }
+    try {
+        const transaction = yield transaction_1.TransactionModel.findOne({ reference });
+        if (!transaction) {
+            return next((0, http_errors_1.default)("Transaction not found."));
+        }
+        ;
+        if (transaction.status === transaction_1.TransactionStatus.FAILED) {
+            return next((0, http_errors_1.default)(400, "This transaction has already been cancelled."));
+        }
+        const updatedTransaction = yield transaction_1.TransactionModel.updateOneById(transaction.id, {
+            status: transaction_1.TransactionStatus.FAILED
+        });
+        if (!updatedTransaction) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        __1.io.emit('transaction:update', updatedTransaction);
+        res.status(200).json({
+            success: true, message: "Wallet funding has been cancelled successfully"
+        });
+    }
+    catch (error) {
+        console.error(`Unable to cancel wallet funding: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.cancelWalletFunding = cancelWalletFunding;
 const getWallet = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const userId = req.userId;
     const type = req.query.type;

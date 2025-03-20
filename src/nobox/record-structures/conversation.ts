@@ -1,6 +1,9 @@
 import { Space } from "nobox-client";
 import { createRowSchema } from "../config";
-
+export enum ParticipantRole {
+  DRIVER = "DRIVER",
+  PASSENGER = "PASSENGER"
+}
 export interface Conversation {
   participant1Id: string;
   participant2Id: string;
@@ -10,7 +13,9 @@ export interface Conversation {
   participantsDetails: {
     avatarUrl: string;
     id: string;
-    name: string
+    name: string;
+    role: ParticipantRole,
+    phone: string
   }[]
   viewedBy: string[];
   deletedBy: string[]

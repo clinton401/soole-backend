@@ -94,7 +94,7 @@ export const userWalletFundingInitialization = async (req: Request, res: Respons
             return next(createError(500, unknown_error));
         }
 
-        console.log({transaction})
+        // console.log({transaction})
 
         io.emit('transaction', {...transaction, createdAt: new Date().toISOString()})
 
@@ -260,7 +260,7 @@ export const verifyUserReference = async (req: Request, res: Response, next: Nex
             io.emit('transaction:update', updatedTransaction)
             await addToUserWalletBalance(wallet, transaction, wallet?.authorizationCode);
             res.status(200).json({
-                success: true, message: "Transaction verified successfully. Wallet has been"
+                success: true, message: "Transaction verified successfully. Wallet has been updated"
             });
             return
         } else {
@@ -281,7 +281,35 @@ export const verifyUserReference = async (req: Request, res: Response, next: Nex
         return next(createError(500, server_error))
     }
 }
+export const cancelWalletFunding = async(req: Request, res: Response, next: NextFunction) => {
+    const {reference} = req.body;
+    if(!reference) {
+        return next(createError(400, "Reference is required"))
+    }
+    try{
+        const transaction = await TransactionModel.findOne({ reference });
+        if (!transaction) {
+            return next(createError("Transaction not found."))
+        };
+        if (transaction.status === TransactionStatus.FAILED) {
+            return next(createError(400, "This transaction has already been cancelled."))
+        }
+        const updatedTransaction = await TransactionModel.updateOneById(transaction.id, {
+            status: TransactionStatus.FAILED
+        });
+        if (!updatedTransaction) {
+            return next(createError(500, unknown_error));
 
+        }
+        io.emit('transaction:update', updatedTransaction);
+        res.status(200).json({
+            success: true, message: "Wallet funding has been cancelled successfully"
+        });
+    }catch(error){
+        console.error(`Unable to cancel wallet funding: ${error}`)
+        return next(createError(500, server_error))
+    }
+}
 export const getWallet = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.userId;
     const type = req.query.type;
