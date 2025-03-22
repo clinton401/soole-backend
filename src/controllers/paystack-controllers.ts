@@ -94,8 +94,12 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
                 return next(createError(404, "Transaction not found."));
             }
 
+            if (transaction.status === TransactionStatus.SUCCESS) {
+                res.status(400).json({ success: true, message: "Transaction already marked as successful." });
+                return;
+            }
             if (transaction.status === TransactionStatus.FAILED) {
-                res.status(200).json({ success: true, message: "Transaction already marked as failed." });
+                res.status(400).json({ success: true, message: "Transaction already marked as failed." });
                 return;
             }
 
@@ -162,6 +166,20 @@ export const paystackWebhook = async (req: Request, res: Response, next: NextFun
 
             if (!payout) {
                 return next(createError(404, "Transfer record not found."));
+            }
+            if(payout.status === PayoutStatus.SUCCESSFUL){
+                res.status(400).json({
+                    
+                    message: "Transfer record already marked as successsful"
+                });
+                return
+            }
+            if(payout.status === PayoutStatus.FAILED){
+                res.status(400).json({
+
+                    message: "Transfer record already marked as failed"
+                });
+                return
             }
 
             const updatedPayout = await PayoutModel.updateOneById(payout.id, { status: PayoutStatus.FAILED });

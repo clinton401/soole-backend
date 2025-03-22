@@ -73,11 +73,11 @@ export const searchForRides = async (req: Request, res: Response, next: NextFunc
     }
     
     const validFilters = ['active', 'completed', 'cancelled', "ongoing"];
-    const selectedFilter = validFilters.includes(filter?.toLowerCase()) ? filter.toLowerCase() : "active";
+    const selectedFilter = validFilters.includes(filter?.toLowerCase()) ? filter.toLowerCase() : null;
 
     type Status = "ACTIVE" | "CANCELLED" | "COMPLETED" | "ONGOING"
 
-    const filterVariable = selectedFilter.toUpperCase() as Status;
+    const filterVariable = selectedFilter?.toUpperCase() as Status || null;
     const currentPage = Math.max(1, Number(page) || 1);
     const pageSize = 15;
     const options = adminPaginationOptions(currentPage, pageSize);
@@ -98,7 +98,7 @@ export const searchForRides = async (req: Request, res: Response, next: NextFunc
             }
         
             
-            const matchesStatus = status === filterVariable;
+            const matchesStatus = filterVariable && status !== filterVariable ? false : true;
 
            
             const matchesQuery = [userFirstName, userLastName, userEmail, userUsername]

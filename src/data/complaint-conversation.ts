@@ -36,7 +36,7 @@ export const createComplaintConversation = async (user: TotalUser, message: stri
             throw new Error("Unable to intiate complaint conversation with a message")
         }
 
-        return {complaintMessage, complaintConversation}
+        return {message: {...complaintMessage, createdAt: new Date().toISOString()}, conversation: {...complaintConversation, createdAt: new Date().toISOString()}}
     } catch (error) {
         throw error
     }

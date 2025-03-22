@@ -8,6 +8,7 @@ import { UpdateProfileSchema } from "../schemas/index";
 import { ZodError } from "zod";
 import { hashPassword, validatePassword } from "../lib/password-utils";
 import { createComplaintConversation } from "../data/complaint-conversation";
+import {io} from ".."
 
 export const addPaymentMethod = async (req: Request, res: Response, next: NextFunction) => {
     const { cardNumber, cvv, expiryDate } = req.body;
@@ -236,7 +237,8 @@ export const createComplaint = async (req: Request, res: Response, next: NextFun
             return next(createError(400, "You need to complete your profile before submitting a complaint."))
         }
 
-        await createComplaintConversation(user, message)
+       const data = await createComplaintConversation(user, message);
+       io.emit("complaint", data)
          res.status(201).json({
             message: "Complaint submitted successfully",
           });

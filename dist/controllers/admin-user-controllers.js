@@ -143,7 +143,7 @@ const searchForUser = (req, res, next) => __awaiter(void 0, void 0, void 0, func
             if (!firstName || !lastName || !email || !username || !isNumberVerified) {
                 return false;
             }
-            const matchesStatus = status === filterVariable;
+            const matchesStatus = filterVariable && status !== filterVariable ? false : true;
             const matchesQuery = [firstName, lastName, email, username]
                 .some(field => field.toLowerCase().includes(query.toLowerCase()));
             return matchesStatus && matchesQuery;

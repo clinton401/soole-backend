@@ -20,6 +20,7 @@ const http_errors_1 = __importDefault(require("http-errors"));
 const utils_1 = require("../lib/utils");
 const html_templates_1 = require("../lib/html-templates");
 const mail_1 = require("../data/mail");
+// export getNotificationCount = async(req: Request, res: Response, next: NextFunction)
 const getComplaintSummary = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const [total, sentCount] = yield Promise.all([

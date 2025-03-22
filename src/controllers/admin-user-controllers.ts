@@ -153,7 +153,9 @@ export const searchForUser = async (req: Request, res: Response, next: NextFunct
             }
 
 
-            const matchesStatus = status === filterVariable;
+
+
+            const matchesStatus = filterVariable && status !== filterVariable ? false : true;
 
 
             const matchesQuery = [firstName, lastName, email, username]

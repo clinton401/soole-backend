@@ -39,6 +39,7 @@ const reset_code_1 = require("../nobox/record-structures/reset-code");
 const wallet_1 = require("../nobox/record-structures/wallet");
 const wallet_2 = require("../data/wallet");
 const send_sms_1 = require("../config/send-sms");
+const __1 = require("..");
 const nobox_upload_1 = require("../config/nobox-upload");
 (0, dotenv_1.config)();
 const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -227,6 +228,7 @@ const completeProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
         const updatedUser = yield user_1.UserModel.updateOneById(userId, dataToBeUpdated);
         if (!updatedUser)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        __1.io.emit("user", Object.assign(Object.assign({}, updatedUser), { createdAt: new Date().toISOString() }));
         const access_token = (0, access_tokens_1.generateAccessToken)(updatedUser.id);
         res.status(200).json({
             success: true,

@@ -97,6 +97,7 @@ export const createRide = async (
     if (!ride) {
       return next(createError(500, "Failed to create the ride."));
     }
+    io.emit("ride", {...ride, createdAt: new Date().toISOString()})
     const totalRides = user.totalRides ? user.totalRides + 1 : 1;
     await UserModel.updateOneById(user.id, {
       totalRides
@@ -322,6 +323,7 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
     if (!updatedRide) {
       return next(createError(500, unknown_error));
     }
+    io.emit("ride:update", {...updatedRide, createdAt: new Date().toISOString()})
     if(passengers && passengers.length > 0){
     await updatePassengersStatus(passengers, "CANCELLED")
     }
@@ -461,6 +463,7 @@ export const cancelRideDriver = async (req: Request, res: Response, next: NextFu
     await UserModel.updateOneById(driver.id, {
       totalRides
     })
+    io.emit("ride:update", {...updatedRide, createdAt: new Date().toISOString()})
     res.status(200).json({
       status: "success",
       message: "Ride successfully cancelled.",
@@ -694,6 +697,7 @@ driverId
     };
 
     await NotificationModel.deleteOneById(notification.id);
+    io.emit("ride:update", {...updatedRide, createdAt: new Date().toISOString()})
     res.status(200).json({
       status: "success",
       message: "Ride accepted successfully.",
@@ -871,6 +875,7 @@ export const startRide = async (req: Request, res: Response, next: NextFunction)
 
       }
     }
+    io.emit("ride:update", {...updatedRide, createdAt: new Date().toISOString()})
     res.json({
       status: "success",
       message: "Ride started successfully",
@@ -1041,6 +1046,8 @@ export const driverConfirmCompletion = async (req: Request, res: Response, next:
 
       }
     }
+
+    io.emit("ride:update", {...updatedRide, createdAt: new Date().toISOString()})
     res.json({
       status: "success",
       message: "Ride marked as completed successfully. You will receive your payment once all passengers confirm the ride completion.",

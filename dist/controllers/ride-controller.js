@@ -88,6 +88,7 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         if (!ride) {
             return next((0, http_errors_1.default)(500, "Failed to create the ride."));
         }
+        __1.io.emit("ride", Object.assign(Object.assign({}, ride), { createdAt: new Date().toISOString() }));
         const totalRides = user.totalRides ? user.totalRides + 1 : 1;
         yield user_1.UserModel.updateOneById(user.id, {
             totalRides
@@ -271,6 +272,7 @@ const cancelRidePassenger = (req, res, next) => __awaiter(void 0, void 0, void 0
         if (!updatedRide) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
+        __1.io.emit("ride:update", Object.assign(Object.assign({}, updatedRide), { createdAt: new Date().toISOString() }));
         if (passengers && passengers.length > 0) {
             yield updatePassengersStatus(passengers, "CANCELLED");
         }
@@ -401,6 +403,7 @@ const cancelRideDriver = (req, res, next) => __awaiter(void 0, void 0, void 0, f
         yield user_1.UserModel.updateOneById(driver.id, {
             totalRides
         });
+        __1.io.emit("ride:update", Object.assign(Object.assign({}, updatedRide), { createdAt: new Date().toISOString() }));
         res.status(200).json({
             status: "success",
             message: "Ride successfully cancelled.",
@@ -640,6 +643,7 @@ const acceptRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
         }
         ;
         yield notification_1.NotificationModel.deleteOneById(notification.id);
+        __1.io.emit("ride:update", Object.assign(Object.assign({}, updatedRide), { createdAt: new Date().toISOString() }));
         res.status(200).json({
             status: "success",
             message: "Ride accepted successfully.",
@@ -809,6 +813,7 @@ const startRide = (req, res, next) => __awaiter(void 0, void 0, void 0, function
                 console.error(`Error processing passenger ${passenger.id}:`, error);
             }
         }
+        __1.io.emit("ride:update", Object.assign(Object.assign({}, updatedRide), { createdAt: new Date().toISOString() }));
         res.json({
             status: "success",
             message: "Ride started successfully",
@@ -967,6 +972,7 @@ const driverConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0, vo
                 console.error(`Error processing passenger ${passenger.id}:`, error);
             }
         }
+        __1.io.emit("ride:update", Object.assign(Object.assign({}, updatedRide), { createdAt: new Date().toISOString() }));
         res.json({
             status: "success",
             message: "Ride marked as completed successfully. You will receive your payment once all passengers confirm the ride completion.",

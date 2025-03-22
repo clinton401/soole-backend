@@ -14,7 +14,7 @@ import { ResetCodeModel } from "../nobox/record-structures/reset-code";
 import { WalletModel, WalletStatus, WalletType } from "../nobox/record-structures/wallet";
 import { findWalletByUserId, createWallet } from "../data/wallet";
 import {sendSMS} from "../config/send-sms"
-
+import {io} from ".."
 import {noboxUpload} from "../config/nobox-upload"
 
 config();
@@ -223,6 +223,7 @@ export const completeProfile = async (req: Request, res: Response, next: NextFun
     }
     const updatedUser = await UserModel.updateOneById(userId, dataToBeUpdated);
     if (!updatedUser) return next(createError(500, unknown_error))
+      io.emit("user", {...updatedUser, createdAt: new Date().toISOString()})
     const access_token = generateAccessToken(updatedUser.id);
     res.status(200).json({
       success: true,

@@ -83,8 +83,12 @@ const paystackWebhook = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
             if (!transaction) {
                 return next((0, http_errors_1.default)(404, "Transaction not found."));
             }
+            if (transaction.status === transaction_1.TransactionStatus.SUCCESS) {
+                res.status(400).json({ success: true, message: "Transaction already marked as successful." });
+                return;
+            }
             if (transaction.status === transaction_1.TransactionStatus.FAILED) {
-                res.status(200).json({ success: true, message: "Transaction already marked as failed." });
+                res.status(400).json({ success: true, message: "Transaction already marked as failed." });
                 return;
             }
             // Update transaction status to FAILED
@@ -137,6 +141,18 @@ const paystackWebhook = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
             const payout = yield payout_1.PayoutModel.findOne({ reference: transferReference });
             if (!payout) {
                 return next((0, http_errors_1.default)(404, "Transfer record not found."));
+            }
+            if (payout.status === payout_1.PayoutStatus.SUCCESSFUL) {
+                res.status(400).json({
+                    message: "Transfer record already marked as successsful"
+                });
+                return;
+            }
+            if (payout.status === payout_1.PayoutStatus.FAILED) {
+                res.status(400).json({
+                    message: "Transfer record already marked as failed"
+                });
+                return;
             }
             const updatedPayout = yield payout_1.PayoutModel.updateOneById(payout.id, { status: payout_1.PayoutStatus.FAILED });
             if (updatedPayout) {

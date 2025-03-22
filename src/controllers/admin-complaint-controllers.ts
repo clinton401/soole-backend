@@ -7,6 +7,7 @@ import { getPageInfo, adminPaginationOptions } from "../lib/utils"
 import { adminReplyEmailTemplate } from "../lib/html-templates";
 import { sendEmail } from "../data/mail";
 
+// export getNotificationCount = async(req: Request, res: Response, next: NextFunction)
 export const getComplaintSummary = async (req: Request, res: Response, next: NextFunction) => {
     try {
 

@@ -40,7 +40,7 @@ const createComplaintConversation = (user, message) => __awaiter(void 0, void 0,
         if (!complaintMessage) {
             throw new Error("Unable to intiate complaint conversation with a message");
         }
-        return { complaintMessage, complaintConversation };
+        return { message: Object.assign(Object.assign({}, complaintMessage), { createdAt: new Date().toISOString() }), conversation: Object.assign(Object.assign({}, complaintConversation), { createdAt: new Date().toISOString() }) };
     }
     catch (error) {
         throw error;

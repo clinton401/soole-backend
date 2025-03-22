@@ -291,6 +291,10 @@ export const cancelWalletFunding = async(req: Request, res: Response, next: Next
         if (!transaction) {
             return next(createError("Transaction not found."))
         };
+        if (transaction.status === TransactionStatus.SUCCESS) {
+           return next(createError(400, "Transaction already marked as successful." ));
+            
+        }
         if (transaction.status === TransactionStatus.FAILED) {
             return next(createError(400, "This transaction has already been cancelled."))
         }

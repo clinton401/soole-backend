@@ -272,6 +272,9 @@ const cancelWalletFunding = (req, res, next) => __awaiter(void 0, void 0, void 0
             return next((0, http_errors_1.default)("Transaction not found."));
         }
         ;
+        if (transaction.status === transaction_1.TransactionStatus.SUCCESS) {
+            return next((0, http_errors_1.default)(400, "Transaction already marked as successful."));
+        }
         if (transaction.status === transaction_1.TransactionStatus.FAILED) {
             return next((0, http_errors_1.default)(400, "This transaction has already been cancelled."));
         }

@@ -22,6 +22,7 @@ const index_1 = require("../schemas/index");
 const zod_1 = require("zod");
 const password_utils_1 = require("../lib/password-utils");
 const complaint_conversation_1 = require("../data/complaint-conversation");
+const __1 = require("..");
 const addPaymentMethod = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { cardNumber, cvv, expiryDate } = req.body;
     const userId = req.userId;
@@ -252,7 +253,8 @@ const createComplaint = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
         if (!firstName || !lastName || !email) {
             return next((0, http_errors_1.default)(400, "You need to complete your profile before submitting a complaint."));
         }
-        yield (0, complaint_conversation_1.createComplaintConversation)(user, message);
+        const data = yield (0, complaint_conversation_1.createComplaintConversation)(user, message);
+        __1.io.emit("complaint", data);
         res.status(201).json({
             message: "Complaint submitted successfully",
         });

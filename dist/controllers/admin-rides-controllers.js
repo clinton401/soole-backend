@@ -64,8 +64,8 @@ const searchForRides = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         return next((0, http_errors_1.default)(400, "Search query is required and must be at least 1 character long."));
     }
     const validFilters = ['active', 'completed', 'cancelled', "ongoing"];
-    const selectedFilter = validFilters.includes(filter === null || filter === void 0 ? void 0 : filter.toLowerCase()) ? filter.toLowerCase() : "active";
-    const filterVariable = selectedFilter.toUpperCase();
+    const selectedFilter = validFilters.includes(filter === null || filter === void 0 ? void 0 : filter.toLowerCase()) ? filter.toLowerCase() : null;
+    const filterVariable = (selectedFilter === null || selectedFilter === void 0 ? void 0 : selectedFilter.toUpperCase()) || null;
     const currentPage = Math.max(1, Number(page) || 1);
     const pageSize = 15;
     const options = (0, utils_1.adminPaginationOptions)(currentPage, pageSize);
@@ -80,7 +80,7 @@ const searchForRides = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
             if (!userFirstName || !userLastName || !userEmail || !userUsername) {
                 return false;
             }
-            const matchesStatus = status === filterVariable;
+            const matchesStatus = filterVariable && status !== filterVariable ? false : true;
             const matchesQuery = [userFirstName, userLastName, userEmail, userUsername]
                 .some(field => field.toLowerCase().includes(query.toLowerCase()));
             return matchesStatus && matchesQuery;
