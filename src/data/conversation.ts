@@ -24,7 +24,7 @@ export const getUserTotalConversations = async (userId: string, page?: string) =
             return options.sort.order === "asc" ? dateA - dateB : dateB - dateA;
         });
 
-        const pageSize = 50;
+        const pageSize = 15;
         const start = (currentPage - 1) * pageSize;
         const end = start + pageSize;
         const paginatedConvo = notDeletedConvo.slice(start, end);

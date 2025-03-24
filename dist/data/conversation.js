@@ -32,7 +32,7 @@ const getUserTotalConversations = (userId, page) => __awaiter(void 0, void 0, vo
             const dateB = new Date(b.updatedAt).getTime();
             return options.sort.order === "asc" ? dateA - dateB : dateB - dateA;
         });
-        const pageSize = 50;
+        const pageSize = 15;
         const start = (currentPage - 1) * pageSize;
         const end = start + pageSize;
         const paginatedConvo = notDeletedConvo.slice(start, end);

@@ -5,6 +5,7 @@ const conversations_controllers_1 = require("../controllers/conversations-contro
 const conversation = (0, express_1.Router)();
 conversation.get("/", conversations_controllers_1.getUserConversations);
 conversation.post("/create", conversations_controllers_1.createConversation);
+conversation.get("/search", conversations_controllers_1.searchForConversations);
 conversation.post("/:id/messages/create", conversations_controllers_1.createMessage);
 conversation.get("/:id/messages", conversations_controllers_1.getConversationMessages);
 conversation.post("/:convoId/messages/:id/read", conversations_controllers_1.markMessageAsRead);

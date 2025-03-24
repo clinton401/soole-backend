@@ -12,8 +12,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.markConversationAsRead = exports.deleteConversation = exports.markMessageAsRead = exports.getConversationMessages = exports.createMessage = exports.createConversation = exports.getUserConversations = void 0;
+exports.searchForConversations = exports.markConversationAsRead = exports.deleteConversation = exports.markMessageAsRead = exports.getConversationMessages = exports.createMessage = exports.createConversation = exports.getUserConversations = void 0;
 const variables_1 = require("../lib/variables");
+const utils_1 = require("../lib/utils");
 const http_errors_1 = __importDefault(require("http-errors"));
 const conversation_1 = require("../nobox/record-structures/conversation");
 const __1 = require("..");
@@ -250,3 +251,54 @@ const markConversationAsRead = (req, res, next) => __awaiter(void 0, void 0, voi
     }
 });
 exports.markConversationAsRead = markConversationAsRead;
+const searchForConversations = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const { query } = req.query;
+    const userId = req.userId;
+    if (!userId)
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    if (!query || query.length < 1) {
+        return next((0, http_errors_1.default)(400, "Search query is required and must be at least 1 character long."));
+    }
+    const options = (0, utils_1.paginationOptions)("desc");
+    try {
+        const convo1 = yield conversation_1.ConversationModel.find({ participant1Id: userId }, options);
+        const convo2 = yield conversation_1.ConversationModel.find({ participant2Id: userId }, options);
+        if (!convo1 || !convo2) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        const totalConvo = [...convo1, ...convo2];
+        const notDeletedConvo = totalConvo.filter(convo => {
+            return !convo.deletedBy.includes(userId);
+        }).sort((a, b) => {
+            const dateA = new Date(a.updatedAt).getTime();
+            const dateB = new Date(b.updatedAt).getTime();
+            return options.sort.order === "asc" ? dateA - dateB : dateB - dateA;
+        });
+        const getReceiverDetails = (convo) => {
+            const receiver = convo.participantsDetails.find((participant) => {
+                return participant.id !== userId;
+            });
+            return receiver;
+        };
+        const validConversations = notDeletedConvo.filter(cvo => {
+            const receiverDetails = getReceiverDetails(cvo);
+            if (!receiverDetails)
+                return false;
+            return receiverDetails.name.toLowerCase().includes(query.toLowerCase());
+        });
+        const pageSize = 15;
+        res.json({
+            status: "success",
+            message: "Conversations found successfully",
+            data: {
+                conversations: validConversations.slice(0, pageSize)
+            }
+        });
+        // res.json({conversations})
+    }
+    catch (error) {
+        console.error(`Unable to search for conversations: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.searchForConversations = searchForConversations;

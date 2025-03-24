@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { server_error, unknown_error, unauthorized_error } from "../lib/variables";
+import {paginationOptions } from "../lib/utils";
 import createError from "http-errors";
-import { ConversationModel } from "../nobox/record-structures/conversation";
+import { ConversationModel, Conversation } from "../nobox/record-structures/conversation";
 import { io } from "..";
 import { getUserTotalConversations, insertNewConversation, findUnique as findUniqueConvo, conversationExists } from "../data/conversation";
 import { insertNewMessage, findMany as findManyMessages, findUnique as findUniqueMessage, updateOneById as updateMesageById } from "../data/message";
@@ -241,5 +242,58 @@ export const markConversationAsRead = async (req: Request, res: Response, next: 
     } catch (error) {
         console.error(`Error while marking conversation as read: ${error}`);
         next(createError(500, server_error));
+    }
+}
+
+export const searchForConversations = async(req: Request, res: Response, next: NextFunction) => {
+    const { query } = req.query as {
+        query?: string;
+    };
+    
+    const userId = req.userId;
+
+    if (!userId) return next(createError(401, unauthorized_error));
+    if(!query || query.length < 1) {
+        return next(createError(400, "Search query is required and must be at least 1 character long."))
+    }
+    const options = paginationOptions("desc")
+    try{
+        const convo1 = await ConversationModel.find({ participant1Id: userId }, options);
+        const convo2 = await ConversationModel.find({ participant2Id: userId }, options);
+        if(!convo1 || !convo2){
+            return next(createError(500, unknown_error))
+        }
+        const totalConvo = [...convo1, ...convo2];
+        const notDeletedConvo = totalConvo.filter(convo => {
+            return !convo.deletedBy.includes(userId)
+        }).sort((a, b) => {
+            const dateA = new Date(a.updatedAt).getTime();
+            const dateB = new Date(b.updatedAt).getTime();
+            return options.sort.order === "asc" ? dateA - dateB : dateB - dateA;
+        });
+        const getReceiverDetails = (convo: Conversation) => {
+            const receiver = convo.participantsDetails.find((participant) => {
+              return participant.id !== userId;
+            });
+            return receiver;
+          };
+        const validConversations = notDeletedConvo.filter(cvo => {
+            const receiverDetails = getReceiverDetails(cvo);
+            if(!receiverDetails)  return false;
+            return receiverDetails.name.toLowerCase().includes(query.toLowerCase())
+        });
+        const pageSize = 15;
+        res.json({
+            status: "success",
+            message: "Conversations found successfully",
+            data: {
+                conversations: validConversations.slice(0, pageSize)
+            }
+        })
+
+        // res.json({conversations})
+    }catch(error) {
+        console.error(`Unable to search for conversations: ${error}`);
+        return next(createError(500, server_error))
     }
 }

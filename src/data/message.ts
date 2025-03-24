@@ -34,7 +34,7 @@ export const findMany = async (conversationId: string, page?: string) => {
         if(!messages){
             throw new Error(unknown_error)
         }
-        const pageSize = 15;
+        const pageSize = 50;
         const currentPage = Math.max(1, Number(page) || 1);
         const data = getUserPageInfo(messages, pageSize, currentPage, 'messages');
         return data

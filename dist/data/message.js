@@ -46,7 +46,7 @@ const findMany = (conversationId, page) => __awaiter(void 0, void 0, void 0, fun
         if (!messages) {
             throw new Error(variables_1.unknown_error);
         }
-        const pageSize = 15;
+        const pageSize = 50;
         const currentPage = Math.max(1, Number(page) || 1);
         const data = (0, utils_1.getUserPageInfo)(messages, pageSize, currentPage, 'messages');
         return data;
