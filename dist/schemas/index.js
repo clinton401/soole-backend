@@ -179,11 +179,6 @@ exports.UpdateProfileSchema = zod_1.z
         .string()
         .url({ message: "Invalid avatar URL format." })
         .optional(),
-    avatarPublicId: zod_1.z
-        .string()
-        .trim()
-        .min(1, { message: "Avatar public ID must not be empty if provided." })
-        .optional(),
 }).optional();
 exports.RegisterAdminSchema = zod_1.z.object({
     name: zod_1.z

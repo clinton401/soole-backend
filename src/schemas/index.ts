@@ -189,11 +189,6 @@ export const UpdateProfileSchema = z
       .url({ message: "Invalid avatar URL format." })
       .optional(),
 
-    avatarPublicId: z
-      .string()
-      .trim()
-      .min(1, { message: "Avatar public ID must not be empty if provided." })
-      .optional(),
   }).optional();
 
   export const RegisterAdminSchema = z.object({

@@ -12,13 +12,13 @@ const PORT = process.env.PORT || 3001;
 
 app.use(
   cors({
-    origin: ["http://localhost:3001", "https://soole-admin.vercel.app", "https://soole-waitlist.vercel.app"],
+    origin: ["http://localhost:3000", "https://soole-admin.vercel.app", "https://soole-waitlist.vercel.app"],
     credentials: true,
   })
 );
 export const io = new Server(server, {
   cors: {
-      origin: ["http://localhost:3001", "https://soole-admin.vercel.app"],
+      origin: ["http://localhost:3000", "https://soole-admin.vercel.app"],
       methods: ["GET", "POST"]
   }
 });
