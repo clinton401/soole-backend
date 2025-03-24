@@ -6,6 +6,7 @@ import { io } from "..";
 import { getUserTotalConversations, insertNewConversation, findUnique as findUniqueConvo, conversationExists } from "../data/conversation";
 import { insertNewMessage, findMany as findManyMessages, findUnique as findUniqueMessage, updateOneById as updateMesageById } from "../data/message";
 import { NotificationModel, Notification } from "../nobox/record-structures/notification";
+import {UserModel} from "../nobox/record-structures/user";
 
 
 
@@ -35,19 +36,24 @@ export const createConversation = async (req: Request, res: Response, next: Next
     if (!participant1Id) return next(createError(401, unauthorized_error));
     if (!participant2Id) return next(createError(400, "Participant 2 ID is required."));
     try {
-        const [conversation, notification] = await Promise.all([
+        const [conversation, notification, driver] = await Promise.all([
             insertNewConversation(participant1Id, participant2Id),
-            notificationId ? NotificationModel.findOne({id: notificationId}) : null
+            notificationId ? NotificationModel.findOne({id: notificationId}) : null,
+            UserModel.findOne({id: participant2Id})
         ])
         
 
         if (!conversation) return next(createError(500, unknown_error));
+        if(!driver) {
+            return next(createError(404, "Participant 2 not found."))
+        }
         if (typeof conversation === "string") {
             return next(createError(400, conversation))
         }
-       if(notification && !notification?.conversationId ){
+       if(notification && (!notification?.conversationId || !notification?.driverNumber)  ){
         const updatedNotification = await NotificationModel.updateOneById(notification.id, {
-            conversationId: conversation.id 
+            conversationId: conversation.id,
+            driverNumber:  driver.phone
         });
 
 

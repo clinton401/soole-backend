@@ -78,7 +78,12 @@ exports.NotificationStructure = {
             type: Number,
         },
         conversationId: {
-            description: "Id of the converstion if available",
+            description: "Id of the conversation if available",
+            required: false,
+            type: String,
+        },
+        driverNumber: {
+            description: "Number of the driver",
             required: false,
             type: String,
         },

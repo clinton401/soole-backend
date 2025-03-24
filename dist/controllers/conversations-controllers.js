@@ -20,6 +20,7 @@ const __1 = require("..");
 const conversation_2 = require("../data/conversation");
 const message_1 = require("../data/message");
 const notification_1 = require("../nobox/record-structures/notification");
+const user_1 = require("../nobox/record-structures/user");
 const getUserConversations = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { page } = req.query;
     const userId = req.userId;
@@ -47,18 +48,23 @@ const createConversation = (req, res, next) => __awaiter(void 0, void 0, void 0,
     if (!participant2Id)
         return next((0, http_errors_1.default)(400, "Participant 2 ID is required."));
     try {
-        const [conversation, notification] = yield Promise.all([
+        const [conversation, notification, driver] = yield Promise.all([
             (0, conversation_2.insertNewConversation)(participant1Id, participant2Id),
-            notificationId ? notification_1.NotificationModel.findOne({ id: notificationId }) : null
+            notificationId ? notification_1.NotificationModel.findOne({ id: notificationId }) : null,
+            user_1.UserModel.findOne({ id: participant2Id })
         ]);
         if (!conversation)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        if (!driver) {
+            return next((0, http_errors_1.default)(404, "Participant 2 not found."));
+        }
         if (typeof conversation === "string") {
             return next((0, http_errors_1.default)(400, conversation));
         }
-        if (notification && !(notification === null || notification === void 0 ? void 0 : notification.conversationId)) {
+        if (notification && (!(notification === null || notification === void 0 ? void 0 : notification.conversationId) || !(notification === null || notification === void 0 ? void 0 : notification.driverNumber))) {
             const updatedNotification = yield notification_1.NotificationModel.updateOneById(notification.id, {
-                conversationId: conversation.id
+                conversationId: conversation.id,
+                driverNumber: driver.phone
             });
             if (updatedNotification) {
                 __1.io.emit("notification:update", updatedNotification);

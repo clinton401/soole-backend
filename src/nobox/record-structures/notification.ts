@@ -27,8 +27,10 @@ export interface Notification {
     triggeredByFirstName: string;
     triggeredByLastName: string;
     triggeredByUsername: string;
+    // triggeredByNumber: string;
     isRead: boolean;
     conversationId?: string;
+    driverNumber?: string
   }
   
   export const NotificationStructure: Space<Notification> = {
@@ -76,6 +78,7 @@ export interface Notification {
         required: true,
         type: String,
       },
+     
       triggeredByLastName: {
         description: "Last name of the user who triggered the notification",
         required: true,
@@ -97,7 +100,12 @@ export interface Notification {
         type: Number,
       },
       conversationId: {
-        description: "Id of the converstion if available",
+        description: "Id of the conversation if available",
+        required: false,
+        type: String,
+      },
+      driverNumber: {
+        description: "Number of the driver",
         required: false,
         type: String,
       },
