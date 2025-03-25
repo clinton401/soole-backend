@@ -27,6 +27,10 @@ const ride_passenger_1 = require("../nobox/record-structures/ride-passenger");
 const transaction_1 = require("../nobox/record-structures/transaction");
 const __1 = require("..");
 const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.userId;
+    if (!userId) {
+        return next((0, http_errors_1.default)(401, "Unauthorized. Please log in to create a ride."));
+    }
     try {
         const { from, to, date, estimatedTime, carImages, vehicleModel, color, plateNumber, numberOfSeats, pricePerSeat, } = req.body;
         if (!from || !to) {
@@ -42,9 +46,8 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         if (!carImages || carImages.length !== 3) {
             return next((0, http_errors_1.default)(400, "Car images are required and must be of length 3"));
         }
-        const userId = req.userId;
-        if (!userId) {
-            return next((0, http_errors_1.default)(401, "Unauthorized. Please log in to create a ride."));
+        if (!carImages.every((img) => typeof img === "string" && img.trim() !== "")) {
+            return next((0, http_errors_1.default)(400, "Invalid input: All image URLs must be valid non-empty strings."));
         }
         const validNumberOfSeats = Number(numberOfSeats);
         if (isNaN(validNumberOfSeats) || validNumberOfSeats <= 0) {

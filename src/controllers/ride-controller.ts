@@ -19,6 +19,12 @@ export const createRide = async (
   res: Response,
   next: NextFunction
 ) => {
+  const userId = req.userId;
+    if (!userId) {
+      return next(
+        createError(401, "Unauthorized. Please log in to create a ride.")
+      );
+    }
   try {
     const {
       from,
@@ -50,13 +56,11 @@ export const createRide = async (
     if(!carImages || carImages.length !== 3) {
       return next(createError(400, "Car images are required and must be of length 3"))
     }
-
-    const userId = req.userId;
-    if (!userId) {
-      return next(
-        createError(401, "Unauthorized. Please log in to create a ride.")
-      );
+    if (!carImages.every((img: any) => typeof img === "string" && img.trim() !== "")) {
+      return next(createError(400, "Invalid input: All image URLs must be valid non-empty strings."));
+      
     }
+    
     const validNumberOfSeats = Number(numberOfSeats);
     if (isNaN(validNumberOfSeats) || validNumberOfSeats <= 0) {
       return next(createError(400, "Number of seats is required and must be greater than 0."));
