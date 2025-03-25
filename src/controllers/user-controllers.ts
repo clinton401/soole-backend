@@ -3,7 +3,7 @@ import createError from "http-errors";
 import { UserModel } from "../nobox/record-structures/user";
 import { PaymentMethodModel } from "../nobox/record-structures/payment-method";
 import { server_error, unknown_error, unauthorized_error } from "../lib/variables";
-import { isCreditCardValid, validateExpiryDate, userHandler } from "../lib/utils";
+import { isCreditCardValid, validateExpiryDate, userHandler, isValidImage } from "../lib/utils";
 import { UpdateProfileSchema } from "../schemas/index";
 import { ZodError } from "zod";
 import { hashPassword, validatePassword } from "../lib/password-utils";
@@ -115,26 +115,28 @@ export const updateUserDetails = async (req: Request, res: Response, next: NextF
 
         if (!validatedData || Object.keys(validatedData).length < 1) return next(createError(400, "At least one field must be provided."));
 
-        if (validatedData.phone) {
-            const phoneExists = await UserModel.findOne({ phone: validatedData.phone });
-            if (phoneExists) {
-                return next(createError(400, "Phone number already exists."));
-            }
-        }
-        if (validatedData.email) {
-            const emailExists = await UserModel.findOne({ email: validatedData.email.toLowerCase() });
-            if (emailExists) {
-                return next(createError(400, "Email already exists."));
-            }
-        }
-
+        // if (validatedData.phone) {
+        //     const phoneExists = await UserModel.findOne({ phone: validatedData.phone });
+        //     if (phoneExists) {
+        //         return next(createError(400, "Phone number already exists."));
+        //     }
+        // }
+        // if (validatedData.email) {
+        //     const emailExists = await UserModel.findOne({ email: validatedData.email.toLowerCase() });
+        //     if (emailExists) {
+        //         return next(createError(400, "Email already exists."));
+        //     }
+        // }
+// if(validatedData.avatarUrl && !isValidImage(validatedData.avatarUrl)){
+//     return next(createError(400, "Avatar URL must be a valid image"))
+// }
         const fieldsToUpdate = Object.fromEntries(
             Object.entries(validatedData).filter(([key, value]) => value !== undefined)
         );
         const validFields = {
             ...fieldsToUpdate,
-            ...(validatedData.email ? { email: validatedData.email.toLowerCase() } : {}),
-            ...(validatedData.username ? { username: validatedData.username.toLowerCase() } : {}),
+            // ...(validatedData.email ? { email: validatedData.email.toLowerCase() } : {}),
+            // ...(validatedData.username ? { username: validatedData.username.toLowerCase() } : {}),
 
         }
         const user = await UserModel.findOne({ id: userId }, {});

@@ -255,10 +255,11 @@ const completeProfile = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
 });
 exports.completeProfile = completeProfile;
 const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const { password, contactInfo } = req.body;
+    const { password, contactInfo, rememberMe } = req.body;
     if (!password || !contactInfo) {
         return next((0, http_errors_1.default)(400, "Incomplete credentials"));
     }
+    const shouldRemember = typeof rememberMe === "boolean" ? rememberMe : rememberMe === "true";
     try {
         let user;
         const options = {
@@ -303,7 +304,7 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
         if (!isPasswordValid) {
             return next((0, http_errors_1.default)(401, "Invalid credentials. Check password and try again"));
         }
-        const access_token = (0, access_tokens_1.generateAccessToken)(user.id);
+        const access_token = (0, access_tokens_1.generateAccessToken)(user.id, shouldRemember);
         res.status(200).json({ status: "success", message: "Login successful.", user: (0, utils_1.userHandler)(user), access_token });
     }
     catch (error) {

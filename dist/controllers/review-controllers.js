@@ -76,6 +76,12 @@ const createReview = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
     }
 });
 exports.createReview = createReview;
+const getAverageRating = (reviews) => {
+    if (reviews.length === 0)
+        return 0;
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    return totalRating / reviews.length;
+};
 const getDriverReviews = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { page } = req.query;
     const driverId = req.params.driverId;
@@ -86,12 +92,13 @@ const getDriverReviews = (req, res, next) => __awaiter(void 0, void 0, void 0, f
         if (!reviews) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
+        const averageRating = getAverageRating(reviews);
         const pageSize = 15;
         const data = (0, utils_1.getUserPageInfo)(reviews, pageSize, currentPage, "reviews");
         res.json({
             status: "success",
             message: "Reviews retrieved successfully",
-            data
+            data: Object.assign(Object.assign({}, data), { averageRating })
         });
     }
     catch (error) {

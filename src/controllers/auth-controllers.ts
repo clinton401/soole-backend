@@ -250,11 +250,12 @@ export const completeProfile = async (req: Request, res: Response, next: NextFun
 }
 
 export const login = async (req: Request, res: Response, next: NextFunction) => {
-  const { password, contactInfo } = req.body;
+  const { password, contactInfo, rememberMe } = req.body;
 
   if (!password || !contactInfo) {
     return next(createError(400, "Incomplete credentials"));
   }
+  const shouldRemember = typeof rememberMe === "boolean" ? rememberMe : rememberMe === "true";
 
   try {
     let user: User & {
@@ -305,7 +306,7 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     if (!isPasswordValid) {
       return next(createError(401, "Invalid credentials. Check password and try again"))
     }
-    const access_token = generateAccessToken(user.id);
+    const access_token = generateAccessToken(user.id, shouldRemember);
     res.status(200).json({ status: "success", message: "Login successful.", user: userHandler(user), access_token })
   } catch (error) {
     console.error(`Unable sign in user: ${error}`)

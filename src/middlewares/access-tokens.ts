@@ -3,14 +3,19 @@ import { Request, Response, NextFunction } from "express";
 import createError from "http-errors";
 import { server_error } from "../lib/variables";
 
-export const generateAccessToken = (id: string) => {
+export const generateAccessToken = (id: string, shouldRemember = false) => {
   const secret = process.env.JWT_SECRET;
   const expiresIn = process.env.JWT_EXPIRES_IN;
+
   if (!secret || !expiresIn) {
-    throw new Error("JWT secret and expire time are required");
+    throw new Error("JWT secret and expiration time are required");
   }
-  return jwt.sign({ id }, secret, { expiresIn });
+
+  return jwt.sign({ id }, secret, {
+    expiresIn: shouldRemember === true ? undefined : expiresIn, 
+  });
 };
+
 export const verifyAccessToken = (
   req: Request,
   res: Response,

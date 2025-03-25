@@ -122,35 +122,35 @@ exports.ScheduleTripSchema = zod_1.z.object({
 });
 exports.UpdateProfileSchema = zod_1.z
     .object({
-    phone: zod_1.z
-        .string()
-        .trim()
-        .regex(/^\+[1-9]\d{1,14}$/, {
-        message: "Invalid phone number format.",
-    }).optional(),
-    firstName: zod_1.z
-        .string()
-        .trim()
-        .min(3, { message: "First name must be at least 3 characters long." })
-        .max(50, { message: "First name must not exceed 50 characters." })
-        .optional(),
-    lastName: zod_1.z
-        .string()
-        .trim()
-        .min(3, { message: "Last name must be at least 3 characters long." })
-        .max(50, { message: "Last name must not exceed 50 characters." })
-        .optional(),
-    email: zod_1.z
-        .string()
-        .trim()
-        .email({ message: "Invalid email format." })
-        .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: "Invalid email address." })
-        .optional(),
-    gender: zod_1.z
-        .enum(["MALE", "FEMALE", "OTHER"], {
-        errorMap: () => ({ message: "Gender must be MALE, FEMALE, or OTHER." }),
-    })
-        .optional(),
+    // phone: z
+    //   .string()
+    //   .trim()
+    //   .regex(/^\+[1-9]\d{1,14}$/, {
+    //     message: "Invalid phone number format.",
+    //   }).optional(),
+    // firstName: z
+    //   .string()
+    //   .trim()
+    //   .min(3, { message: "First name must be at least 3 characters long." })
+    //   .max(50, { message: "First name must not exceed 50 characters." })
+    //   .optional(),
+    // lastName: z
+    //   .string()
+    //   .trim()
+    //   .min(3, { message: "Last name must be at least 3 characters long." })
+    //   .max(50, { message: "Last name must not exceed 50 characters." })
+    //   .optional(),
+    // email: z
+    //   .string()
+    //   .trim()
+    //   .email({ message: "Invalid email format." })
+    //   .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: "Invalid email address." })
+    //   .optional(),
+    // gender: z
+    //   .enum(["MALE", "FEMALE", "OTHER"], {
+    //     errorMap: () => ({ message: "Gender must be MALE, FEMALE, or OTHER." }),
+    //   })
+    //   .optional(),
     dob: zod_1.z
         .string()
         .regex(/^(0[1-9]|[12][0-9]|3[01])-(0[1-9]|1[0-2])-\d{4}$/, {
@@ -169,12 +169,12 @@ exports.UpdateProfileSchema = zod_1.z
         .refine((bio) => !bio || bio.trim().split(/\s+/).length >= 1, {
         message: "Bio must have at least one word if provided.",
     }),
-    username: zod_1.z
-        .string()
-        .trim()
-        .min(3, { message: "Username must be at least 3 characters long." })
-        .max(50, { message: "Username must not exceed 50 characters." })
-        .optional(),
+    // username: z
+    //   .string()
+    //   .trim()
+    //   .min(3, { message: "Username must be at least 3 characters long." })
+    //   .max(50, { message: "Username must not exceed 50 characters." })
+    //   .optional(),
     avatarUrl: zod_1.z
         .string()
         .url({ message: "Invalid avatar URL format." })

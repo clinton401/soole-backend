@@ -3,7 +3,7 @@ import createError from "http-errors";
 import { server_error, unauthorized_error, unknown_error } from "../lib/variables";
 import { isValidNumber, paginationOptions, getUserPageInfo } from "../lib/utils";
 import { UserModel } from "../nobox/record-structures/user"
-import { ReviewModel } from "../nobox/record-structures/review"
+import { ReviewModel, Review } from "../nobox/record-structures/review"
 export const createReview = async (req: Request, res: Response, next: NextFunction) => {
     const { driverId, comment, rating } = req.body;
     const userId = req.userId;
@@ -64,6 +64,12 @@ export const createReview = async (req: Request, res: Response, next: NextFuncti
         return next(createError(500, server_error))
     }
 }
+const getAverageRating = (reviews:  Review[]): number => {
+    if (reviews.length === 0) return 0;
+  
+    const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
+    return totalRating / reviews.length;
+  };
 
 export const getDriverReviews = async (req: Request, res: Response, next: NextFunction) => {
     const {page} = req.query as {
@@ -77,12 +83,15 @@ export const getDriverReviews = async (req: Request, res: Response, next: NextFu
 if(!reviews){
     return next(createError(500, unknown_error))
 }
+ const averageRating = getAverageRating(reviews)
 const pageSize = 15;
 const data = getUserPageInfo(reviews, pageSize, currentPage, "reviews");
         res.json({
             status: "success",
             message: "Reviews retrieved successfully",
-            data
+            data: {...data,
+                averageRating
+            }
         })
     } catch (error) {
         console.error(`Unable to get driver reviews: ${error}`);

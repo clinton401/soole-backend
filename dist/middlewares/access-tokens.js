@@ -7,13 +7,15 @@ exports.isAuthenticated = exports.verifyAccessToken = exports.generateAccessToke
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const http_errors_1 = __importDefault(require("http-errors"));
 const variables_1 = require("../lib/variables");
-const generateAccessToken = (id) => {
+const generateAccessToken = (id, shouldRemember = false) => {
     const secret = process.env.JWT_SECRET;
     const expiresIn = process.env.JWT_EXPIRES_IN;
     if (!secret || !expiresIn) {
-        throw new Error("JWT secret and expire time are required");
+        throw new Error("JWT secret and expiration time are required");
     }
-    return jsonwebtoken_1.default.sign({ id }, secret, { expiresIn });
+    return jsonwebtoken_1.default.sign({ id }, secret, {
+        expiresIn: shouldRemember === true ? undefined : expiresIn,
+    });
 };
 exports.generateAccessToken = generateAccessToken;
 const verifyAccessToken = (req, res, next) => {
