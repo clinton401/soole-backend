@@ -24,7 +24,7 @@ const mail_1 = require("../data/mail");
 const getComplaintSummary = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const [total, sentCount] = yield Promise.all([
-            complaint_conversation_1.ComplaintConversationModel.find({ adminViewable: true }),
+            complaint_conversation_1.ComplaintConversationModel.find({}),
             complaint_message_1.ComplaintMessageModel.find({ senderType: complaint_message_1.ComplaintSenderType.ADMIN })
         ]);
         if (!total || !sentCount) {
@@ -74,7 +74,7 @@ const getComplaintConversations = (req, res, next) => __awaiter(void 0, void 0, 
             conversations = yield complaint_conversation_1.ComplaintConversationModel.find({ isDeleted: true }, options);
         }
         else {
-            const total = yield complaint_conversation_1.ComplaintConversationModel.find({ adminViewable: true }, options);
+            const total = yield complaint_conversation_1.ComplaintConversationModel.find({}, options);
             conversations = total.filter(convo => convo.isDeleted === false);
         }
         if (!conversations) {
@@ -356,7 +356,7 @@ const searchForComplaints = (req, res, next) => __awaiter(void 0, void 0, void 0
     const pageSize = 15;
     const options = (0, utils_1.adminPaginationOptions)(currentPage, pageSize);
     try {
-        const complaints = yield complaint_conversation_1.ComplaintConversationModel.find({ adminViewable: true }, options);
+        const complaints = yield complaint_conversation_1.ComplaintConversationModel.find({}, options);
         if (!complaints) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }

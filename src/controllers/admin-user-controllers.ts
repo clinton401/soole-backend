@@ -23,7 +23,7 @@ export const getAllUsersForAdmin = async (req: Request, res: Response, next: Nex
         if(filterVariable ){
             users = await UserModel.find({status: filterVariable}, options);
         } else {
-            users = await UserModel.find({adminViewable: true}, options);
+            users = await UserModel.find({}, options);
         }
         if (!users) {
             return next(createError(500, unknown_error));
@@ -138,7 +138,7 @@ export const searchForUser = async (req: Request, res: Response, next: NextFunct
     const options = adminPaginationOptions(currentPage, pageSize);
 
     try {
-        const users = await UserModel.find({adminViewable: true}, options);
+        const users = await UserModel.find({}, options);
         if (!users) {
             return next(createError(500, unknown_error))
         }

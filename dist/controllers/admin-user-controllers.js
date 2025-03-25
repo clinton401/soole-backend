@@ -31,7 +31,7 @@ const getAllUsersForAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
             users = yield user_1.UserModel.find({ status: filterVariable }, options);
         }
         else {
-            users = yield user_1.UserModel.find({ adminViewable: true }, options);
+            users = yield user_1.UserModel.find({}, options);
         }
         if (!users) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
@@ -133,7 +133,7 @@ const searchForUser = (req, res, next) => __awaiter(void 0, void 0, void 0, func
     const pageSize = 15;
     const options = (0, utils_1.adminPaginationOptions)(currentPage, pageSize);
     try {
-        const users = yield user_1.UserModel.find({ adminViewable: true }, options);
+        const users = yield user_1.UserModel.find({}, options);
         if (!users) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }

@@ -38,7 +38,7 @@ const getAllAdmins = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
     }
     ;
     try {
-        const admins = yield admin_1.AdminModel.find({ adminViewable: true });
+        const admins = yield admin_1.AdminModel.find({});
         if (!admins) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
@@ -153,7 +153,19 @@ const removeFromSuperAdmin = (req, res, next) => __awaiter(void 0, void 0, void 
 exports.removeFromSuperAdmin = removeFromSuperAdmin;
 const addNewAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const values = req.body;
+    const userId = req.userId;
+    if (!userId) {
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    }
+    ;
     try {
+        const superAdmin = yield (0, admin_2.findAdminById)(userId);
+        if (!superAdmin) {
+            return next((0, http_errors_1.default)(404, "User not found"));
+        }
+        if (superAdmin.role !== admin_1.AdminRole.SUPER_ADMIN) {
+            return next((0, http_errors_1.default)(403, "You need super admin privileges to perform this action."));
+        }
         const validatedData = schemas_1.AddNewAdminSchema.parse(values);
         const password = process.env.NEW_ADMIN_PASSWORD;
         if (!password) {

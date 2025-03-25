@@ -33,7 +33,7 @@ const getAllRidesForAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
             }, options);
         }
         else {
-            rides = yield ride_1.rideModel.find({ adminViewable: true }, options);
+            rides = yield ride_1.rideModel.find({}, options);
         }
         if (!rides) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
@@ -70,7 +70,7 @@ const searchForRides = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
     const pageSize = 15;
     const options = (0, utils_1.adminPaginationOptions)(currentPage, pageSize);
     try {
-        const rides = yield ride_1.rideModel.find({ adminViewable: true }, options);
+        const rides = yield ride_1.rideModel.find({}, options);
         if (!rides) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }

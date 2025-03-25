@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isWithinTwoDays = exports.isValidImage = exports.getMonthName = exports.getDayOfWeek = exports.getWeekNumber = exports.getDates = exports.calculateGrowth = exports.dateToInt = exports.hasSufficientBalance = exports.getPageInfo = exports.getUserPageInfo = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
+exports.isPastDate = exports.isWithinTwoDays = exports.isValidImage = exports.getMonthName = exports.getDayOfWeek = exports.getWeekNumber = exports.getDates = exports.calculateGrowth = exports.dateToInt = exports.hasSufficientBalance = exports.getPageInfo = exports.getUserPageInfo = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
 const validator_1 = __importDefault(require("validator"));
 const errorHandler = (error, code) => {
     return {
@@ -232,3 +232,9 @@ const isWithinTwoDays = (rideDate, requestDate) => {
     return diffInDays <= 2;
 };
 exports.isWithinTwoDays = isWithinTwoDays;
+const isPastDate = (date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return date < today;
+};
+exports.isPastDate = isPastDate;

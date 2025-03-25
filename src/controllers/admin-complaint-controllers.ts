@@ -12,7 +12,7 @@ export const getComplaintSummary = async (req: Request, res: Response, next: Nex
     try {
 
         const [total, sentCount] = await Promise.all([
-            ComplaintConversationModel.find({ adminViewable: true }),
+            ComplaintConversationModel.find({}),
             ComplaintMessageModel.find({ senderType: ComplaintSenderType.ADMIN })
 
         ]);
@@ -71,7 +71,7 @@ export const getComplaintConversations = async (req: Request, res: Response, nex
         } else if (filterVariable === "BIN") {
             conversations = await ComplaintConversationModel.find({ isDeleted: true }, options);
         } else {
-            const total = await ComplaintConversationModel.find({ adminViewable: true }, options);
+            const total = await ComplaintConversationModel.find({ }, options);
 
             conversations = total.filter(convo => convo.isDeleted === false)
         }
@@ -366,7 +366,7 @@ export const searchForComplaints = async (req: Request, res: Response, next: Nex
     const options = adminPaginationOptions(currentPage, pageSize);
 
     try {
-        const complaints = await ComplaintConversationModel.find({ adminViewable: true }, options);
+        const complaints = await ComplaintConversationModel.find({ }, options);
         if (!complaints) {
             return next(createError(500, unknown_error))
         }

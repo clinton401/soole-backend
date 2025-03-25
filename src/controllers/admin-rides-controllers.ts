@@ -34,7 +34,7 @@ export const getAllRidesForAdmin = async (req: Request, res: Response, next: Nex
             }, options)
         } else {
 
-            rides = await rideModel.find({ adminViewable: true }, options);
+            rides = await rideModel.find({ }, options);
         }
         if (!rides) {
             return next(createError(500, unknown_error))
@@ -83,7 +83,7 @@ export const searchForRides = async (req: Request, res: Response, next: NextFunc
     const options = adminPaginationOptions(currentPage, pageSize);
 
     try{
-        const rides = await rideModel.find({ adminViewable: true }, options);
+        const rides = await rideModel.find({}, options);
         if(!rides){
             return next(createError(500, unknown_error))
         }

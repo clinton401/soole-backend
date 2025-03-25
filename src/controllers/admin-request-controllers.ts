@@ -16,7 +16,7 @@ export const getAdminRequests = async (req: Request, res: Response, next: NextFu
     const currentPage = Math.max(1, Number(page) || 1);
     try {
         const options = paginationOptions()
-        const requests = await AdminRequestModel.find({ adminViewable: true }, options);
+        const requests = await AdminRequestModel.find({}, options);
         if(!requests){
             return next(createError(500, unknown_error))
         }

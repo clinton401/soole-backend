@@ -8,7 +8,7 @@ import { server_error, unknown_error, unauthorized_error } from "../lib/variable
 import { PayoutModel, PayoutType, PayoutStatus } from "../nobox/record-structures/payout";
 import { findWalletByUserId, deductFromWallet, addToWallet } from "../data/wallet"
 import { createNotification } from "../data/notification"
-import { hasSufficientBalance, hasDecimal, dateToInt, getUserPageInfo, isWithinTwoDays } from "../lib/utils";
+import { hasSufficientBalance, hasDecimal, dateToInt, getUserPageInfo, isWithinTwoDays, isPastDate } from "../lib/utils";
 import {RidePassengerModel, RidePassenger} from "../nobox/record-structures/ride-passenger";
 import { TransactionModel, TransactionType, TransactionStatus } from "../nobox/record-structures/transaction";
 import {io} from ".."
@@ -43,6 +43,9 @@ export const createRide = async (
   
     if (isNaN(inputDate.getTime())) {
       return next(createError(400, "Invalid date format provided."));
+    }
+    if(isPastDate(inputDate)) {
+      return next(createError(400, "Invalid date! Please enter a date that is today or in the future."));
     }
     if(!carImages || carImages.length !== 3) {
       return next(createError(400, "Car images are required and must be of length 3"))
@@ -150,11 +153,13 @@ export const searchRides = async (
     return next(createError(400, "Invalid date format provided."));
   }
 
-  const currentPage = Math.max(1, Number(page) || 1);
+  // const currentPage = Math.max(1, Number(page) || 1);
   try {
     const rides = await rideModel.find({
       status: "ACTIVE"
     });
+
+    // const rideNotCreatedByYou = rides.filter(ride => ride.userId !== userId);
     const ridesNotBookedByYou = rides.filter(ride => {
       return !ride.passengers.some(passenger => passenger.id === userId);
     });
@@ -342,6 +347,7 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
       triggeredByFirstName: user.firstName as string,
       triggeredByLastName: user.lastName as string,
       triggeredByUsername: user.username as string,
+      price: refundAmount
     })
     const payouts = await PayoutModel.find({
       userId: ride.userId,
@@ -423,6 +429,7 @@ export const cancelRideDriver = async (req: Request, res: Response, next: NextFu
             seats: passenger.seats,
             isRead: false,
             rideId: id,
+            price: ride.pricePerSeat * passenger.seats,
             triggeredByAvatarUrl: driver.avatarUrl as string,
             triggeredByFirstName: driver.firstName as string,
             triggeredByLastName: driver.lastName as string,
@@ -502,6 +509,10 @@ export const requestRide = async (req: Request, res: Response, next: NextFunctio
     if (ride.status !== "ACTIVE") {
       return next(createError(400, "This ride is not active and cannot be requested."))
     }
+const rideDate = new Date(ride.date)
+    if(isPastDate(rideDate)) {
+      return next(createError(400, "You can't request for a ride that is in the past"));
+    }
     if (!wallet) return next(createError(400, "You need to create a wallet before requesting a ride."))
     if (ride.userId === userId) return next(createError(400, "You can't request this ride because you're the driver."));
     const amountOfSeatsLeft = ride.numberOfSeats - validSeats;
@@ -525,7 +536,7 @@ export const requestRide = async (req: Request, res: Response, next: NextFunctio
       triggeredByFirstName: user.firstName as string,
       triggeredByLastName: user.lastName as string,
       triggeredByUsername: user.username as string,
-      
+      price: rideCost
     }
     const existingRequest = await NotificationModel.findOne({
       userId: ride.userId,
@@ -632,6 +643,13 @@ export const acceptRideRequest = async (req: Request, res: Response, next: NextF
     if (ride.status !== "ACTIVE") {
       return next(createError(400, "You can only accept requests for active rides."))
     }
+
+    const rideDate = new Date(ride.date)
+    if(isPastDate(rideDate)) {
+      return next(createError(400, "You can't accept ride request for a ride that is in the past"));
+    }
+    
+
     if (notification.type !== NotificationType.RIDE_REQUEST) {
       return next(createError(400, "You can only accept  notifications of type 'RIDE_REQUEST'."));
     }
@@ -657,7 +675,7 @@ const inputDate = new Date(date);
   
 const validDate = isNaN(inputDate.getTime()) ? new Date(): inputDate;
   
-
+const price = validSeats * ride.pricePerSeat;
 await RidePassengerModel.insertOne({userId,
 userUsername: username as string,
 userAvatarUrl: avatarUrl as string,
@@ -687,6 +705,7 @@ driverId
       seats: notification.seats,
       isRead: false,
       rideId,
+      price,
       triggeredByAvatarUrl: driver.avatarUrl as string,
       triggeredByFirstName: driver.firstName as string,
       triggeredByLastName: driver.lastName as string,
@@ -731,6 +750,11 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
       return next(createError(400, "You can only reject  notifications of type 'RIDE_REQUEST'."));
     }
     if (ride.userId !== driverId) return next(createError(403, "You can't reject this ride because you're not the driver."));
+    
+    const rideDate = new Date(ride.date)
+    if(isPastDate(rideDate)) {
+      return next(createError(400, "You can't reject ride request for a ride that is in the past"));
+    }
 
     const wallet = await findWalletByUserId(notification.triggeredById)
     if (!wallet) {
@@ -759,6 +783,7 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
     seats: notification.seats,
     isRead: false,
     rideId,
+    price: refundAmount,
     triggeredByAvatarUrl: driver.avatarUrl as string,
     triggeredByFirstName: driver.firstName as string,
     triggeredByLastName: driver.lastName as string,
@@ -840,6 +865,10 @@ export const startRide = async (req: Request, res: Response, next: NextFunction)
         "This ride is not active and cannot be started."))
     }
 
+    const rideDate = new Date(ride.date)
+    if(isPastDate(rideDate)) {
+      return next(createError(400, "You can't start this ride because it is in the past"));
+    }
 
     const updatedRide = await rideModel.updateOneById(ride.id, {
       status: "ONGOING"
@@ -862,6 +891,7 @@ export const startRide = async (req: Request, res: Response, next: NextFunction)
           seats: passenger.seats,
           isRead: false,
           rideId: id,
+          price: ride.pricePerSeat * passenger.seats,
           triggeredByAvatarUrl: driver.avatarUrl as string,
           triggeredByFirstName: driver.firstName as string,
           triggeredByLastName: driver.lastName as string,
@@ -912,6 +942,10 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
     if (ride.status !== "COMPLETED") {
       return next(createError(400, "You can only confirm completion for a ride that has been marked as completed by the driver."));
     }
+    const rideDate = new Date(ride.date)
+    if(isPastDate(rideDate)) {
+      return next(createError(400, "You can't confirm completion for this ride because it is in the past"));
+    }
 
     const wallet = await findWalletByUserId(ride.userId, WalletType.DRIVER);
     if (!wallet) {
@@ -955,6 +989,7 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
         seats: ride.numberOfSeats,
         isRead: false,
         rideId: id,
+        price: totalPrice, 
         triggeredByAvatarUrl: user.avatarUrl as string,
         triggeredByFirstName: user.firstName as string,
         triggeredByLastName: user.lastName as string,
@@ -1014,7 +1049,10 @@ export const driverConfirmCompletion = async (req: Request, res: Response, next:
         "You can only confirm completion for an ongoing ride."))
     }
     if (ride.userId !== driverId) return next(createError(400, "You can't mark this as completed ride because you're not the driver."));
-
+    const rideDate = new Date(ride.date)
+    if(isPastDate(rideDate)) {
+      return next(createError(400, "You can't confirm completion for this ride because it is in the past"));
+    }
     const updatedRide = await rideModel.updateOneById(ride.id, {
       status: "COMPLETED"
     })
@@ -1033,6 +1071,7 @@ export const driverConfirmCompletion = async (req: Request, res: Response, next:
           seats: passenger.seats,
           isRead: false,
           rideId: id,
+          price: ride.pricePerSeat * passenger.seats,
           triggeredByAvatarUrl: driver.avatarUrl as string,
           triggeredByFirstName: driver.firstName as string,
           triggeredByLastName: driver.lastName as string,

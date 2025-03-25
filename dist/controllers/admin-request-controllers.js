@@ -38,7 +38,7 @@ const getAdminRequests = (req, res, next) => __awaiter(void 0, void 0, void 0, f
     const currentPage = Math.max(1, Number(page) || 1);
     try {
         const options = (0, utils_1.paginationOptions)();
-        const requests = yield admin_request_2.AdminRequestModel.find({ adminViewable: true }, options);
+        const requests = yield admin_request_2.AdminRequestModel.find({}, options);
         if (!requests) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }

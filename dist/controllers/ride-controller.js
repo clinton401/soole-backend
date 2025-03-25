@@ -36,6 +36,9 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         if (isNaN(inputDate.getTime())) {
             return next((0, http_errors_1.default)(400, "Invalid date format provided."));
         }
+        if ((0, utils_1.isPastDate)(inputDate)) {
+            return next((0, http_errors_1.default)(400, "Invalid date! Please enter a date that is today or in the future."));
+        }
         if (!carImages || carImages.length !== 3) {
             return next((0, http_errors_1.default)(400, "Car images are required and must be of length 3"));
         }
@@ -126,11 +129,12 @@ const searchRides = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
     if (isNaN(requestDate.getTime())) {
         return next((0, http_errors_1.default)(400, "Invalid date format provided."));
     }
-    const currentPage = Math.max(1, Number(page) || 1);
+    // const currentPage = Math.max(1, Number(page) || 1);
     try {
         const rides = yield ride_1.rideModel.find({
             status: "ACTIVE"
         });
+        // const rideNotCreatedByYou = rides.filter(ride => ride.userId !== userId);
         const ridesNotBookedByYou = rides.filter(ride => {
             return !ride.passengers.some(passenger => passenger.id === userId);
         });
@@ -290,6 +294,7 @@ const cancelRidePassenger = (req, res, next) => __awaiter(void 0, void 0, void 0
             triggeredByFirstName: user.firstName,
             triggeredByLastName: user.lastName,
             triggeredByUsername: user.username,
+            price: refundAmount
         });
         const payouts = yield payout_1.PayoutModel.find({
             userId: ride.userId,
@@ -371,6 +376,7 @@ const cancelRideDriver = (req, res, next) => __awaiter(void 0, void 0, void 0, f
                             seats: passenger.seats,
                             isRead: false,
                             rideId: id,
+                            price: ride.pricePerSeat * passenger.seats,
                             triggeredByAvatarUrl: driver.avatarUrl,
                             triggeredByFirstName: driver.firstName,
                             triggeredByLastName: driver.lastName,
@@ -443,6 +449,10 @@ const requestRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         if (ride.status !== "ACTIVE") {
             return next((0, http_errors_1.default)(400, "This ride is not active and cannot be requested."));
         }
+        const rideDate = new Date(ride.date);
+        if ((0, utils_1.isPastDate)(rideDate)) {
+            return next((0, http_errors_1.default)(400, "You can't request for a ride that is in the past"));
+        }
         if (!wallet)
             return next((0, http_errors_1.default)(400, "You need to create a wallet before requesting a ride."));
         if (ride.userId === userId)
@@ -468,6 +478,7 @@ const requestRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
             triggeredByFirstName: user.firstName,
             triggeredByLastName: user.lastName,
             triggeredByUsername: user.username,
+            price: rideCost
         };
         const existingRequest = yield notification_1.NotificationModel.findOne({
             userId: ride.userId,
@@ -583,6 +594,10 @@ const acceptRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
         if (ride.status !== "ACTIVE") {
             return next((0, http_errors_1.default)(400, "You can only accept requests for active rides."));
         }
+        const rideDate = new Date(ride.date);
+        if ((0, utils_1.isPastDate)(rideDate)) {
+            return next((0, http_errors_1.default)(400, "You can't accept ride request for a ride that is in the past"));
+        }
         if (notification.type !== notification_1.NotificationType.RIDE_REQUEST) {
             return next((0, http_errors_1.default)(400, "You can only accept  notifications of type 'RIDE_REQUEST'."));
         }
@@ -608,6 +623,7 @@ const acceptRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
         const inputDate = new Date(date);
         const userName = `${firstName} ${lastName}`;
         const validDate = isNaN(inputDate.getTime()) ? new Date() : inputDate;
+        const price = validSeats * ride.pricePerSeat;
         yield ride_passenger_1.RidePassengerModel.insertOne({ userId,
             userUsername: username,
             userAvatarUrl: avatarUrl,
@@ -633,6 +649,7 @@ const acceptRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
             seats: notification.seats,
             isRead: false,
             rideId,
+            price,
             triggeredByAvatarUrl: driver.avatarUrl,
             triggeredByFirstName: driver.firstName,
             triggeredByLastName: driver.lastName,
@@ -683,6 +700,10 @@ const rejectRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
         }
         if (ride.userId !== driverId)
             return next((0, http_errors_1.default)(403, "You can't reject this ride because you're not the driver."));
+        const rideDate = new Date(ride.date);
+        if ((0, utils_1.isPastDate)(rideDate)) {
+            return next((0, http_errors_1.default)(400, "You can't reject ride request for a ride that is in the past"));
+        }
         const wallet = yield (0, wallet_2.findWalletByUserId)(notification.triggeredById);
         if (!wallet) {
             return next((0, http_errors_1.default)(400, "No wallet found for this user"));
@@ -709,6 +730,7 @@ const rejectRideRequest = (req, res, next) => __awaiter(void 0, void 0, void 0, 
                 seats: notification.seats,
                 isRead: false,
                 rideId,
+                price: refundAmount,
                 triggeredByAvatarUrl: driver.avatarUrl,
                 triggeredByFirstName: driver.firstName,
                 triggeredByLastName: driver.lastName,
@@ -783,6 +805,10 @@ const startRide = (req, res, next) => __awaiter(void 0, void 0, void 0, function
         if (ride.status !== "ACTIVE") {
             return next((0, http_errors_1.default)(400, "This ride is not active and cannot be started."));
         }
+        const rideDate = new Date(ride.date);
+        if ((0, utils_1.isPastDate)(rideDate)) {
+            return next((0, http_errors_1.default)(400, "You can't start this ride because it is in the past"));
+        }
         const updatedRide = yield ride_1.rideModel.updateOneById(ride.id, {
             status: "ONGOING"
         });
@@ -803,6 +829,7 @@ const startRide = (req, res, next) => __awaiter(void 0, void 0, void 0, function
                     seats: passenger.seats,
                     isRead: false,
                     rideId: id,
+                    price: ride.pricePerSeat * passenger.seats,
                     triggeredByAvatarUrl: driver.avatarUrl,
                     triggeredByFirstName: driver.firstName,
                     triggeredByLastName: driver.lastName,
@@ -850,6 +877,10 @@ const passengerConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0,
         if (ride.status !== "COMPLETED") {
             return next((0, http_errors_1.default)(400, "You can only confirm completion for a ride that has been marked as completed by the driver."));
         }
+        const rideDate = new Date(ride.date);
+        if ((0, utils_1.isPastDate)(rideDate)) {
+            return next((0, http_errors_1.default)(400, "You can't confirm completion for this ride because it is in the past"));
+        }
         const wallet = yield (0, wallet_2.findWalletByUserId)(ride.userId, wallet_1.WalletType.DRIVER);
         if (!wallet) {
             return next((0, http_errors_1.default)(404, "No wallet found for the driver"));
@@ -890,6 +921,7 @@ const passengerConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0,
                 seats: ride.numberOfSeats,
                 isRead: false,
                 rideId: id,
+                price: totalPrice,
                 triggeredByAvatarUrl: user.avatarUrl,
                 triggeredByFirstName: user.firstName,
                 triggeredByLastName: user.lastName,
@@ -945,6 +977,10 @@ const driverConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0, vo
         }
         if (ride.userId !== driverId)
             return next((0, http_errors_1.default)(400, "You can't mark this as completed ride because you're not the driver."));
+        const rideDate = new Date(ride.date);
+        if ((0, utils_1.isPastDate)(rideDate)) {
+            return next((0, http_errors_1.default)(400, "You can't confirm completion for this ride because it is in the past"));
+        }
         const updatedRide = yield ride_1.rideModel.updateOneById(ride.id, {
             status: "COMPLETED"
         });
@@ -962,6 +998,7 @@ const driverConfirmCompletion = (req, res, next) => __awaiter(void 0, void 0, vo
                     seats: passenger.seats,
                     isRead: false,
                     rideId: id,
+                    price: ride.pricePerSeat * passenger.seats,
                     triggeredByAvatarUrl: driver.avatarUrl,
                     triggeredByFirstName: driver.firstName,
                     triggeredByLastName: driver.lastName,

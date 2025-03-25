@@ -8,7 +8,7 @@ export const getPayoutYearlyOverview = async(validYear: number) => {
         
 
 
-        const payouts = await PayoutModel.find({ adminViewable: true });
+        const payouts = await PayoutModel.find({});
         
 
         if(!payouts){

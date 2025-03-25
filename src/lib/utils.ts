@@ -271,3 +271,10 @@ export const isWithinTwoDays = (rideDate: string, requestDate: Date) => {
 
   return diffInDays <= 2;
 };
+
+export const isPastDate = (date: Date) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return date < today;
+};

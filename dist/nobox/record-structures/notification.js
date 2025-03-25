@@ -87,6 +87,11 @@ exports.NotificationStructure = {
             required: false,
             type: String,
         },
+        price: {
+            description: "Price of the ride ",
+            required: true,
+            type: Number
+        }
         // isCompleted: {
         //   description: "Is it completed",
         //   required: true,

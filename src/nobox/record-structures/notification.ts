@@ -28,6 +28,7 @@ export interface Notification {
     triggeredByLastName: string;
     triggeredByUsername: string;
     // triggeredByNumber: string;
+    price: number;
     isRead: boolean;
     conversationId?: string;
     driverNumber?: string
@@ -109,6 +110,11 @@ export interface Notification {
         required: false,
         type: String,
       },
+      price: {
+        description: "Price of the ride ",
+        required: true,
+        type: Number
+      }
       // isCompleted: {
       //   description: "Is it completed",
       //   required: true,

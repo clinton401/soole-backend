@@ -27,7 +27,7 @@ export const getAllAdmins = async (req: Request, res: Response, next: NextFuncti
         return next(createError(401, unauthorized_error))
     };
     try {
-        const admins = await AdminModel.find({ adminViewable: true });
+        const admins = await AdminModel.find({});
         if (!admins) {
             return next(createError(500, unknown_error))
         }
@@ -147,10 +147,24 @@ export const removeFromSuperAdmin = async (req: Request, res: Response, next: Ne
 }
 
 export const addNewAdmin = async (req: Request, res: Response, next: NextFunction) => {
-    const values = req.body;
+    const values = req.body;  
+    const userId = req.userId;
+    if (!userId) {
+        return next(createError(401, unauthorized_error))
+    };
 
     try {
+        const superAdmin = await  findAdminById(userId);
+        if(!superAdmin){
+            return next(createError(404, "User not found"))
+        }
+
+        if (superAdmin.role !== AdminRole.SUPER_ADMIN) {
+            return next(createError(403, "You need super admin privileges to perform this action."))
+        }
+
         const validatedData = AddNewAdminSchema.parse(values);
+
         const password = process.env.NEW_ADMIN_PASSWORD;
         if (!password) {
             return next(createError(400, "New admin password is required in the environment variable"))
