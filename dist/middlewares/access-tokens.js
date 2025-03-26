@@ -13,9 +13,10 @@ const generateAccessToken = (id, shouldRemember = false) => {
     if (!secret || !expiresIn) {
         throw new Error("JWT secret and expiration time are required");
     }
-    return jsonwebtoken_1.default.sign({ id }, secret, {
-        expiresIn: shouldRemember === true ? undefined : expiresIn,
-    });
+    const jwtOptions = shouldRemember
+        ? {} // No expiration if shouldRemember is true
+        : { expiresIn }; // Use expiresIn only if shouldRemember is false
+    return jsonwebtoken_1.default.sign({ id }, secret, jwtOptions);
 };
 exports.generateAccessToken = generateAccessToken;
 const verifyAccessToken = (req, res, next) => {

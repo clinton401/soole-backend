@@ -64,15 +64,15 @@ export const createReview = async (req: Request, res: Response, next: NextFuncti
         return next(createError(500, server_error))
     }
 }
-const getAverageRating = (reviews:  Review[]): number => {
+const getAverageRating = (reviews: Review[]): number => {
     if (reviews.length === 0) return 0;
-  
+
     const totalRating = reviews.reduce((sum, review) => sum + review.rating, 0);
     return totalRating / reviews.length;
-  };
+};
 
 export const getDriverReviews = async (req: Request, res: Response, next: NextFunction) => {
-    const {page} = req.query as {
+    const { page } = req.query as {
         page?: string
     }
     const driverId = req.params.driverId;
@@ -80,16 +80,17 @@ export const getDriverReviews = async (req: Request, res: Response, next: NextFu
     try {
         const options = paginationOptions();
         const reviews = await ReviewModel.find({ driverId }, options);
-if(!reviews){
-    return next(createError(500, unknown_error))
-}
- const averageRating = getAverageRating(reviews)
-const pageSize = 15;
-const data = getUserPageInfo(reviews, pageSize, currentPage, "reviews");
+        if (!reviews) {
+            return next(createError(500, unknown_error))
+        }
+        const averageRating = getAverageRating(reviews)
+        const pageSize = 15;
+        const data = getUserPageInfo(reviews, pageSize, currentPage, "reviews");
         res.json({
             status: "success",
             message: "Reviews retrieved successfully",
-            data: {...data,
+            data: {
+                ...data,
                 averageRating
             }
         })

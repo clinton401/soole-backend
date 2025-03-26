@@ -11,9 +11,12 @@ export const generateAccessToken = (id: string, shouldRemember = false) => {
     throw new Error("JWT secret and expiration time are required");
   }
 
-  return jwt.sign({ id }, secret, {
-    expiresIn: shouldRemember === true ? undefined : expiresIn, 
-  });
+  
+  const jwtOptions: jwt.SignOptions = shouldRemember
+    ? {} // No expiration if shouldRemember is true
+    : { expiresIn }; // Use expiresIn only if shouldRemember is false
+
+  return jwt.sign({ id }, secret, jwtOptions);
 };
 
 export const verifyAccessToken = (
