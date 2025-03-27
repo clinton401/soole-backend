@@ -35,7 +35,7 @@ export const getAllUsersForAdmin = async (req: Request, res: Response, next: Nex
             const { firstName, lastName, email, username, status, isNumberVerified } = user;
 
 
-            if (!firstName || !lastName || !email || !username || !isNumberVerified) {
+            if (!firstName || !lastName || !email || !username || !isNumberVerified || !status) {
                 return false;
             }
 

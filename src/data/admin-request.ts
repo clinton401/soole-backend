@@ -1,5 +1,6 @@
 import { AdminRequestModel, AdminRequest } from "../nobox/record-structures/admin-request";
 import { unknown_error } from "../lib/variables";
+import {io} from ".."
 type FullAdmin = AdminRequest & {
     id: string;
     createdAt: string;
@@ -12,6 +13,7 @@ export const createAdminRequest = async (data: AdminRequest): Promise<FullAdmin>
         if (!admin) {
             throw new Error(unknown_error);
         }
+        io.emit("admin:request", admin)
         return admin;
     } catch (error) {
         throw error

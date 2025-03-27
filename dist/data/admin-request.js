@@ -12,12 +12,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.deleteAdminRequestById = exports.findAdminRequestById = exports.hasPendingAdminRequest = exports.createAdminRequest = void 0;
 const admin_request_1 = require("../nobox/record-structures/admin-request");
 const variables_1 = require("../lib/variables");
+const __1 = require("..");
 const createAdminRequest = (data) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const admin = yield admin_request_1.AdminRequestModel.insertOne(data);
         if (!admin) {
             throw new Error(variables_1.unknown_error);
         }
+        __1.io.emit("admin:request", admin);
         return admin;
     }
     catch (error) {

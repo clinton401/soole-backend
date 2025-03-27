@@ -5,7 +5,7 @@ import createError from "http-errors";
 import { unauthorized_error, unknown_error, server_error } from "../lib/variables";
 import { AddNewAdminSchema, UpdateAdminProfileSchema } from "../schemas";
 import { config } from "dotenv";
-import { userHandler, zodErrorHandler, getDates, getUserPageInfo, getWeekNumber, isValidNumber, isValidImage } from "../lib/utils";
+import { userHandler, zodErrorHandler, getDates, getUserPageInfo, adminPaginationOptions, isValidNumber, isValidImage } from "../lib/utils";
 import { validateUniqueAdminIdentifiers, createAdmin, findAdminById } from "../data/admin";
 import { hashPassword, validatePassword,  } from "../lib/password-utils";
 import { ZodError } from "zod";
@@ -26,8 +26,11 @@ export const getAllAdmins = async (req: Request, res: Response, next: NextFuncti
     if (!userId) {
         return next(createError(401, unauthorized_error))
     };
+    
+    const pageSize = 15;
+    const options = adminPaginationOptions(currentPage, pageSize);
     try {
-        const admins = await AdminModel.find({});
+        const admins = await AdminModel.find({}, options);
         if (!admins) {
             return next(createError(500, unknown_error))
         }
@@ -35,7 +38,6 @@ export const getAllAdmins = async (req: Request, res: Response, next: NextFuncti
             return userHandler(admin)
         })
         const filteredAdmins = adminsWithoutPassword.filter(admin => admin.id !== userId);
-        const pageSize = 15;
         const data = getUserPageInfo(filteredAdmins, pageSize, currentPage, "admins");
         res.json({
             status: "success",

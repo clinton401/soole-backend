@@ -37,8 +37,10 @@ const getAllAdmins = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
     }
     ;
+    const pageSize = 15;
+    const options = (0, utils_1.adminPaginationOptions)(currentPage, pageSize);
     try {
-        const admins = yield admin_1.AdminModel.find({});
+        const admins = yield admin_1.AdminModel.find({}, options);
         if (!admins) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
@@ -46,7 +48,6 @@ const getAllAdmins = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
             return (0, utils_1.userHandler)(admin);
         });
         const filteredAdmins = adminsWithoutPassword.filter(admin => admin.id !== userId);
-        const pageSize = 15;
         const data = (0, utils_1.getUserPageInfo)(filteredAdmins, pageSize, currentPage, "admins");
         res.json({
             status: "success",

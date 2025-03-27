@@ -41,7 +41,7 @@ const getAllUsersForAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
         });
         const validUsers = filteredUsers.filter(user => {
             const { firstName, lastName, email, username, status, isNumberVerified } = user;
-            if (!firstName || !lastName || !email || !username || !isNumberVerified) {
+            if (!firstName || !lastName || !email || !username || !isNumberVerified || !status) {
                 return false;
             }
             return true;
