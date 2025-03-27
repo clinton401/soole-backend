@@ -21,8 +21,11 @@ export const getAdminRequests = async (req: Request, res: Response, next: NextFu
             return next(createError(500, unknown_error))
         }
         const pageSize = 15;
-        
-        const data = getUserPageInfo(requests, pageSize, currentPage, "requests");
+        const filteredRequests = requests.map(request => {
+            const {password, ...cleanedRequest} = request;
+            return cleanedRequest
+        })
+        const data = getUserPageInfo(filteredRequests, pageSize, currentPage, "requests");
         res.json({ status: "success", message: "Admin requests found successfully", data});
     } catch (error) {
         console.error(`Unable to get admin request: ${error}`);

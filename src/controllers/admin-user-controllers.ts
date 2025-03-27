@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { UserModel, UserStatus, User } from "../nobox/record-structures/user";
 import { server_error, unknown_error } from "../lib/variables"
-import { adminPaginationOptions, getPageInfo } from "../lib/utils"
+import { adminPaginationOptions, getPageInfo, userHandler } from "../lib/utils"
 import createError from "http-errors"
 export const getAllUsersForAdmin = async (req: Request, res: Response, next: NextFunction) => {
     const { filter, page } = req.query as {
@@ -28,9 +28,17 @@ export const getAllUsersForAdmin = async (req: Request, res: Response, next: Nex
         if (!users) {
             return next(createError(500, unknown_error));
         }
-        const validUsers = users.filter(user => {
-            const { password, isNumberVerified, email, status } = user
-            if (!password || !isNumberVerified || !email || !status) return false;
+        const filteredUsers = users.map(user => {
+            return userHandler(user)
+        })
+        const validUsers = filteredUsers.filter(user => {
+            const { firstName, lastName, email, username, status, isNumberVerified } = user;
+
+
+            if (!firstName || !lastName || !email || !username || !isNumberVerified) {
+                return false;
+            }
+
             return true;
         })
         const { totalLength: totalUsers, totalPages, nextPage, filteredData, prevPage } = getPageInfo(validUsers, pageSize, currentPage)
@@ -80,7 +88,7 @@ export const suspendUser = async (req: Request, res: Response, next: NextFunctio
         res.json({
             status: "success",
             message: "Account suspended successsfully",
-            user: updatedUser
+            user: userHandler(updatedUser)
         })
     } catch (error) {
         console.error(`Unable to suspend user: ${error}`);
@@ -110,7 +118,7 @@ export const reactivateUser = async (req: Request, res: Response, next: NextFunc
         res.json({
             status: "success",
             message: "Account successfully reactivated.",
-            user: updatedUser
+            user: userHandler(updatedUser)
         })
     } catch (error) {
         console.error(`Unable to reactivate user: ${error}`);
@@ -144,7 +152,10 @@ export const searchForUser = async (req: Request, res: Response, next: NextFunct
         }
 
         // console.log({filterVariable, users})    
-        const validUsers = users.filter(user => {
+        const filteredUsers = users.map(user => {
+            return userHandler(user)
+        })
+        const validUsers = filteredUsers.filter(user => {
             const { firstName, lastName, email, username, status, isNumberVerified } = user;
 
 

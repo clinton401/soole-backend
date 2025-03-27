@@ -42,7 +42,10 @@ const getAllAdmins = (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         if (!admins) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        const filteredAdmins = admins.filter(admin => admin.id !== userId);
+        const adminsWithoutPassword = admins.map(admin => {
+            return (0, utils_1.userHandler)(admin);
+        });
+        const filteredAdmins = adminsWithoutPassword.filter(admin => admin.id !== userId);
         const pageSize = 15;
         const data = (0, utils_1.getUserPageInfo)(filteredAdmins, pageSize, currentPage, "admins");
         res.json({
@@ -95,7 +98,7 @@ const makeSuperAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         res.json({
             status: "success",
             message: "User made a super admin successfully",
-            user: updatedAdmin
+            user: (0, utils_1.userHandler)(updatedAdmin)
         });
     }
     catch (error) {
@@ -142,7 +145,7 @@ const removeFromSuperAdmin = (req, res, next) => __awaiter(void 0, void 0, void 
         res.json({
             status: "success",
             message: "User removed as super admin successfully",
-            user: updatedAdmin
+            user: (0, utils_1.userHandler)(updatedAdmin)
         });
     }
     catch (error) {

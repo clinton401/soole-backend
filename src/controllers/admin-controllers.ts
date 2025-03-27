@@ -1,4 +1,4 @@
-import { AdminModel, AdminRole } from "../nobox/record-structures/admin";
+import { AdminModel, AdminRole, Admin } from "../nobox/record-structures/admin";
 import { PayoutModel, PayoutType, PayoutStatus } from "../nobox/record-structures/payout";
 import { Request, Response, NextFunction } from "express";
 import createError from "http-errors";
@@ -31,7 +31,10 @@ export const getAllAdmins = async (req: Request, res: Response, next: NextFuncti
         if (!admins) {
             return next(createError(500, unknown_error))
         }
-        const filteredAdmins = admins.filter(admin => admin.id !== userId);
+        const adminsWithoutPassword = admins.map(admin => {
+            return userHandler(admin)
+        })
+        const filteredAdmins = adminsWithoutPassword.filter(admin => admin.id !== userId);
         const pageSize = 15;
         const data = getUserPageInfo(filteredAdmins, pageSize, currentPage, "admins");
         res.json({
@@ -87,7 +90,7 @@ export const makeSuperAdmin = async (req: Request, res: Response, next: NextFunc
         res.json({
             status: "success",
             message: "User made a super admin successfully",
-            user: updatedAdmin
+            user: userHandler(updatedAdmin)
         })
     } catch (error) {
         console.error(`Unable to make admin a super admin: ${error}`);
@@ -138,7 +141,7 @@ export const removeFromSuperAdmin = async (req: Request, res: Response, next: Ne
         res.json({
             status: "success",
             message: "User removed as super admin successfully",
-            user: updatedAdmin
+            user: userHandler(updatedAdmin)
         })
     } catch (error) {
         console.error(`Unable to remove user from super admin: ${error}`);

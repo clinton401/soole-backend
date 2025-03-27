@@ -47,10 +47,11 @@ export const otpGenerator = (is1Hr = false) => {
 export const hasExpired = (expiresAt: Date): boolean => {
   return expiresAt < new Date();
 };
-export const userHandler = (user: User | Admin) => {
+export const userHandler = <T extends User | Admin>(user: T): Omit<T, "password"> => {
   const { password, ...cleanedUser } = user;
-  return cleanedUser
-}
+  return cleanedUser;
+};
+
 
 
 

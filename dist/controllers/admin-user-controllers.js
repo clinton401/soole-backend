@@ -36,10 +36,14 @@ const getAllUsersForAdmin = (req, res, next) => __awaiter(void 0, void 0, void 0
         if (!users) {
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
-        const validUsers = users.filter(user => {
-            const { password, isNumberVerified, email, status } = user;
-            if (!password || !isNumberVerified || !email || !status)
+        const filteredUsers = users.map(user => {
+            return (0, utils_1.userHandler)(user);
+        });
+        const validUsers = filteredUsers.filter(user => {
+            const { firstName, lastName, email, username, status, isNumberVerified } = user;
+            if (!firstName || !lastName || !email || !username || !isNumberVerified) {
                 return false;
+            }
             return true;
         });
         const { totalLength: totalUsers, totalPages, nextPage, filteredData, prevPage } = (0, utils_1.getPageInfo)(validUsers, pageSize, currentPage);
@@ -84,7 +88,7 @@ const suspendUser = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
         res.json({
             status: "success",
             message: "Account suspended successsfully",
-            user: updatedUser
+            user: (0, utils_1.userHandler)(updatedUser)
         });
     }
     catch (error) {
@@ -112,7 +116,7 @@ const reactivateUser = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
         res.json({
             status: "success",
             message: "Account successfully reactivated.",
-            user: updatedUser
+            user: (0, utils_1.userHandler)(updatedUser)
         });
     }
     catch (error) {
@@ -138,7 +142,10 @@ const searchForUser = (req, res, next) => __awaiter(void 0, void 0, void 0, func
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
         // console.log({filterVariable, users})    
-        const validUsers = users.filter(user => {
+        const filteredUsers = users.map(user => {
+            return (0, utils_1.userHandler)(user);
+        });
+        const validUsers = filteredUsers.filter(user => {
             const { firstName, lastName, email, username, status, isNumberVerified } = user;
             if (!firstName || !lastName || !email || !username || !isNumberVerified) {
                 return false;

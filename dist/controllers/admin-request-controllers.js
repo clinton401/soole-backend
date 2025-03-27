@@ -43,7 +43,11 @@ const getAdminRequests = (req, res, next) => __awaiter(void 0, void 0, void 0, f
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
         const pageSize = 15;
-        const data = (0, utils_1.getUserPageInfo)(requests, pageSize, currentPage, "requests");
+        const filteredRequests = requests.map(request => {
+            const { password } = request, cleanedRequest = __rest(request, ["password"]);
+            return cleanedRequest;
+        });
+        const data = (0, utils_1.getUserPageInfo)(filteredRequests, pageSize, currentPage, "requests");
         res.json({ status: "success", message: "Admin requests found successfully", data });
     }
     catch (error) {
