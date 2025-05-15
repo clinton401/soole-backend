@@ -2,7 +2,7 @@ import { Response, Request, NextFunction } from "express";
 import { RegisterSchema, OtpSchema, CompleteProfileSchema } from "../schemas";
 import createError from "http-errors";
 import { UserModel, User, UserStatus } from "../nobox/record-structures/user";
-import { otpGenerator, hasExpired, userHandler, dateToInt, getWeekNumber, getDayOfWeek } from "../lib/utils";
+import { otpGenerator, hasExpired, userHandler, dateToInt, getWeekNumber, getDayOfWeek, validateEmail, normalizePhoneNumber } from "../lib/utils";
 import { server_error, unknown_error } from "../lib/variables";
 import { NumberVerificationModel } from "../nobox/record-structures/number-verification";
 import { config } from "dotenv";
@@ -49,16 +49,16 @@ export const register = async (
 
     if (!user) return next(createError(500, unknown_error));
 
-    const walletExists = await findWalletByUserId(user.id);
-    if (!walletExists) {
-      await createWallet(user.id, WalletType.USER)
+    // const walletExists = await findWalletByUserId(user.id);
+    // if (!walletExists) {
+    //   await createWallet(user.id, WalletType.USER)
 
-    }
-    const driverWalletExists = await findWalletByUserId(user.id, WalletType.DRIVER);
-    if (!driverWalletExists) {
-      await createWallet(user.id, WalletType.DRIVER)
+    // }
+    // const driverWalletExists = await findWalletByUserId(user.id, WalletType.DRIVER);
+    // if (!driverWalletExists) {
+    //   await createWallet(user.id, WalletType.DRIVER)
 
-    }
+    // }
 
     const params = {
       userId: user.id,
@@ -262,12 +262,11 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       id: string
     } | null;
 
-    const options: { paramRelationship?: 'Or' | 'And' } = {
-      paramRelationship: 'Or',
-    };
-    user = await UserModel.findOne({ phone: contactInfo.trim() }, {});
-    if (!user) {
-      user = await UserModel.findOne({ email: contactInfo.toLowerCase().trim() }, {})
+    if (validateEmail(contactInfo)) {
+      user = await UserModel.findOne({ email: contactInfo.toLowerCase().trim() }, {});
+    } else {
+      const normalizedPhone = normalizePhoneNumber(contactInfo);
+      user = await UserModel.findOne({ phone: normalizedPhone }, {});
     }
 
     if (!user) {

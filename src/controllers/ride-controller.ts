@@ -70,12 +70,9 @@ export const createRide = async (
     }
     // if (!validNumberOfSeats) return next(createError(400, "Number of seats is required."))
     // const user = await UserModel.findOne({ id: userId }, {});
-    const [user, wallet] = await Promise.all([
-      UserModel.findOne({ id: userId }, {}),
-      findWalletByUserId(userId, WalletType.DRIVER)
-    ])
+    const user = await UserModel.findOne({ id: userId }, {});
     if (!user) return next(createError(404, "User not found."));
-    if (!wallet) return next(createError(400, "You need to create a driver's wallet before creating a ride."))
+    // if (!wallet) return next(createError(400, "You need to create a driver's wallet before creating a ride."))
       const today = new Date();
     // today.setDate(today.getDate() - 1);
     const analyticsDate = dateToInt(today);
@@ -296,28 +293,28 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
     if (foundPassengers.length === 0) {
       return next(createError(400, "You can't cancel this ride because you're not a passenger."));
     }
-    const wallet = await findWalletByUserId(foundPassengers[0].id)
-    if (!wallet) {
-      return next(createError(400, "No wallet found for this user"))
-    }
+    // const wallet = await findWalletByUserId(foundPassengers[0].id)
+    // if (!wallet) {
+    //   return next(createError(400, "No wallet found for this user"))
+    // }
     const refundAmount = foundPassengers.reduce((total, passenger) => total + passenger.seats * ride.pricePerSeat, 0);
 
    
-    const refundSuccess = await addToWallet(wallet.id, refundAmount, wallet.balance);
-    if (!refundSuccess) {
-      return next(createError(500, unknown_error))
-    }
-  const newTransaction =  await TransactionModel.insertOne({
-      userId,
-      amount: refundAmount,
-      currency: "₦",
-      type: TransactionType.REFUND,
-      status: TransactionStatus.SUCCESS,
-      reference: `txn_${Date.now()}_${userId}`,
-  });
-  if(newTransaction){
-    io.emit("transaction", newTransaction)
-  }
+  //   const refundSuccess = await addToWallet(wallet.id, refundAmount, wallet.balance);
+  //   if (!refundSuccess) {
+  //     return next(createError(500, unknown_error))
+  //   }
+  // const newTransaction =  await TransactionModel.insertOne({
+  //     userId,
+  //     amount: refundAmount,
+  //     currency: "₦",
+  //     type: TransactionType.REFUND,
+  //     status: TransactionStatus.SUCCESS,
+  //     reference: `txn_${Date.now()}_${userId}`,
+  // });
+  // if(newTransaction){
+  //   io.emit("transaction", newTransaction)
+  // }
 
     const newPassengers = ride.passengers.filter(passenger => passenger.id !== userId);
     const totalSeatsToAdd = foundPassengers.reduce((total, passenger) => total + passenger.seats, 0);
@@ -353,27 +350,26 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
       triggeredByUsername: user.username as string,
       price: refundAmount
     })
-    const payouts = await PayoutModel.find({
-      userId: ride.userId,
-      requesterId: user.id,
-      rideId: ride.id
+    // const payouts = await PayoutModel.find({
+    //   userId: ride.userId,
+    //   requesterId: user.id,
+    //   rideId: ride.id
 
-    })
-    for (const payout of payouts) {
-      const updatedPayout = await PayoutModel.updateOneById(payout.id, {
-        status: PayoutStatus.FAILED
-      })
-      if(updatedPayout){
-        io.emit("payout:update", updatedPayout)
-       }
-    }
+    // })
+    // for (const payout of payouts) {
+    //   const updatedPayout = await PayoutModel.updateOneById(payout.id, {
+    //     status: PayoutStatus.FAILED
+    //   })
+    //   if(updatedPayout){
+    //     io.emit("payout:update", updatedPayout)
+    //    }
+    // }
 
 
     res.status(200).json({
       status: "success",
       message: "Ride successfully cancelled.",
-      ride: updatedRide,
-      wallet: refundSuccess
+      ride: updatedRide
     });
   } catch (error) {
     console.error(`Unable to cancel ride as passenger: ${error}`);
@@ -405,25 +401,9 @@ export const cancelRideDriver = async (req: Request, res: Response, next: NextFu
       }
     for (const passenger of ride.passengers) {
       try {
-        const wallet = await findWalletByUserId(passenger.id)
-        if (wallet) {
-          const refundAmount = passenger.seats * ride.pricePerSeat;
-
-          // Refund passenger
-          const refundSuccess = await addToWallet(wallet.id, refundAmount, wallet.balance);
-          if (!refundSuccess) {
-            console.error(`Failed to refund user ${passenger.id}`);
-            continue;
-          }
-          const [transaction, notification] = await Promise.all([
-            TransactionModel.insertOne({
-              userId: passenger.id,
-              amount: refundAmount,
-              currency: "₦",
-              type: TransactionType.REFUND,
-              status: TransactionStatus.SUCCESS,
-              reference: `txn_${Date.now()}_${passenger.id}`,
-          }),
+      
+          const [ notification] = await Promise.all([
+          
           createNotification({
             userId: passenger.id,
             type: NotificationType.RIDE_CANCELLED_BY_DRIVER,
@@ -441,27 +421,11 @@ export const cancelRideDriver = async (req: Request, res: Response, next: NextFu
           })
         
           ])
-          if(transaction) {
-            
-            io.emit('transaction', {...transaction, createdAt: new Date().toISOString()})
-          }
+         
            
-        }
         
-        const payouts = await   PayoutModel.find({
-          userId: driverId,
-          requesterId: passenger.id,
-          rideId: ride.id
-
-        })
-        for (const payout of payouts) {
-        const updatedPayout =   await PayoutModel.updateOneById(payout.id, {
-            status: PayoutStatus.FAILED
-          })
-          if(updatedPayout){
-            io.emit("payout:update", updatedPayout)
-           }
-        }
+        
+   
 
 
       } catch (error) {
@@ -502,10 +466,9 @@ export const requestRide = async (req: Request, res: Response, next: NextFunctio
 
   if (!userId) return next(createError(401, unauthorized_error));
   try {
-    const [user, ride, wallet] = await Promise.all([
+    const [user, ride] = await Promise.all([
       UserModel.findOne({ id: userId }, {}),
-      rideModel.findOne({ id }, {}),
-      findWalletByUserId(userId)
+      rideModel.findOne({ id }, {})
     ]);
     // const ride = await rideModel.findOne({ id });
     if (!user) return next(createError(404, "User not found."))
@@ -517,15 +480,15 @@ const rideDate = new Date(ride.date)
     if(isPastDate(rideDate)) {
       return next(createError(400, "You can't request for a ride that is in the past"));
     }
-    if (!wallet) return next(createError(400, "You need to create a wallet before requesting a ride."))
+    // if (!wallet) return next(createError(400, "You need to create a wallet before requesting a ride."))
     if (ride.userId === userId) return next(createError(400, "You can't request this ride because you're the driver."));
     const amountOfSeatsLeft = ride.numberOfSeats - validSeats;
     if (amountOfSeatsLeft < 0) return next(createError(400, "Requested seats exceed the available seats."));
     const rideCost = ride.pricePerSeat * validSeats;
-    const isSufficient = hasSufficientBalance(wallet.balance, rideCost);
-    if (!isSufficient) {
-      return next(createError(400, "Insufficient balance. Please fund your wallet."))
-    }
+    // const isSufficient = hasSufficientBalance(wallet.balance, rideCost);
+    // if (!isSufficient) {
+    //   return next(createError(400, "Insufficient balance. Please fund your wallet."))
+    // }
 
     const params = {
       userId: ride.userId,
@@ -555,37 +518,37 @@ const rideDate = new Date(ride.date)
     if (!newNotification) {
       return next(createError(500, unknown_error))
     }
-    await deductFromWallet(wallet.id, rideCost, wallet.balance);
-    const userName = `${user.firstName} ${user.lastName}`
-    const [payout, transaction] = await Promise.all([
-      PayoutModel.insertOne({
-        userId: ride.userId,
-        requesterId: userId,
-        pickupLocation: ride.from,
-        dropoffLocation: ride.to,
-        amount: rideCost,
-        userName,
-        rideId: ride.id,
-        status: PayoutStatus.PENDING,
-        type: PayoutType.RIDE_PAYMENT,
-        adminViewable: true
-      }),
-      TransactionModel.insertOne({
-        userId,
-        amount: rideCost,
-        currency: "₦",
-        type: TransactionType.RIDE_PAYMENT,
-        status: TransactionStatus.SUCCESS,
-        reference: `txn_${Date.now()}_${userId}`,
-    })
-    ])
-    if(payout){
-      io.emit("payout", payout)
-    }
-    if(transaction) {
+    // await deductFromWallet(wallet.id, rideCost, wallet.balance);
+    // const userName = `${user.firstName} ${user.lastName}`
+    // const [payout, transaction] = await Promise.all([
+    //   PayoutModel.insertOne({
+    //     userId: ride.userId,
+    //     requesterId: userId,
+    //     pickupLocation: ride.from,
+    //     dropoffLocation: ride.to,
+    //     amount: rideCost,
+    //     userName,
+    //     rideId: ride.id,
+    //     status: PayoutStatus.PENDING,
+    //     type: PayoutType.RIDE_PAYMENT,
+    //     adminViewable: true
+    //   }),
+    //   TransactionModel.insertOne({
+    //     userId,
+    //     amount: rideCost,
+    //     currency: "₦",
+    //     type: TransactionType.RIDE_PAYMENT,
+    //     status: TransactionStatus.SUCCESS,
+    //     reference: `txn_${Date.now()}_${userId}`,
+    // })
+    // ])
+    // if(payout){
+    //   io.emit("payout", payout)
+    // }
+    // if(transaction) {
             
-      io.emit('transaction', {...transaction, createdAt: new Date().toISOString()})
-    }
+    //   io.emit('transaction', {...transaction, createdAt: new Date().toISOString()})
+    // }
     // const payout = await PayoutModel.insertOne({
     //   userId: ride.userId,
     //   requesterId: userId,
@@ -598,9 +561,9 @@ const rideDate = new Date(ride.date)
     //   type: PayoutType.RIDE_PAYMENT,
     //   adminViewable: true
     // })
-    if (!payout) {
-      return next(createError(500, unknown_error));
-    }
+    // if (!payout) {
+    //   return next(createError(500, unknown_error));
+    // }
     res.status(200).json({
       status: "success",
       message: "Ride request sent successfully. You will be notified once the driver responds.",
@@ -760,25 +723,27 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
       return next(createError(400, "You can't reject ride request for a ride that is in the past"));
     }
 
-    const wallet = await findWalletByUserId(notification.triggeredById)
-    if (!wallet) {
-      return next(createError(400, "No wallet found for this user"))
-    }
+    // const wallet = await findWalletByUserId(notification.triggeredById)
+    // if (!wallet) {
+    //   return next(createError(400, "No wallet found for this user"))
+    // }
     const refundAmount = notification.seats * ride.pricePerSeat;
 
     // Refund passenger
-    const refundSuccess = await addToWallet(wallet.id, refundAmount, wallet.balance);
-    if (!refundSuccess) {
-      return next(createError(500, unknown_error))
-    }
-  const [transaction, newNotification, payouts] = await Promise.all([  TransactionModel.insertOne({
-      userId: notification.triggeredById,
-      amount: refundAmount,
-      currency: "₦",
-      type: TransactionType.REFUND,
-      status: TransactionStatus.SUCCESS,
-      reference: `txn_${Date.now()}_${notification.triggeredById}`,
-  }), createNotification({
+    // const refundSuccess = await addToWallet(wallet.id, refundAmount, wallet.balance);
+    // if (!refundSuccess) {
+    //   return next(createError(500, unknown_error))
+    // }
+  const [ newNotification] = await Promise.all([ 
+  //    TransactionModel.insertOne({
+  //     userId: notification.triggeredById,
+  //     amount: refundAmount,
+  //     currency: "₦",
+  //     type: TransactionType.REFUND,
+  //     status: TransactionStatus.SUCCESS,
+  //     reference: `txn_${Date.now()}_${notification.triggeredById}`,
+  // }), 
+  createNotification({
     userId: passengerId,
     type: NotificationType.RIDE_REJECTED,
     from: notification.from,
@@ -792,16 +757,18 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
     triggeredByFirstName: driver.firstName as string,
     triggeredByLastName: driver.lastName as string,
     triggeredByUsername: driver.username as string,
-  }), PayoutModel.find({
-    userId: ride.userId,
-    requesterId: notification.triggeredById,
-    rideId: ride.id
+  }), 
+  // PayoutModel.find({
+  //   userId: ride.userId,
+  //   requesterId: notification.triggeredById,
+  //   rideId: ride.id
 
-  })])
-  if(transaction) {
+  // })
+])
+  // if(transaction) {
             
-    io.emit('transaction', transaction)
-  }
+  //   io.emit('transaction', transaction)
+  // }
     // const newNotification = await createNotification({
     //   userId: passengerId,
     //   type: NotificationType.RIDE_REJECTED,
@@ -825,14 +792,14 @@ export const rejectRideRequest = async (req: Request, res: Response, next: NextF
     //   rideId: ride.id
 
     // })
-    for (const payout of payouts) {
-     const updatedPayout = await PayoutModel.updateOneById(payout.id, {
-        status: PayoutStatus.FAILED
-      })
-      if(updatedPayout){
-        io.emit("payout:update", updatedPayout)
-       }
-    }
+    // for (const payout of payouts) {
+    //  const updatedPayout = await PayoutModel.updateOneById(payout.id, {
+    //     status: PayoutStatus.FAILED
+    //   })
+    //   if(updatedPayout){
+    //     io.emit("payout:update", updatedPayout)
+    //    }
+    // }
     
     await NotificationModel.deleteOneById(notification.id);
     res.status(200).json({
@@ -951,10 +918,10 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
       return next(createError(400, "You can't confirm completion for this ride because it is in the past"));
     }
 
-    const wallet = await findWalletByUserId(ride.userId, WalletType.DRIVER);
-    if (!wallet) {
-      return next(createError(404, "No wallet found for the driver"))
-    }
+    // const wallet = await findWalletByUserId(ride.userId, WalletType.DRIVER);
+    // if (!wallet) {
+    //   return next(createError(404, "No wallet found for the driver"))
+    // }
     const foundPassengers = ride.passengers.filter(passenger => passenger.id === userId);
     if (foundPassengers.length === 0) {
       return next(createError(400, "You can't confirm completion because you're not a passenger."));
@@ -977,44 +944,44 @@ export const passengerConfirmCompletion = async (req: Request, res: Response, ne
     if(passengers && passengers.length > 0){
       await updatePassengersStatus(passengers, "COMPLETED")
       }
-    const allCompleted = updatedRide.passengers.every(passenger => passenger.completed === true);
-    if (allCompleted) {
-      let totalPrice = 0;
-      updatedRide.passengers.forEach(passenger => {
-        totalPrice += passenger.seats * ride.pricePerSeat;
-      });
-      await addToWallet(wallet.id, totalPrice, wallet.balance);
-      await createNotification({
-        userId: ride.userId,
-        type: NotificationType.RIDE_COMPLETETED_DRIVER,
-        from: ride.from,
-        to: ride.to,
-        triggeredById: userId,
-        seats: ride.numberOfSeats,
-        isRead: false,
-        rideId: id,
-        price: totalPrice, 
-        triggeredByAvatarUrl: user.avatarUrl as string,
-        triggeredByFirstName: user.firstName as string,
-        triggeredByLastName: user.lastName as string,
-        triggeredByUsername: user.username as string,
-      })
-      const payouts = await PayoutModel.find({
-        userId: ride.userId,
-        requesterId: user.id,
-        rideId: ride.id
+    // const allCompleted = updatedRide.passengers.every(passenger => passenger.completed === true);
+    // if (allCompleted) {
+    //   let totalPrice = 0;
+    //   updatedRide.passengers.forEach(passenger => {
+    //     totalPrice += passenger.seats * ride.pricePerSeat;
+    //   });
+    //   await addToWallet(wallet.id, totalPrice, wallet.balance);
+    //   await createNotification({
+    //     userId: ride.userId,
+    //     type: NotificationType.RIDE_COMPLETETED_DRIVER,
+    //     from: ride.from,
+    //     to: ride.to,
+    //     triggeredById: userId,
+    //     seats: ride.numberOfSeats,
+    //     isRead: false,
+    //     rideId: id,
+    //     price: totalPrice, 
+    //     triggeredByAvatarUrl: user.avatarUrl as string,
+    //     triggeredByFirstName: user.firstName as string,
+    //     triggeredByLastName: user.lastName as string,
+    //     triggeredByUsername: user.username as string,
+    //   })
+    //   const payouts = await PayoutModel.find({
+    //     userId: ride.userId,
+    //     requesterId: user.id,
+    //     rideId: ride.id
 
-      })
-      for (const payout of payouts) {
-        const updatedPayout = await PayoutModel.updateOneById(payout.id, {
-          status: PayoutStatus.SUCCESSFUL
-        })
-        if(updatedPayout){
-          io.emit("payout:update", updatedPayout)
-         }
-      }
-
-    }
+    //   })
+    //   for (const payout of payouts) {
+    //     const updatedPayout = await PayoutModel.updateOneById(payout.id, {
+    //       status: PayoutStatus.SUCCESSFUL
+    //     })
+    //     if(updatedPayout){
+    //       io.emit("payout:update", updatedPayout)
+    //      }
+    //   }
+// 
+    // }
     const totalTrips = user.totalTrips ? user.totalTrips + 1 : 1;
 
 await UserModel.updateOneById(user.id, {

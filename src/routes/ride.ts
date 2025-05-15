@@ -13,7 +13,6 @@ ride.post("/:id/request/reject", rejectRideRequest);
 ride.post("/:id/cancel/driver", cancelRideDriver);
 ride.post("/:id/cancel/passenger", cancelRidePassenger);
 
-// new routes
 
 ride.post("/:id/start", startRide);
 ride.post("/:id/completed/passenger", passengerConfirmCompletion);

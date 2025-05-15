@@ -12,7 +12,6 @@ ride.post("/:id/request/accept", ride_controller_1.acceptRideRequest);
 ride.post("/:id/request/reject", ride_controller_1.rejectRideRequest);
 ride.post("/:id/cancel/driver", ride_controller_1.cancelRideDriver);
 ride.post("/:id/cancel/passenger", ride_controller_1.cancelRidePassenger);
-// new routes
 ride.post("/:id/start", ride_controller_1.startRide);
 ride.post("/:id/completed/passenger", ride_controller_1.passengerConfirmCompletion);
 ride.post("/:id/completed/driver", ride_controller_1.driverConfirmCompletion);

@@ -36,8 +36,6 @@ const zod_1 = require("zod");
 const password_utils_1 = require("../lib/password-utils");
 const access_tokens_1 = require("../middlewares/access-tokens");
 const reset_code_1 = require("../nobox/record-structures/reset-code");
-const wallet_1 = require("../nobox/record-structures/wallet");
-const wallet_2 = require("../data/wallet");
 const send_sms_1 = require("../config/send-sms");
 const __1 = require("..");
 const nobox_upload_1 = require("../config/nobox-upload");
@@ -62,14 +60,14 @@ const register = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         const user = yield user_1.UserModel.insertOne(Object.assign(Object.assign({}, validatedFields.data), { isNumberVerified: false, totalTrips: 0, totalRides: 0, status: user_1.UserStatus.ACTIVE, analyticsDate, weekOfCreation, dayOfCreation, adminViewable: true }));
         if (!user)
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
-        const walletExists = yield (0, wallet_2.findWalletByUserId)(user.id);
-        if (!walletExists) {
-            yield (0, wallet_2.createWallet)(user.id, wallet_1.WalletType.USER);
-        }
-        const driverWalletExists = yield (0, wallet_2.findWalletByUserId)(user.id, wallet_1.WalletType.DRIVER);
-        if (!driverWalletExists) {
-            yield (0, wallet_2.createWallet)(user.id, wallet_1.WalletType.DRIVER);
-        }
+        // const walletExists = await findWalletByUserId(user.id);
+        // if (!walletExists) {
+        //   await createWallet(user.id, WalletType.USER)
+        // }
+        // const driverWalletExists = await findWalletByUserId(user.id, WalletType.DRIVER);
+        // if (!driverWalletExists) {
+        //   await createWallet(user.id, WalletType.DRIVER)
+        // }
         const params = {
             userId: user.id,
         };
@@ -262,12 +260,12 @@ const login = (req, res, next) => __awaiter(void 0, void 0, void 0, function* ()
     const shouldRemember = typeof rememberMe === "boolean" ? rememberMe : rememberMe === "true";
     try {
         let user;
-        const options = {
-            paramRelationship: 'Or',
-        };
-        user = yield user_1.UserModel.findOne({ phone: contactInfo.trim() }, {});
-        if (!user) {
+        if ((0, utils_1.validateEmail)(contactInfo)) {
             user = yield user_1.UserModel.findOne({ email: contactInfo.toLowerCase().trim() }, {});
+        }
+        else {
+            const normalizedPhone = (0, utils_1.normalizePhoneNumber)(contactInfo);
+            user = yield user_1.UserModel.findOne({ phone: normalizedPhone }, {});
         }
         if (!user) {
             return next((0, http_errors_1.default)(400, "User not found. Check phone number or email and try again."));

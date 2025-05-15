@@ -69,7 +69,15 @@ export const validateEmail = (email: string) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
 };
-
+export const normalizePhoneNumber =(input: string): string  => {
+  let phone = input.trim();
+  if (phone.startsWith('+')) return phone;
+  phone = phone.replace(/\D/g, '');
+  if (phone.startsWith('0')) {
+    phone = phone.slice(1);
+  }
+  return `+234${phone}`;
+}
 export const isCreditCardValid = (cardNumber: string): boolean => {
   return validator.isCreditCard(cardNumber);
 }

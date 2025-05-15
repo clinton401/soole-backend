@@ -31,11 +31,11 @@ api.use("/rides", verifyAccessToken, verifyUserStatus, ride);
 api.use("/user", verifyAccessToken, verifyUserStatus, user);
 api.use("/notifications", verifyAccessToken, verifyUserStatus,  notification);
 api.use("/conversations", verifyAccessToken, verifyUserStatus,  conversation);
-api.use("/paystack", paystack);
-api.use("/wallet", verifyAccessToken, verifyUserStatus, wallet);
-api.use("/transactions", verifyAccessToken, verifyUserStatus , transaction);
+// api.use("/paystack", paystack);
+// api.use("/wallet", verifyAccessToken, verifyUserStatus, wallet);
+// api.use("/transactions", verifyAccessToken, verifyUserStatus , transaction);
 api.use("/reviews", verifyAccessToken, verifyUserStatus, review);
-api.use("/payouts", verifyAccessToken, verifyUserStatus, payout);
+// api.use("/payouts", verifyAccessToken, verifyUserStatus, payout);
 api.post("/upload-images",upload.single('image'),  uploadImage)
 
 

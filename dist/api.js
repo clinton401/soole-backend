@@ -12,12 +12,8 @@ const auth_controllers_1 = require("./controllers/auth-controllers");
 const upload_1 = __importDefault(require("./middlewares/upload"));
 const notification_1 = __importDefault(require("./routes/notification"));
 const conversation_1 = __importDefault(require("./routes/conversation"));
-const paystack_1 = __importDefault(require("./routes/paystack"));
-const wallet_1 = __importDefault(require("./routes/wallet"));
-const transaction_1 = __importDefault(require("./routes/transaction"));
 const review_1 = __importDefault(require("./routes/review"));
 const waitlist_1 = __importDefault(require("./routes/waitlist"));
-const payout_1 = __importDefault(require("./routes/payout"));
 const admin_1 = __importDefault(require("./routes/admin"));
 const admin_auth_1 = __importDefault(require("./routes/admin-auth"));
 const admin_ride_1 = __importDefault(require("./routes/admin-ride"));
@@ -32,11 +28,11 @@ api.use("/rides", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, ri
 api.use("/user", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, user_1.default);
 api.use("/notifications", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, notification_1.default);
 api.use("/conversations", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, conversation_1.default);
-api.use("/paystack", paystack_1.default);
-api.use("/wallet", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, wallet_1.default);
-api.use("/transactions", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, transaction_1.default);
+// api.use("/paystack", paystack);
+// api.use("/wallet", verifyAccessToken, verifyUserStatus, wallet);
+// api.use("/transactions", verifyAccessToken, verifyUserStatus , transaction);
 api.use("/reviews", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, review_1.default);
-api.use("/payouts", access_tokens_1.verifyAccessToken, user_2.verifyUserStatus, payout_1.default);
+// api.use("/payouts", verifyAccessToken, verifyUserStatus, payout);
 api.post("/upload-images", upload_1.default.single('image'), auth_controllers_1.uploadImage);
 // Admin routes 
 api.use("/admin/auth", access_tokens_1.isAuthenticated, admin_auth_1.default);

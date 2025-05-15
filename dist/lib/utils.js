@@ -14,7 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isPastDate = exports.isWithinTwoDays = exports.isValidImage = exports.getMonthName = exports.getDayOfWeek = exports.getWeekNumber = exports.getDates = exports.calculateGrowth = exports.dateToInt = exports.hasSufficientBalance = exports.getPageInfo = exports.getUserPageInfo = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
+exports.isPastDate = exports.isWithinTwoDays = exports.isValidImage = exports.getMonthName = exports.getDayOfWeek = exports.getWeekNumber = exports.getDates = exports.calculateGrowth = exports.dateToInt = exports.hasSufficientBalance = exports.getPageInfo = exports.getUserPageInfo = exports.adminPaginationOptions = exports.paginationOptions = exports.hasDecimal = exports.isValidNumber = exports.hasAtLeastOneProperty = exports.zodErrorHandler = exports.validateExpiryDate = exports.isCreditCardValid = exports.normalizePhoneNumber = exports.validateEmail = exports.validateDOB = exports.validatePhone = exports.userHandler = exports.hasExpired = exports.otpGenerator = exports.errorHandler = void 0;
 const validator_1 = __importDefault(require("validator"));
 const errorHandler = (error, code) => {
     return {
@@ -63,6 +63,17 @@ const validateEmail = (email) => {
     return emailRegex.test(email);
 };
 exports.validateEmail = validateEmail;
+const normalizePhoneNumber = (input) => {
+    let phone = input.trim();
+    if (phone.startsWith('+'))
+        return phone;
+    phone = phone.replace(/\D/g, '');
+    if (phone.startsWith('0')) {
+        phone = phone.slice(1);
+    }
+    return `+234${phone}`;
+};
+exports.normalizePhoneNumber = normalizePhoneNumber;
 const isCreditCardValid = (cardNumber) => {
     return validator_1.default.isCreditCard(cardNumber);
 };
