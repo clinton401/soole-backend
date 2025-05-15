@@ -318,9 +318,12 @@ const sendResetCode = (req, res, next) => __awaiter(void 0, void 0, void 0, func
     }
     try {
         let user;
-        user = yield user_1.UserModel.findOne({ phone: contactInfo.trim() }, {});
-        if (!user) {
+        if ((0, utils_1.validateEmail)(contactInfo)) {
             user = yield user_1.UserModel.findOne({ email: contactInfo.toLowerCase().trim() }, {});
+        }
+        else {
+            const normalizedPhone = (0, utils_1.normalizePhoneNumber)(contactInfo);
+            user = yield user_1.UserModel.findOne({ phone: normalizedPhone }, {});
         }
         if (!user) {
             return next((0, http_errors_1.default)(400, "User not found. Check phone number or email and try again."));
