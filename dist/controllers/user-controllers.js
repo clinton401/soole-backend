@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createComplaint = exports.deleteAccount = exports.resetPassword = exports.updateUserDetails = exports.getSpecificUserDetails = exports.getUserDetails = exports.getPaymentMethods = exports.deletePaymentMethod = exports.addPaymentMethod = void 0;
+exports.verifyFace = exports.kycVerification = exports.createComplaint = exports.deleteAccount = exports.resetPassword = exports.updateUserDetails = exports.getSpecificUserDetails = exports.getUserDetails = exports.getPaymentMethods = exports.deletePaymentMethod = exports.addPaymentMethod = void 0;
 const http_errors_1 = __importDefault(require("http-errors"));
 const user_1 = require("../nobox/record-structures/user");
 const payment_method_1 = require("../nobox/record-structures/payment-method");
@@ -23,6 +23,15 @@ const zod_1 = require("zod");
 const password_utils_1 = require("../lib/password-utils");
 const complaint_conversation_1 = require("../data/complaint-conversation");
 const __1 = require("..");
+const form_data_1 = __importDefault(require("form-data"));
+const fs_1 = __importDefault(require("fs"));
+const path_1 = __importDefault(require("path"));
+const axios_1 = __importDefault(require("axios"));
+const FACEPP_KEY = process.env.FACEPP_API_KEY;
+const FACEPP_SECRET = process.env.FACEPP_API_SECRET;
+if (!FACEPP_KEY || !FACEPP_SECRET) {
+    throw new Error("Faceapp key and secret are required");
+}
 const addPaymentMethod = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     const { cardNumber, cvv, expiryDate } = req.body;
     const userId = req.userId;
@@ -268,3 +277,120 @@ const createComplaint = (req, res, next) => __awaiter(void 0, void 0, void 0, fu
     }
 });
 exports.createComplaint = createComplaint;
+const kycVerification = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+        }
+        let { nin, driverLicense } = req.body;
+        console.log({ nin, driverLicense });
+        if ((typeof nin !== 'string' || !nin.trim()) &&
+            (typeof driverLicense !== 'string' || !driverLicense.trim())) {
+            return next((0, http_errors_1.default)(400, 'At least one of NIN or Driver License must be provided'));
+        }
+        if (typeof nin === 'string') {
+            nin = nin.trim();
+            if (nin.length !== 11) {
+                return next((0, http_errors_1.default)(400, 'NIN must be exactly 11 characters'));
+            }
+        }
+        else {
+            nin = undefined;
+        }
+        if (typeof driverLicense === 'string') {
+            driverLicense = driverLicense.trim();
+            if (driverLicense.length < 5) {
+                return next((0, http_errors_1.default)(400, 'Driver License must be at least 5 characters'));
+            }
+        }
+        else {
+            driverLicense = undefined;
+        }
+        const existingUser = yield user_1.UserModel.findOne({ id: userId });
+        if (!existingUser) {
+            return next((0, http_errors_1.default)(404, 'User not found'));
+        }
+        if (nin && existingUser.nin && nin === existingUser.nin) {
+            return next((0, http_errors_1.default)(400, 'NIN has already been submitted'));
+        }
+        if (driverLicense && existingUser.driverLicense && driverLicense === existingUser.driverLicense) {
+            return next((0, http_errors_1.default)(400, 'Driver License has already been submitted'));
+        }
+        const updateData = {};
+        if (nin && nin !== existingUser.nin)
+            updateData.nin = nin;
+        if (driverLicense && driverLicense !== existingUser.driverLicense)
+            updateData.driverLicense = driverLicense;
+        if (Object.keys(updateData).length === 0) {
+            return next((0, http_errors_1.default)(400, 'No new KYC details to update'));
+        }
+        const updatedUser = yield user_1.UserModel.updateOneById(userId, updateData);
+        res.status(200).json({ success: true, user: (0, utils_1.userHandler)(updatedUser) });
+    }
+    catch (error) {
+        console.error(`Unable to add kyc: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.kycVerification = kycVerification;
+const verifyFace = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const userId = req.userId;
+    if (!userId) {
+        return next((0, http_errors_1.default)(401, variables_1.unauthorized_error));
+    }
+    try {
+        const user = yield user_1.UserModel.findOne({ id: userId });
+        if (!user) {
+            return next((0, http_errors_1.default)(404, "User not found."));
+        }
+        if (user.isKycVerified) {
+            return next((0, http_errors_1.default)(400, "You have already completed identity verification."));
+        }
+        if (!user.nin) {
+            return next((0, http_errors_1.default)(400, "You must submit your NIN to complete identity verification."));
+        }
+        const file = req === null || req === void 0 ? void 0 : req.file;
+        if (!file) {
+            return next((0, http_errors_1.default)(400, "No image uploaded"));
+        }
+        const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+        if (!allowedMimeTypes.includes(file.mimetype)) {
+            return next((0, http_errors_1.default)(400, 'Invalid file type. Only images are allowed.'));
+        }
+        const imagePath = path_1.default.resolve(file.path);
+        const image = fs_1.default.createReadStream(imagePath);
+        const formData = new form_data_1.default();
+        formData.append('api_key', FACEPP_KEY);
+        formData.append('api_secret', FACEPP_SECRET);
+        formData.append('image_file', image);
+        formData.append('return_attributes', 'age,gender,smiling,glass,headpose,facequality');
+        const response = yield axios_1.default.post('https://api-us.faceplusplus.com/facepp/v3/detect', formData, { headers: formData.getHeaders() });
+        fs_1.default.unlinkSync(imagePath);
+        // console.log(JSON.stringify(response.data))
+        const faces = response.data.faces;
+        if (!faces.length) {
+            return next((0, http_errors_1.default)(400, 'No face detected'));
+        }
+        const { age } = faces[0].attributes;
+        const ageValue = age.value;
+        if (ageValue < 18) {
+            return next((0, http_errors_1.default)(403, 'Must be at least 18 years old'));
+        }
+        const date = new Date();
+        const kycVerifiedAt = date.toISOString();
+        const updatedUser = yield user_1.UserModel.updateOneById(userId, {
+            kycVerifiedAt,
+            isKycVerified: true
+        });
+        if (!updatedUser) {
+            return next((0, http_errors_1.default)(500, variables_1.unknown_error));
+        }
+        res.json({ success: true, age: ageValue, user: (0, utils_1.userHandler)(updatedUser) });
+    }
+    catch (error) {
+        console.error(`Unable to verify face: ${error}`);
+        return next((0, http_errors_1.default)(500, variables_1.server_error));
+    }
+});
+exports.verifyFace = verifyFace;

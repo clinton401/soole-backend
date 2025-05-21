@@ -29,6 +29,13 @@ const verifyUserStatus = (req, res, next) => __awaiter(void 0, void 0, void 0, f
         if (user.status === user_1.UserStatus.SUSPENDED || user.status === user_1.UserStatus.DEACTIVATED) {
             return next((0, http_errors_1.default)(403, "Account suspended or deactivated."));
         }
+        const protectedRoutes = [
+            "/verify-face",
+            "/kyc/submit"
+        ];
+        if (protectedRoutes.includes(req.path) && !user.isKycVerified) {
+            next((0, http_errors_1.default)(403, "You must complete identity verification to continue."));
+        }
         next();
     }
     catch (error) {

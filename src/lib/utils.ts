@@ -47,9 +47,19 @@ export const otpGenerator = (is1Hr = false) => {
 export const hasExpired = (expiresAt: Date): boolean => {
   return expiresAt < new Date();
 };
-export const userHandler = <T extends User | Admin>(user: T): Omit<T, "password"> => {
-  const { password, ...cleanedUser } = user;
-  return cleanedUser;
+export const userHandler = <T extends User | Admin>(
+  user: T
+): Omit<T, "password" | "nin" | "driverLicense"> & Partial<{ ninSubmitted: boolean; driverLicenseSubmitted: boolean }> => {
+  const { password, nin, driverLicense, ...rest } = user as any;
+
+  const cleanedUser = { ...rest } as any;
+
+  if ('nin' in user || 'driverLicense' in user) {
+    cleanedUser.ninSubmitted = !!nin;
+    cleanedUser.driverLicenseSubmitted = !!driverLicense;
+  }
+
+  return cleanedUser as unknown as Omit<T, "password" | "nin" | "driverLicense"> & Partial<{ ninSubmitted: boolean; driverLicenseSubmitted: boolean }>;
 };
 
 

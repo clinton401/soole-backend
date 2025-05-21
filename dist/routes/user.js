@@ -1,9 +1,15 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const user_controllers_1 = require("../controllers/user-controllers");
+const upload_1 = __importDefault(require("../middlewares/upload"));
 const user = (0, express_1.Router)();
 user.get("/me", user_controllers_1.getUserDetails);
+user.post("/me/kyc/submit", user_controllers_1.kycVerification);
+user.post("/me/verify-face", upload_1.default.single('image'), user_controllers_1.verifyFace);
 user.post("/me/complaint", user_controllers_1.createComplaint);
 user.put("/me/update", user_controllers_1.updateUserDetails);
 user.put("/me/update/password", user_controllers_1.resetPassword);

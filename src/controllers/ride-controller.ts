@@ -73,6 +73,9 @@ export const createRide = async (
     const user = await UserModel.findOne({ id: userId }, {});
     if (!user) return next(createError(404, "User not found."));
     // if (!wallet) return next(createError(400, "You need to create a driver's wallet before creating a ride."))
+    if(!user.driverLicense) {
+      return next(createError(400, "Driver's license is required to create a ride."))
+    }
       const today = new Date();
     // today.setDate(today.getDate() - 1);
     const analyticsDate = dateToInt(today);
@@ -248,8 +251,15 @@ export const getRides = async (req: Request, res: Response, next: NextFunction) 
 
   
   const pageSize = 15
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); 
 
-  const data = getUserPageInfo(rides, pageSize, currentPage, "rides")
+    const futureRides = rides.filter((ride) => {
+      const rideDate = new Date(ride.date);
+      rideDate.setHours(0, 0, 0, 0); 
+      return rideDate >= today;
+    });
+    const data = getUserPageInfo(futureRides, pageSize, currentPage, "rides")
     res.status(200).json({
       success: true,
       message: "Rides found successfully.",
@@ -354,6 +364,7 @@ export const cancelRidePassenger = async (req: Request, res: Response, next: Nex
     //   userId: ride.userId,
     //   requesterId: user.id,
     //   rideId: ride.id
+
 
     // })
     // for (const payout of payouts) {

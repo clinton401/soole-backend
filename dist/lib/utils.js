@@ -44,7 +44,12 @@ const hasExpired = (expiresAt) => {
 };
 exports.hasExpired = hasExpired;
 const userHandler = (user) => {
-    const { password } = user, cleanedUser = __rest(user, ["password"]);
+    const _a = user, { password, nin, driverLicense } = _a, rest = __rest(_a, ["password", "nin", "driverLicense"]);
+    const cleanedUser = Object.assign({}, rest);
+    if ('nin' in user || 'driverLicense' in user) {
+        cleanedUser.ninSubmitted = !!nin;
+        cleanedUser.driverLicenseSubmitted = !!driverLicense;
+    }
     return cleanedUser;
 };
 exports.userHandler = userHandler;

@@ -25,6 +25,11 @@ export interface User {
   totalRides: number;
   adminViewable: boolean
   analyticsDate: string;
+  driverLicense?: string;
+  nin?: string;
+  isKycVerified?: boolean
+  kycVerifiedAt?: string | null
+  
 }
 
 export const UserStructure: Space<User> = {
@@ -128,6 +133,29 @@ export const UserStructure: Space<User> = {
       required: true,
       type: Boolean,
     },
+    driverLicense: {
+      description: "User's Driver's License Number",
+      required: false,
+      type: String,
+    },
+    
+    nin: {
+      description: "User's NIN (National Identification Number)",
+      required: false,
+      type: String,
+    },
+    
+    isKycVerified: {
+      description: "Has the user passed KYC verification?",
+      required: false,
+      type: Boolean,
+    },
+    
+    kycVerifiedAt: {
+      description: "Date and time when KYC verification was completed",
+      required: false,
+      type: String,
+    }
 
 
   },

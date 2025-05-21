@@ -8,7 +8,17 @@ import { UpdateProfileSchema } from "../schemas/index";
 import { ZodError } from "zod";
 import { hashPassword, validatePassword } from "../lib/password-utils";
 import { createComplaintConversation } from "../data/complaint-conversation";
-import {io} from ".."
+import {io} from "..";
+import FormData from 'form-data';
+import fs from 'fs';
+import path from 'path';
+import axios from 'axios';
+const FACEPP_KEY = process.env.FACEPP_API_KEY;
+const FACEPP_SECRET = process.env.FACEPP_API_SECRET;
+
+if(!FACEPP_KEY || !FACEPP_SECRET){
+    throw new Error("Faceapp key and secret are required")
+}
 
 export const addPaymentMethod = async (req: Request, res: Response, next: NextFunction) => {
     const { cardNumber, cvv, expiryDate } = req.body;
@@ -246,6 +256,151 @@ export const createComplaint = async (req: Request, res: Response, next: NextFun
           });
     } catch (error) {
         console.error(`Unable to create a complaint: ${error}`);
+        return next(createError(500, server_error));
+    }
+}
+
+
+
+export const kycVerification = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.userId;
+        if (!userId) {
+            return next(createError(401, unauthorized_error));
+        }
+
+        let { nin, driverLicense } = req.body;
+
+        console.log({nin, driverLicense})
+        if (
+            (typeof nin !== 'string' || !nin.trim()) &&
+            (typeof driverLicense !== 'string' || !driverLicense.trim())
+        ) {
+            return next(createError(400, 'At least one of NIN or Driver License must be provided'));
+        }
+
+        if (typeof nin === 'string') {
+            nin = nin.trim();
+            if (nin.length !== 11) {
+                return next(createError(400, 'NIN must be exactly 11 characters'));
+            }
+        } else {
+            nin = undefined;
+        }
+
+        if (typeof driverLicense === 'string') {
+            driverLicense = driverLicense.trim();
+            if (driverLicense.length < 5) {
+                return next(createError(400, 'Driver License must be at least 5 characters'));
+            }
+        } else {
+            driverLicense = undefined;
+        }
+
+        const existingUser = await UserModel.findOne({ id: userId });
+        if (!existingUser) {
+            return next(createError(404, 'User not found'));
+        }
+
+        if (nin && existingUser.nin && nin === existingUser.nin) {
+            return next(createError(400, 'NIN has already been submitted'));
+        }
+
+        if (driverLicense && existingUser.driverLicense && driverLicense === existingUser.driverLicense) {
+            return next(createError(400, 'Driver License has already been submitted'));
+        }
+
+        const updateData: { nin?: string; driverLicense?: string } = {};
+        if (nin && nin !== existingUser.nin) updateData.nin = nin;
+        if (driverLicense && driverLicense !== existingUser.driverLicense) updateData.driverLicense = driverLicense;
+
+        if (Object.keys(updateData).length === 0) {
+            return next(createError(400, 'No new KYC details to update'));
+        }
+
+        const updatedUser = await UserModel.updateOneById(userId, updateData);
+
+        res.status(200).json({ success: true, user: userHandler(updatedUser) });
+    } catch (error) {
+        console.error(`Unable to add kyc: ${error}`);
+        return next(createError(500, server_error));
+    }
+};
+
+
+export const verifyFace = async(req: Request, res: Response, next: NextFunction) => {
+    const userId = req.userId;
+    if (!userId) {
+        return next(createError(401, unauthorized_error))
+    }
+    try {
+        const user = await UserModel.findOne({ id: userId });
+        if (!user) {
+            return next(createError(404, "User not found."))
+        }
+        if (user.isKycVerified) {
+    return next(createError(400, "You have already completed identity verification."))
+}
+        if(!user.nin){
+            return next(createError(400, "You must submit your NIN to complete identity verification."))
+        }
+
+           const file = req?.file
+            if (!file) {
+              return next(createError(400, "No image uploaded"))
+        
+            }
+            const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+            if (!allowedMimeTypes.includes(file.mimetype)) {
+              return next(createError(400, 'Invalid file type. Only images are allowed.'));
+            }
+
+            
+  const imagePath = path.resolve(file.path);
+  const image = fs.createReadStream(imagePath);
+
+  const formData = new FormData();
+  formData.append('api_key', FACEPP_KEY);
+  formData.append('api_secret', FACEPP_SECRET);
+  formData.append('image_file', image);
+  formData.append('return_attributes', 'age,gender,smiling,glass,headpose,facequality');
+
+  const response = await axios.post(
+    'https://api-us.faceplusplus.com/facepp/v3/detect',
+    formData,
+    { headers: formData.getHeaders() }
+  );
+
+        fs.unlinkSync(imagePath);
+
+        // console.log(JSON.stringify(response.data))
+
+        const faces = response.data.faces;
+
+        if (!faces.length) {
+            return next(createError(400, 'No face detected' ));
+        }
+
+        const { age } = faces[0].attributes;
+        const ageValue = age.value;
+
+        if (ageValue < 18) {
+            return next(createError(403, 'Must be at least 18 years old'));
+        }
+
+        const date = new Date();
+        const kycVerifiedAt = date.toISOString();
+        const updatedUser = await UserModel.updateOneById(userId, {
+            kycVerifiedAt,
+            isKycVerified: true
+        });
+        if(!updatedUser){
+            return next(createError(500, unknown_error))
+        }
+         res.json({ success: true, age: ageValue, user: userHandler(updatedUser)  });
+
+    } catch (error) {
+        console.error(`Unable to verify face: ${error}`);
         return next(createError(500, server_error));
     }
 }

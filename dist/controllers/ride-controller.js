@@ -58,6 +58,9 @@ const createRide = (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         if (!user)
             return next((0, http_errors_1.default)(404, "User not found."));
         // if (!wallet) return next(createError(400, "You need to create a driver's wallet before creating a ride."))
+        if (!user.driverLicense) {
+            return next((0, http_errors_1.default)(400, "Driver's license is required to create a ride."));
+        }
         const today = new Date();
         // today.setDate(today.getDate() - 1);
         const analyticsDate = (0, utils_1.dateToInt)(today);
@@ -198,7 +201,14 @@ const getRides = (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             return next((0, http_errors_1.default)(500, variables_1.unknown_error));
         }
         const pageSize = 15;
-        const data = (0, utils_1.getUserPageInfo)(rides, pageSize, currentPage, "rides");
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const futureRides = rides.filter((ride) => {
+            const rideDate = new Date(ride.date);
+            rideDate.setHours(0, 0, 0, 0);
+            return rideDate >= today;
+        });
+        const data = (0, utils_1.getUserPageInfo)(futureRides, pageSize, currentPage, "rides");
         res.status(200).json({
             success: true,
             message: "Rides found successfully.",
