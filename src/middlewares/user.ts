@@ -2,12 +2,14 @@ import { Request, Response, NextFunction } from "express";
 import { UserModel, UserStatus } from "../nobox/record-structures/user";
 import createError from "http-errors";
 import { unauthorized_error, server_error } from "../lib/variables";
+
 export const verifyUserStatus = async (req: Request, res: Response, next: NextFunction) => {
 
     const userId = req.userId;
     if (!userId) {
         return next(createError(401, unauthorized_error))
     }
+
     try {
         const user = await UserModel.findOne({ id: userId });
         if (!user) {
