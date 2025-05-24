@@ -180,10 +180,7 @@ export const uploadImage = async (req: Request, res: Response, next: NextFunctio
       return next(createError(400, 'Invalid file type. Only images are allowed.'));
     }
     const filePath = file.path;
-    const fileBuffer = fs.readFileSync(filePath);
-    const convertedFile = new File([fileBuffer], file.originalname, { type: file.mimetype });
-    
-    const result = await noboxUpload(convertedFile)
+    const result = await noboxUpload(filePath, file.originalname, file.mimetype);
     fs.unlink(filePath, (err) => {
       if (err) {
         console.error(`Failed to delete file: ${filePath}. Error: ${err.message}`);

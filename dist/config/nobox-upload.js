@@ -14,24 +14,22 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.noboxUpload = void 0;
 const axios_1 = __importDefault(require("axios"));
+const form_data_1 = __importDefault(require("form-data"));
+const fs_1 = __importDefault(require("fs"));
 const variables_1 = require("./variables");
-const noboxUpload = (file) => __awaiter(void 0, void 0, void 0, function* () {
-    const formData = new FormData();
-    formData.append("file", file);
+const noboxUpload = (filePath, originalName, mimetype) => __awaiter(void 0, void 0, void 0, function* () {
+    const formData = new form_data_1.default();
+    formData.append("file", fs_1.default.createReadStream(filePath), {
+        filename: originalName,
+        contentType: mimetype,
+    });
     try {
-        if (!file) {
-            throw new Error("No File to upload");
-        }
         const response = yield axios_1.default.post(`${variables_1.NOBOX_UPLOAD_URL}/${variables_1.NOBOX_PROJECT}/upload`, formData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-                Authorization: `Bearer ${variables_1.NOBOX_TOKEN}`,
-            },
+            headers: Object.assign(Object.assign({}, formData.getHeaders()), { Authorization: `Bearer ${variables_1.NOBOX_TOKEN}` }),
         });
         const data = response.data;
-        if (!data) {
+        if (!data)
             throw new Error("File upload error");
-        }
         return data;
     }
     catch (error) {

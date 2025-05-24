@@ -185,9 +185,7 @@ const uploadImage = (req, res, next) => __awaiter(void 0, void 0, void 0, functi
             return next((0, http_errors_1.default)(400, 'Invalid file type. Only images are allowed.'));
         }
         const filePath = file.path;
-        const fileBuffer = fs_1.default.readFileSync(filePath);
-        const convertedFile = new File([fileBuffer], file.originalname, { type: file.mimetype });
-        const result = yield (0, nobox_upload_1.noboxUpload)(convertedFile);
+        const result = yield (0, nobox_upload_1.noboxUpload)(filePath, file.originalname, file.mimetype);
         fs_1.default.unlink(filePath, (err) => {
             if (err) {
                 console.error(`Failed to delete file: ${filePath}. Error: ${err.message}`);

@@ -1,6 +1,10 @@
-import axios from "axios";
 
-import {NOBOX_TOKEN, NOBOX_PROJECT, NOBOX_ENDPOINT, NOBOX_UPLOAD_URL} from "./variables"
+import axios from "axios";
+import FormData from "form-data";
+import fs from "fs";
+
+import { NOBOX_TOKEN, NOBOX_PROJECT, NOBOX_UPLOAD_URL } from "./variables";
+
 export interface CloudFile {
     _id: string;
     name: string;
@@ -11,32 +15,34 @@ export interface CloudFile {
     createdAt: string;
 }
 
-
-export const noboxUpload = async(file:  File) => {
+export const noboxUpload = async (
+    filePath: string,
+    originalName: string,
+    mimetype: string
+) => {
     const formData = new FormData();
-    formData.append("file", file);
-    try {
-        if (!file) {
-            throw new Error("No File to upload");
-        }
+    formData.append("file", fs.createReadStream(filePath), {
+        filename: originalName,
+        contentType: mimetype,
+    });
 
-        const response = await axios.post(`${NOBOX_UPLOAD_URL}/${NOBOX_PROJECT}/upload`, formData, {
-            headers: {
-                "Content-Type": "multipart/form-data",
-                Authorization: `Bearer ${NOBOX_TOKEN}`,
-            },
-           
-        });
+    try {
+        const response = await axios.post(
+            `${NOBOX_UPLOAD_URL}/${NOBOX_PROJECT}/upload`,
+            formData,
+            {
+                headers: {
+                    ...formData.getHeaders(),
+                    Authorization: `Bearer ${NOBOX_TOKEN}`,
+                },
+            }
+        );
 
         const data: CloudFile = response.data;
-  
-        if(!data){
-            throw new Error("File upload error")
-        }
-
+        if (!data) throw new Error("File upload error");
         return data;
     } catch (error) {
         console.error(`Unable to upload file: ${error}`);
-        throw error
+        throw error;
     }
-}
+};
