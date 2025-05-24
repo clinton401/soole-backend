@@ -13,24 +13,33 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sendEmail = void 0;
-const nodemailer_1 = __importDefault(require("nodemailer"));
-const transporter = nodemailer_1.default.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS
-    }
-});
-const sendEmail = (to, subject, text, content) => __awaiter(void 0, void 0, void 0, function* () {
-    const mailOptions = {
-        from: process.env.EMAIL_USER,
-        to,
-        subject,
-        text,
-        html: content
-    };
+// import {NOBOX_UPL}
+const axios_1 = __importDefault(require("axios"));
+const variables_1 = require("../config/variables");
+// const transporter = nodemailer.createTransport({
+//   service: 'gmail',
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASS
+//   }
+// });
+const sendEmail = (to, title, textBody, emailBody) => __awaiter(void 0, void 0, void 0, function* () {
+    // const mailOptions = {
+    //   from: process.env.EMAIL_USER,
+    //   to,
+    //   subject,
+    //   text,
+    //   html: content
+    // };
     try {
-        yield transporter.sendMail(mailOptions);
+        yield axios_1.default.post(`${variables_1.NOBOX_SENDER_URL}`, {
+            from: "nobox.hq@gmail.com",
+            to,
+            title,
+            textBody,
+            emailBody
+        });
+        // await transporter.sendMail(mailOptions);
         // const response = await axios.post(`${NOBOX_UPLOAD_URL}/${NOBOX_PROJECT}/send-email?to=${to}&raw=1`, {
         //   content,
         //   subject,

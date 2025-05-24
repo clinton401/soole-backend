@@ -2,26 +2,33 @@
 import nodemailer from 'nodemailer';
 // import {NOBOX_UPL}
 import axios from "axios";
-import {NOBOX_TOKEN, NOBOX_PROJECT, NOBOX_ENDPOINT, NOBOX_UPLOAD_URL} from "../config/variables"
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
+import {NOBOX_SENDER_URL} from "../config/variables"
+// const transporter = nodemailer.createTransport({
+//   service: 'gmail',
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASS
+//   }
+// });
 
-export const sendEmail = async (to: string, subject: string, text: string, content: string) => {
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to,
-    subject,
-    text,
-    html: content
-  };
+export const sendEmail = async (to: string, title: string, textBody: string, emailBody: string) => {
+  // const mailOptions = {
+  //   from: process.env.EMAIL_USER,
+  //   to,
+  //   subject,
+  //   text,
+  //   html: content
+  // };
 
   try {
-    await transporter.sendMail(mailOptions);
+    await axios.post(`${NOBOX_SENDER_URL}`, {
+      from: "nobox.hq@gmail.com",
+      to,
+      title,
+      textBody,
+      emailBody
+  });
+    // await transporter.sendMail(mailOptions);
     // const response = await axios.post(`${NOBOX_UPLOAD_URL}/${NOBOX_PROJECT}/send-email?to=${to}&raw=1`, {
     //   content,
     //   subject,

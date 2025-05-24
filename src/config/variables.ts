@@ -13,3 +13,4 @@ export const NOBOX_PROJECT = getEnvVariable("NOBOX_PROJECT");
 export const NOBOX_UPLOAD_URL = getEnvVariable("NOBOX_UPLOAD_URL");
 export const TERMII_SENDER_ID = getEnvVariable("TERMII_SENDER_ID");
 export const TERMII_API_KEY = getEnvVariable("TERMII_API_KEY");
+export const NOBOX_SENDER_URL = getEnvVariable("NOBOX_SENDER_URL");
